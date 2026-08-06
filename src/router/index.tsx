@@ -4,6 +4,8 @@ import NotFound from "../pages/NotFound";
 import App from "@/App.tsx";
 import Layout from "@/components/Layout";
 import Login from "@/pages/login.tsx";
+import Post from "@/pages/post.tsx";
+import Profile from "@/pages/profile.tsx";
 
 const router = createBrowserRouter([
     {
@@ -17,6 +19,14 @@ const router = createBrowserRouter([
             {
                 path: "login",
                 element: <Login />,
+            },
+            {
+                path: "users/:id",
+                element: <Profile />,
+            },
+            {
+                path: "posts/:id",
+                element: <Post />,
             },
         ],
     },

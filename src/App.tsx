@@ -1,27 +1,12 @@
 import { Home as HomePage } from "@/pages/home.tsx";
-import { useEffect } from "react";
-import { clearToken, getToken, me } from "@/lib/api.ts";
+import { clearToken } from "@/lib/api.ts";
 import { Loader2 } from "lucide-react";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useNavigate } from "react-router-dom";
 
 function App() {
-    const { user, setUser, checking, setChecking } = useUserStore();
+    const { user, setUser, checking } = useUserStore();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        const token = getToken();
-        if (!token) {
-            setChecking(false);
-            return;
-        }
-        me()
-            .then(setUser)
-            .catch(() => {
-                clearToken();
-            })
-            .finally(() => setChecking(false));
-    }, [setChecking, setUser]);
 
     if (checking) {
         return (

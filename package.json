@@ -16,7 +16,10 @@
         "@tailwindcss/vite": "^4.3.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "katex": "^0.18.1",
         "lucide-react": "^1.28.0",
+        "markdown-it": "^15.0.0",
+        "markdown-it-texmath": "^1.0.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "react-router-dom": "^7.18.2",
@@ -27,6 +30,7 @@
         "zustand": "^5.0.14"
     },
     "devDependencies": {
+        "@types/markdown-it": "^14.1.2",
         "@types/node": "^24.13.3",
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",

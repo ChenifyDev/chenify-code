@@ -6,6 +6,7 @@
     "scripts": {
         "start": "bun index.ts",
         "dev": "bun index.ts --debug",
+        "seed": "bun seed.ts",
         "build": "bun build index.ts --outdir dist --minify --target bun",
     },
     "devDependencies": {
