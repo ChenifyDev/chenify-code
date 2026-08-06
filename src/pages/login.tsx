@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { login, register, setToken, type UserPublic } from "@/lib/api.ts";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useNavigate } from "react-router-dom";
 
 type Status = { type: "error" | "success"; text: string } | null;
 
@@ -40,6 +41,7 @@ function LoginForm({ onSuccess }: { onSuccess: (user: UserPublic) => void }) {
     const [remember, setRemember] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [status, setStatus] = useState<Status>(null);
+    const navigate = useNavigate();
 
     const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
@@ -57,6 +59,7 @@ function LoginForm({ onSuccess }: { onSuccess: (user: UserPublic) => void }) {
             setToken(token, remember);
             setStatus({ type: "success", text: `欢迎回来，${user.username}` });
             onSuccess(user);
+            navigate("/");
         } catch (err) {
             setStatus({ type: "error", text: err instanceof Error ? err.message : "登录失败" });
         } finally {

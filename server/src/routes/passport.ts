@@ -1,12 +1,12 @@
 import {
     createUser,
     findUserByEmail,
-    findUserById,
     findUserByUsername,
     findUserByUsernameOrEmail,
     toPublicUser,
 } from "../db";
-import { signToken, verifyToken } from "../jwt";
+import { signToken } from "../jwt";
+import { jsonError, getAuthUser } from "./util";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
@@ -32,16 +32,6 @@ async function processAvatar(file: File, originalExt: string): Promise<{ data: U
     } catch {
         return { data: file, ext: originalExt };
     }
-}
-
-function jsonError(status: number, message: string): Response {
-    return Response.json({ message }, { status });
-}
-
-function extractBearer(req: Request): string | null {
-    const auth = req.headers.get("authorization");
-    if (!auth?.startsWith("Bearer ")) return null;
-    return auth.slice(7);
 }
 
 export const routes: Bun.Serve.Routes<any, any> = {
@@ -119,17 +109,9 @@ export const routes: Bun.Serve.Routes<any, any> = {
     },
 
     "/api/passport/me": async (req) => {
-        const token = extractBearer(req);
-        if (!token) {
-            return jsonError(401, "未提供登录凭证");
-        }
-        const payload = await verifyToken(token);
-        if (!payload) {
-            return jsonError(401, "登录凭证无效或已过期");
-        }
-        const user = findUserById(payload.sub);
+        const user = await getAuthUser(req);
         if (!user) {
-            return jsonError(404, "用户不存在");
+            return jsonError(401, "未提供有效登录凭证");
         }
         return Response.json(user);
     },
