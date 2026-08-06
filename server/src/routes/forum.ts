@@ -70,7 +70,8 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const url = new URL(req.url);
             const { offset, limit } = parsePagination(url);
             const tag = url.searchParams.get("tag")?.trim().toLowerCase() || null;
-            const posts = listPosts({ offset, limit, tag, viewerId: me?.id ?? null });
+            const sort = url.searchParams.get("sort") === "hot" ? "hot" : "latest";
+            const posts = listPosts({ offset, limit, tag, sort, viewerId: me?.id ?? null });
             return Response.json(posts);
         },
         POST: async (req) => {

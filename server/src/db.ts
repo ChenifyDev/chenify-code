@@ -249,6 +249,37 @@ const listUserPostsStmt = db.prepare(`
     ORDER BY p.created_at DESC, p.id DESC
     LIMIT ? OFFSET ?
 `);
+const listHotPostsStmt = db.prepare(`
+    SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 2 + 1)
+               / pow((julianday('now') - julianday(created_at)) * 24 + 2, 1.5)) AS heat
+    FROM (
+        SELECT p.id, p.user_id, p.content, p.created_at,
+               u.username, u.avatar,
+               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comments_count,
+               (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes_count,
+               (SELECT COUNT(*) FROM favorites f WHERE f.post_id = p.id) AS favorites_count
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+    )
+    ORDER BY heat DESC, created_at DESC, id DESC
+    LIMIT ? OFFSET ?
+`);
+const listHotPostsByTagStmt = db.prepare(`
+    SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 2 + 1)
+               / pow((julianday('now') - julianday(created_at)) * 24 + 2, 1.5)) AS heat
+    FROM (
+        SELECT p.id, p.user_id, p.content, p.created_at,
+               u.username, u.avatar,
+               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comments_count,
+               (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes_count,
+               (SELECT COUNT(*) FROM favorites f WHERE f.post_id = p.id) AS favorites_count
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.id IN (SELECT pt.post_id FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = ?)
+    )
+    ORDER BY heat DESC, created_at DESC, id DESC
+    LIMIT ? OFFSET ?
+`);
 const listUserFavoritesStmt = db.prepare(`
     SELECT p.id, p.user_id, p.content, p.created_at,
            u.username, u.avatar,
@@ -534,11 +565,17 @@ export function listPosts(options: {
     offset: number;
     limit: number;
     tag?: string | null;
+    sort?: "latest" | "hot";
     viewerId: number | null;
 }): Post[] {
-    const rows = options.tag
-        ? (listPostsByTagStmt.all(options.tag, options.limit, options.offset) as PostRow[])
-        : (listPostsStmt.all(options.limit, options.offset) as PostRow[]);
+    const rows =
+        options.sort === "hot"
+            ? ((options.tag
+                  ? (listHotPostsByTagStmt.all(options.tag, options.limit, options.offset) as PostRow[])
+                  : (listHotPostsStmt.all(options.limit, options.offset) as PostRow[])) as PostRow[])
+            : options.tag
+              ? (listPostsByTagStmt.all(options.tag, options.limit, options.offset) as PostRow[])
+              : (listPostsStmt.all(options.limit, options.offset) as PostRow[]);
     return hydratePosts(rows, options.viewerId);
 }
 

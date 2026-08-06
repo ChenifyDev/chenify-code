@@ -140,8 +140,15 @@ function qs(params: Record<string, string | number | boolean | undefined | null>
     return text ? `?${text}` : "";
 }
 
-export function listPosts(offset = 0, limit = 20, tag?: string): Promise<Post[]> {
-    return request<Post[]>(`/posts${qs({ offset, limit, tag })}`, { headers: authHeaders() });
+export function listPosts(options: {
+    offset?: number;
+    limit?: number;
+    tag?: string | null;
+    sort?: "latest" | "hot";
+}): Promise<Post[]> {
+    return request<Post[]>(`/posts${qs({ offset: options.offset ?? 0, limit: options.limit ?? 20, tag: options.tag, sort: options.sort })}`, {
+        headers: authHeaders(),
+    });
 }
 
 export function getPost(id: number): Promise<Post> {

@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import App from "@/App.tsx";
 import Layout from "@/components/Layout";
+import Explore from "@/pages/explore.tsx";
 import Login from "@/pages/login.tsx";
 import Post from "@/pages/post.tsx";
 import Profile from "@/pages/profile.tsx";
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
             {
                 path: "login",
                 element: <Login />,
+            },
+            {
+                path: "explore",
+                element: <Explore />,
             },
             {
                 path: "users/:id",
