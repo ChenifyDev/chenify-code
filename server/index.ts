@@ -3,7 +3,7 @@ import { routes as passportRoutes } from "./src/routes/passport";
 
 mkdirSync("./uploads", { recursive: true });
 
-const server = Bun.serve({
+Bun.serve({
     port: 8080,
     routes: {
         ...passportRoutes,
@@ -15,7 +15,7 @@ const server = Bun.serve({
             return new Response(Bun.file(`./uploads/${path}`));
         },
     },
-    fetch(req) {
+    fetch(_req) {
         return new Response("Not Found", { status: 404 });
     },
 });
