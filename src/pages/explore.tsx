@@ -38,6 +38,7 @@ function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
     const [hasMore, setHasMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const offsetRef = useRef(0);
+    const startedRef = useRef(false);
 
     const load = useCallback(async () => {
         setLoadingMore(true);
@@ -56,6 +57,8 @@ function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
     }, [sort, tag]);
 
     useEffect(() => {
+        if (startedRef.current) return;
+        startedRef.current = true;
         void load();
     }, [load]);
 

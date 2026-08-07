@@ -890,10 +890,11 @@ export function publishDraft(id: number): { draft: Draft; post: Post } | null {
 export function unpublishDraft(id: number): Draft | null {
     const draft = getDraftById(id);
     if (!draft) return null;
-    if (draft.status === "published" && draft.post_id != null) {
-        deletePostRowsOnly(draft.post_id);
-    }
+    const wasPublished = draft.status === "published" && draft.post_id != null;
     unpublishDraftStmt.run(id);
+    if (wasPublished) {
+        deletePostRowsOnly(draft.post_id!);
+    }
     return getDraftById(id);
 }
 
