@@ -130,6 +130,7 @@ function DraftList() {
     const [error, setError] = useState<string | null>(null);
     const [busyId, setBusyId] = useState<number | null>(null);
     const offsetRef = useRef(0);
+    const navigate = useNavigate();
 
     const reload = useCallback(async () => {
         offsetRef.current = 0;
@@ -197,8 +198,8 @@ function DraftList() {
         void runAction(draft, deleteDraft, (prev) => prev.filter((d) => d.id !== draft.id));
     };
 
-    const handleEdit = (_draft: Draft) => {
-        window.alert("编辑功能即将开放，敬请期待");
+    const handleEdit = (draft: Draft) => {
+        navigate(`/write?id=${draft.id}`);
     };
 
     return (

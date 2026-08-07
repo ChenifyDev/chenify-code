@@ -1,4 +1,4 @@
-import { Code2, Compass, FileText, Home, LogOut, LogIn } from "lucide-react";
+import { Code2, Compass, FileText, Home, LogOut, LogIn, SquarePen } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { clearToken } from "@/lib/api.ts";
@@ -16,6 +16,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx";
 import { cn } from "@/lib/utils.ts";
+import { ModeToggle } from "@/components/ModeToggle.tsx";
 
 export default function AppSidebar() {
     const user = useUserStore((s) => s.user);
@@ -31,14 +32,17 @@ export default function AppSidebar() {
     return (
         <Sidebar>
             <SidebarHeader>
-                <div className="flex items-center gap-3 px-2 py-1">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                        <Code2 className="size-5" />
+                <div className={"flex gap-3 justify-between"}>
+                    <div className="flex items-center gap-3 px-2 py-1">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                            <Code2 className="size-5" />
+                        </div>
+                        <div className="grid gap-0.5 leading-tight">
+                            <p className="text-sm font-semibold">ChenifyCode</p>
+                            <p className="text-xs text-muted-foreground">更好的编程社区</p>
+                        </div>
                     </div>
-                    <div className="grid gap-0.5 leading-tight">
-                        <p className="text-sm font-semibold">ChenifyCode</p>
-                        <p className="text-xs text-muted-foreground">更好的编程社区</p>
-                    </div>
+                    <ModeToggle />
                 </div>
             </SidebarHeader>
 
@@ -58,14 +62,14 @@ export default function AppSidebar() {
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <NavLink to="/explore">
-                                        {({ isActive }) => (
-                                            <SidebarMenuButton isActive={isActive} tooltip="发现/广场">
-                                                <Compass />
-                                                <span>发现/广场</span>
-                                            </SidebarMenuButton>
-                                        )}
-                                    </NavLink>
-                                </SidebarMenuItem>
+                                    {({ isActive }) => (
+                                        <SidebarMenuButton isActive={isActive} tooltip="发现/广场">
+                                            <Compass />
+                                            <span>发现/广场</span>
+                                        </SidebarMenuButton>
+                                    )}
+                                </NavLink>
+                            </SidebarMenuItem>
                             {user && (
                                 <SidebarMenuItem>
                                     <NavLink to="/drafts">
@@ -84,6 +88,18 @@ export default function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
+                {user && (
+                    <SidebarMenuItem>
+                        <NavLink to="/write">
+                            {({ isActive }) => (
+                                <SidebarMenuButton isActive={isActive} tooltip="写文章">
+                                    <SquarePen />
+                                    <span>写文章</span>
+                                </SidebarMenuButton>
+                            )}
+                        </NavLink>
+                    </SidebarMenuItem>
+                )}
                 <div className="flex items-center gap-2 rounded-md px-2 py-1 group-data-[collapsible=icon]:justify-center">
                     <Avatar
                         onClick={() => navigate(`/users/${user?.id}`)}

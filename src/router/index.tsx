@@ -8,6 +8,7 @@ import Drafts from "@/pages/drafts.tsx";
 import Login from "@/pages/login.tsx";
 import Post from "@/pages/post.tsx";
 import Profile from "@/pages/profile.tsx";
+import Write from "@/pages/write.tsx";
 
 const router = createBrowserRouter([
     {
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
             {
                 path: "drafts",
                 element: <Drafts />,
+            },
+            {
+                path: "write",
+                element: <Write />,
             },
             {
                 path: "users/:id",
