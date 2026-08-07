@@ -4,11 +4,14 @@ import "./index.css";
 import { RouterProvider } from "react-router-dom";
 import router from "@/router";
 import AuthBootstrap from "@/components/AuthBootstrap.tsx";
+import { ThemeProvider } from "@/components/ThemeProvider.tsx";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <AuthBootstrap>
-            <RouterProvider router={router} />
+            <ThemeProvider defaultTheme={"system"} storageKey={"app-theme"}>
+                <RouterProvider router={router} />
+            </ThemeProvider>
         </AuthBootstrap>
     </StrictMode>,
 );
