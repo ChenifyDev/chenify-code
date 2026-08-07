@@ -64,6 +64,18 @@ export interface FollowUser extends UserSummary {
     is_following: boolean;
 }
 
+export interface Draft {
+    id: number;
+    content: string;
+    user_id: number;
+    status: "draft" | "published";
+    post_id: number | null;
+    created_at: string;
+    updated_at: string;
+    images: string[];
+    tags: string[];
+}
+
 interface LoginResponse {
     token: string;
     user: UserPublic;
@@ -279,4 +291,24 @@ export function updatePrivacy(flags: {
         body: JSON.stringify(flags),
         headers: authHeaders(),
     });
+}
+
+export function listDrafts(status?: "draft" | "published", offset = 0, limit = 20): Promise<Draft[]> {
+    return request<Draft[]>(`/drafts${qs({ status, offset, limit })}`, { headers: authHeaders() });
+}
+
+export function getDraft(id: number): Promise<Draft> {
+    return request<Draft>(`/drafts/${id}`, { headers: authHeaders() });
+}
+
+export function publishDraft(id: number): Promise<Post> {
+    return request<Post>(`/drafts/${id}/publish`, { method: "POST", headers: authHeaders() });
+}
+
+export function unpublishDraft(id: number): Promise<Draft> {
+    return request<Draft>(`/drafts/${id}/unpublish`, { method: "POST", headers: authHeaders() });
+}
+
+export function deleteDraft(id: number): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/drafts/${id}`, { method: "DELETE", headers: authHeaders() });
 }

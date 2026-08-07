@@ -66,6 +66,18 @@ export interface SpaceCounts {
     followers: number | null;
 }
 
+export interface Draft {
+    id: number;
+    content: string;
+    user_id: number;
+    status: "draft" | "published";
+    post_id: number | null;
+    created_at: string;
+    updated_at: string;
+    images: string[];
+    tags: string[];
+}
+
 const db = new Database(import.meta.dir + "/../app.db");
 
 db.run(`
@@ -170,6 +182,37 @@ db.run(`
 `);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)`);
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS drafts (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL REFERENCES users(id),
+        content    TEXT NOT NULL,
+        status     TEXT NOT NULL DEFAULT 'draft',
+        post_id    INTEGER REFERENCES posts(id),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_drafts_user_id ON drafts(user_id)`);
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS draft_images (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        draft_id INTEGER NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+        path     TEXT NOT NULL
+    )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_draft_images_draft_id ON draft_images(draft_id)`);
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS draft_tags (
+        draft_id INTEGER NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+        tag_id   INTEGER NOT NULL REFERENCES tags(id),
+        PRIMARY KEY (draft_id, tag_id)
+    )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_draft_tags_tag_id ON draft_tags(tag_id)`);
 
 db.run("PRAGMA foreign_keys = ON");
 
@@ -309,6 +352,7 @@ const deletePostTagsStmt = db.prepare(`DELETE FROM post_tags WHERE post_id = ?`)
 const deletePostFavoritesStmt = db.prepare(`DELETE FROM favorites WHERE post_id = ?`);
 const deletePostCommentsStmt = db.prepare(`DELETE FROM comments WHERE post_id = ?`);
 const deletePostStmt = db.prepare(`DELETE FROM posts WHERE id = ?`);
+const deleteTagStmt = db.prepare(`DELETE FROM tags WHERE id = ?`);
 
 const insertFavoriteStmt = db.prepare(`INSERT OR IGNORE INTO favorites (user_id, post_id) VALUES (?, ?)`);
 const deleteFavoriteStmt = db.prepare(`DELETE FROM favorites WHERE user_id = ? AND post_id = ?`);
@@ -341,6 +385,38 @@ const listCommentsStmt = db.prepare(`
 `);
 const getCommentOwnerStmt = db.prepare(`SELECT user_id FROM comments WHERE id = ?`);
 const deleteCommentStmt = db.prepare(`DELETE FROM comments WHERE id = ?`);
+
+const insertDraftStmt = db.prepare(`INSERT INTO drafts (user_id, content) VALUES (?, ?)`);
+const updateDraftStmt = db.prepare(`UPDATE drafts SET content = ?, updated_at = datetime('now') WHERE id = ?`);
+const publishDraftStmt = db.prepare(
+    `UPDATE drafts SET status = 'published', post_id = ?, updated_at = datetime('now') WHERE id = ?`,
+);
+const unpublishDraftStmt = db.prepare(
+    `UPDATE drafts SET status = 'draft', post_id = NULL, updated_at = datetime('now') WHERE id = ?`,
+);
+const getDraftStmt = db.prepare(`
+    SELECT id, user_id, content, status, post_id, created_at, updated_at
+    FROM drafts WHERE id = ?
+`);
+const getDraftOwnerStmt = db.prepare(`SELECT user_id FROM drafts WHERE id = ?`);
+const listDraftsStmt = db.prepare(`
+    SELECT id, user_id, content, status, post_id, created_at, updated_at
+    FROM drafts WHERE user_id = ? AND status = ?
+    ORDER BY updated_at DESC, id DESC
+    LIMIT ? OFFSET ?
+`);
+const listAllDraftsStmt = db.prepare(`
+    SELECT id, user_id, content, status, post_id, created_at, updated_at
+    FROM drafts WHERE user_id = ?
+    ORDER BY updated_at DESC, id DESC
+    LIMIT ? OFFSET ?
+`);
+const deleteDraftImagesStmt = db.prepare(`DELETE FROM draft_images WHERE draft_id = ?`);
+const deleteDraftTagsStmt = db.prepare(`DELETE FROM draft_tags WHERE draft_id = ?`);
+const insertDraftImageStmt = db.prepare(`INSERT INTO draft_images (draft_id, path) VALUES (?, ?)`);
+const insertDraftTagStmt = db.prepare(`INSERT OR IGNORE INTO draft_tags (draft_id, tag_id) VALUES (?, ?)`);
+const getDraftImagesStmt = db.prepare(`SELECT path FROM draft_images WHERE draft_id = ?`);
+const deleteDraftStmt = db.prepare(`DELETE FROM drafts WHERE id = ?`);
 
 const insertFollowStmt = db.prepare(`INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)`);
 const deleteFollowStmt = db.prepare(`DELETE FROM follows WHERE follower_id = ? AND following_id = ?`);
@@ -392,6 +468,43 @@ interface CommentRow {
     username: string;
     avatar: string | null;
     post_snippet: string;
+}
+
+interface DraftRow {
+    id: number;
+    user_id: number;
+    content: string;
+    status: string;
+    post_id: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+function getDraftImages(id: number): string[] {
+    return (getDraftImagesStmt.all(id) as { path: string }[]).map((row) => row.path);
+}
+
+function getDraftTags(id: number): string[] {
+    const rows = db
+        .query<{ name: string }, number[]>(
+            `SELECT t.name FROM draft_tags dt JOIN tags t ON t.id = dt.tag_id WHERE dt.draft_id = ?`,
+        )
+        .all(id);
+    return rows.map((row) => row.name);
+}
+
+function toDraft(row: DraftRow): Draft {
+    return {
+        id: row.id,
+        content: row.content,
+        user_id: row.user_id,
+        status: row.status === "published" ? "published" : "draft",
+        post_id: row.post_id,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        images: getDraftImages(row.id),
+        tags: getDraftTags(row.id),
+    };
 }
 
 function hydratePosts(rows: PostRow[], viewerId: number | null): Post[] {
@@ -605,6 +718,14 @@ export function deletePost(id: number): string[] {
     return images;
 }
 
+function deletePostRowsOnly(id: number): void {
+    deletePostImagesStmt.run(id);
+    deletePostTagsStmt.run(id);
+    deletePostFavoritesStmt.run(id);
+    deletePostCommentsStmt.run(id);
+    deletePostStmt.run(id);
+}
+
 export function listTags(): string[] {
     return (listTagsStmt.all() as { name: string }[]).map((row) => row.name);
 }
@@ -663,6 +784,117 @@ export function getCommentOwner(id: number): number | null {
 
 export function deleteComment(id: number): boolean {
     return deleteCommentStmt.run(id).changes > 0;
+}
+
+export function createDraft(userId: number, content: string, imagePaths: string[], tags: string[]): Draft {
+    const result = insertDraftStmt.run(userId, content);
+    const draftId = Number(result.lastInsertRowid);
+    for (const path of imagePaths) insertDraftImageStmt.run(draftId, path);
+    for (const tag of tags) {
+        insertTagStmt.run(tag);
+        const tagRow = getTagIdStmt.get(tag) as { id: number } | null;
+        if (tagRow) insertDraftTagStmt.run(draftId, tagRow.id);
+    }
+    return toDraft(getDraftStmt.get(draftId) as DraftRow);
+}
+
+export function listDrafts(
+    userId: number,
+    options: { offset: number; limit: number; status?: "draft" | "published" },
+): Draft[] {
+    const rows =
+        options.status === undefined
+            ? (listAllDraftsStmt.all(userId, options.limit, options.offset) as DraftRow[])
+            : (listDraftsStmt.all(userId, options.status, options.limit, options.offset) as DraftRow[]);
+    return rows.map(toDraft);
+}
+
+export function getDraftById(id: number): Draft | null {
+    const row = getDraftStmt.get(id) as DraftRow | null;
+    return row ? toDraft(row) : null;
+}
+
+export function getDraftOwner(id: number): number | null {
+    const row = getDraftOwnerStmt.get(id) as { user_id: number } | null;
+    return row?.user_id ?? null;
+}
+
+export function updateDraft(
+    id: number,
+    content: string,
+    imagePaths: string[],
+    tags: string[],
+): { draft: Draft | null; removedImages: string[] } {
+    const removedImages = getDraftImages(id);
+    const removedTagIds = db
+        .query<{ tag_id: number }, number[]>(`SELECT tag_id FROM draft_tags WHERE draft_id = ?`)
+        .all(id);
+
+    updateDraftStmt.run(content, id);
+    deleteDraftImagesStmt.run(id);
+    deleteDraftTagsStmt.run(id);
+    for (const path of imagePaths) insertDraftImageStmt.run(id, path);
+    for (const tag of tags) {
+        insertTagStmt.run(tag);
+        const tagRow = getTagIdStmt.get(tag) as { id: number } | null;
+        if (tagRow) insertDraftTagStmt.run(id, tagRow.id);
+    }
+
+    const keep = new Set(imagePaths);
+    const goneImages = removedImages.filter((path) => !keep.has(path));
+    const keepTagIds = new Set(removedTagIds.map((row) => row.tag_id));
+    for (const tag of tags) {
+        const tagRow = getTagIdStmt.get(tag) as { id: number } | null;
+        if (tagRow) keepTagIds.add(tagRow.id);
+    }
+    for (const row of removedTagIds) {
+        if (!keepTagIds.has(row.tag_id)) {
+            const used = db
+                .query<{ n: number }, number[]>(
+                    `SELECT COUNT(*) AS n FROM post_tags WHERE tag_id = ? UNION ALL
+                     SELECT COUNT(*) AS n FROM draft_tags WHERE tag_id = ?`,
+                )
+                .all(row.tag_id, row.tag_id);
+            if (used.every((r) => r.n === 0)) deleteTagStmt.run(row.tag_id);
+        }
+    }
+
+    const row = getDraftStmt.get(id) as DraftRow | null;
+    return { draft: row ? toDraft(row) : null, removedImages: goneImages };
+}
+
+export function deleteDraft(id: number): string[] {
+    const images = getDraftImages(id);
+    const row = getDraftStmt.get(id) as DraftRow | null;
+    deleteDraftImagesStmt.run(id);
+    deleteDraftTagsStmt.run(id);
+    deleteDraftStmt.run(id);
+    if (row?.post_id != null) {
+        images.push(...deletePost(row.post_id));
+    }
+    return images;
+}
+
+export function publishDraft(id: number): { draft: Draft; post: Post } | null {
+    const draft = getDraftById(id);
+    if (!draft) return null;
+    if (draft.status === "published" && draft.post_id != null) {
+        return { draft, post: getPostById(draft.post_id, draft.user_id)! };
+    }
+    const post = createPost(draft.user_id, draft.content, draft.images, draft.tags);
+    if (!post) return null;
+    publishDraftStmt.run(post.id, id);
+    return { draft: getDraftById(id)!, post };
+}
+
+export function unpublishDraft(id: number): Draft | null {
+    const draft = getDraftById(id);
+    if (!draft) return null;
+    if (draft.status === "published" && draft.post_id != null) {
+        deletePostRowsOnly(draft.post_id);
+    }
+    unpublishDraftStmt.run(id);
+    return getDraftById(id);
 }
 
 export function toggleFollow(followerId: number, followingId: number): { following: boolean; followers_count: number } {

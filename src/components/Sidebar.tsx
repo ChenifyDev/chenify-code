@@ -1,4 +1,4 @@
-import { Code2, Compass, Home, LogOut, LogIn } from "lucide-react";
+import { Code2, Compass, FileText, Home, LogOut, LogIn } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { clearToken } from "@/lib/api.ts";
@@ -58,14 +58,26 @@ export default function AppSidebar() {
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <NavLink to="/explore">
-                                    {({ isActive }) => (
-                                        <SidebarMenuButton isActive={isActive} tooltip="发现/广场">
-                                            <Compass />
-                                            <span>发现/广场</span>
-                                        </SidebarMenuButton>
-                                    )}
-                                </NavLink>
-                            </SidebarMenuItem>
+                                        {({ isActive }) => (
+                                            <SidebarMenuButton isActive={isActive} tooltip="发现/广场">
+                                                <Compass />
+                                                <span>发现/广场</span>
+                                            </SidebarMenuButton>
+                                        )}
+                                    </NavLink>
+                                </SidebarMenuItem>
+                            {user && (
+                                <SidebarMenuItem>
+                                    <NavLink to="/drafts">
+                                        {({ isActive }) => (
+                                            <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
+                                                <FileText />
+                                                <span>草稿管理</span>
+                                            </SidebarMenuButton>
+                                        )}
+                                    </NavLink>
+                                </SidebarMenuItem>
+                            )}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

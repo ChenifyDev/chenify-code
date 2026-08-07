@@ -1,21 +1,29 @@
 import { unlink } from "node:fs/promises";
 import {
     createComment,
+    createDraft,
     createPost,
     deleteComment,
+    deleteDraft,
     deletePost,
     getCommentOwner,
+    getDraftById,
+    getDraftOwner,
     getPostById,
     getPostOwner,
     listComments,
+    listDrafts,
     listPosts,
     listTags,
+    publishDraft,
     toggleFavorite,
     toggleFollow,
     toggleLike,
     unfavoritePost,
     unfollowUser,
     unlikePost,
+    unpublishDraft,
+    updateDraft,
     updatePrivacy,
     userExists,
 } from "../db";
@@ -57,10 +65,53 @@ function validTags(tags: string[]): boolean {
     return tags.every((tag) => tag.length <= MAX_TAG_LENGTH);
 }
 
+async function saveImages(imageFiles: File[]): Promise<{ paths: string[] } | { error: string }> {
+    const imagePaths: string[] = [];
+    for (const file of imageFiles) {
+        const processed = await processImage(file);
+        if (!processed) {
+            await deleteImageFiles(imagePaths);
+            return { error: "图片仅支持 png、jpg、webp、gif 格式，且大小不能超过 2MB" };
+        }
+        const base = crypto.randomUUID();
+        const relPath = `${base}.${processed.ext}`;
+        await Bun.write(`./uploads/${relPath}`, processed.data);
+        imagePaths.push(`/uploads/${relPath}`);
+    }
+    return { paths: imagePaths };
+}
+
+async function deleteImageFiles(paths: string[]): Promise<void> {
+    await Promise.all(paths.map((path) => unlink(path.replace(/^\//, "")).catch(() => {})));
+}
+
 function numericIdError(raw: string): number | Response {
     const id = Number(raw);
     if (!Number.isInteger(id) || id <= 0) return jsonError(400, "无效的 ID");
     return id;
+}
+
+async function parseDraftForm(req: Request): Promise<
+    | { content: string; tags: string[]; imageFiles: File[] }
+    | { error: Response }
+> {
+    const form = await req.formData();
+    const content = form.get("content")?.toString().trim() ?? "";
+    if (content.length > MAX_CONTENT_LENGTH) {
+        return { error: jsonError(400, `帖子内容不能超过 ${MAX_CONTENT_LENGTH} 字`) };
+    }
+
+    const rawTags = form.get("tags")?.toString() ?? "";
+    const tags = splitTags(rawTags);
+    if (!validTags(tags)) return { error: jsonError(400, `单个标签不能超过 ${MAX_TAG_LENGTH} 个字符`) };
+
+    const imageFiles: File[] = [];
+    for (const entry of form.getAll("images")) {
+        if (entry instanceof File) imageFiles.push(entry);
+    }
+    if (imageFiles.length > MAX_IMAGES) return { error: jsonError(400, `最多上传 ${MAX_IMAGES} 张图片`) };
+
+    return { content, tags, imageFiles };
 }
 
 export const routes: Bun.Serve.Routes<any, any> = {
@@ -93,20 +144,10 @@ export const routes: Bun.Serve.Routes<any, any> = {
             }
             if (imageFiles.length > MAX_IMAGES) return jsonError(400, `最多上传 ${MAX_IMAGES} 张图片`);
 
-            const imagePaths: string[] = [];
-            for (const file of imageFiles) {
-                const processed = await processImage(file);
-                if (!processed) {
-                    for (const path of imagePaths) await unlink(path.replace(/^\//, "")).catch(() => {});
-                    return jsonError(400, "图片仅支持 png、jpg、webp、gif 格式，且大小不能超过 2MB");
-                }
-                const base = crypto.randomUUID();
-                const relPath = `${base}.${processed.ext}`;
-                await Bun.write(`./uploads/${relPath}`, processed.data);
-                imagePaths.push(`/uploads/${relPath}`);
-            }
+            const saved = await saveImages(imageFiles);
+            if ("error" in saved) return jsonError(400, saved.error);
 
-            const post = createPost(me.id, content, imagePaths, tags);
+            const post = createPost(me.id, content, saved.paths, tags);
             if (!post) return jsonError(500, "发帖失败");
             return Response.json(post, { status: 201 });
         },
@@ -249,6 +290,112 @@ export const routes: Bun.Serve.Routes<any, any> = {
             }
             updatePrivacy(me.id, favPublic, followPublic);
             return Response.json({ success: true });
+        },
+    },
+
+    "/api/drafts": {
+        GET: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const url = new URL(req.url);
+            const { offset, limit } = parsePagination(url);
+            const status = url.searchParams.get("status") as "draft" | "published" | null;
+            const parsed =
+                status === "draft" || status === "published" ? status : undefined;
+            return Response.json(listDrafts(me.id, { offset, limit, status: parsed }));
+        },
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = await parseDraftForm(req);
+            if ("error" in parsed) return parsed.error;
+            const saved = await saveImages(parsed.imageFiles);
+            if ("error" in saved) return jsonError(400, saved.error);
+            const draft = createDraft(me.id, parsed.content, saved.paths, parsed.tags);
+            return Response.json(draft, { status: 201 });
+        },
+    },
+
+    "/api/drafts/:id": {
+        GET: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权查看该草稿");
+            return Response.json(getDraftById(parsed));
+        },
+        PATCH: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权修改该草稿");
+            const existing = getDraftById(parsed);
+            if (existing?.status === "published") return jsonError(400, "已发布的草稿请先取消发布再编辑");
+
+            const formData = await parseDraftForm(req);
+            if ("error" in formData) return formData.error;
+            const saved = await saveImages(formData.imageFiles);
+            if ("error" in saved) return jsonError(400, saved.error);
+
+            const { draft, removedImages } = updateDraft(parsed, formData.content, saved.paths, formData.tags);
+            await deleteImageFiles(removedImages);
+            if (!draft) return jsonError(500, "更新草稿失败");
+            return Response.json(draft);
+        },
+        DELETE: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权删除该草稿");
+            const paths = deleteDraft(parsed);
+            await deleteImageFiles(paths);
+            return Response.json({ success: true });
+        },
+    },
+
+    "/api/drafts/:id/publish": {
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权发布该草稿");
+            const draft = getDraftById(parsed);
+            if (!draft) return jsonError(404, "草稿不存在");
+            if (!draft.content) return jsonError(400, "发布内容不能为空");
+            if (draft.status === "published") return jsonError(400, "草稿已发布，请勿重复发布");
+            const result = publishDraft(parsed);
+            if (!result) return jsonError(500, "发布失败");
+            return Response.json(result.post, { status: 201 });
+        },
+    },
+
+    "/api/drafts/:id/unpublish": {
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权取消发布该草稿");
+            const draft = getDraftById(parsed);
+            if (!draft) return jsonError(404, "草稿不存在");
+            if (draft.status !== "published") return jsonError(400, "该草稿尚未发布");
+            const updated = unpublishDraft(parsed);
+            if (!updated) return jsonError(500, "取消发布失败");
+            return Response.json(updated);
         },
     },
 };
