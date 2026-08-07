@@ -72,8 +72,8 @@ export function listPosts(options: {
                 : sql``;
         const rows =
             db.all(sql`
-            SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 2 + 1)
-                / pow((julianday('now') - julianday(created_at)) * 24 + 2, 1.5)) AS heat
+            SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 5 + 1)
+                / (1 + ln(1 + (julianday('now') - julianday(created_at)) * 24))) AS heat
             FROM (
                 SELECT p.id, p.user_id, p.content, p.created_at, u.username, u.avatar,
                     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comments_count,
