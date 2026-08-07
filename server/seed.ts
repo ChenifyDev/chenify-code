@@ -1,11 +1,21 @@
-// 生成调试数据
-import { Database } from "bun:sqlite";
+﻿// 生成调试数据
+import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { db } from "./src/db/client";
+import {
+    comments,
+    draftTags,
+    drafts,
+    favorites,
+    follows,
+    likes,
+    postTags,
+    posts,
+    tags,
+    users,
+} from "./src/db/schema";
 
 const PASSWORD = "123456";
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];
-
-const db = new Database(import.meta.dir + "/app.db");
-db.run("PRAGMA foreign_keys = ON");
 
 const reset = process.argv.includes("--reset");
 
@@ -34,7 +44,7 @@ interface SeedUser {
     likes: string[]; // list of "<authorUsername>:<postIndex>" to like
 }
 
-const users: SeedUser[] = [
+const seedUsers: SeedUser[] = [
     {
         username: "alice",
         email: "alice@example.com",
@@ -119,7 +129,7 @@ const users: SeedUser[] = [
                 updated_at: "2026-07-28 14:30:00",
             },
             {
-                content: "个人博客留言板想做成匿名也能发，但又想防刷屏，验证码 + 频率限制怎么平衡比较好？",
+                content: "个人博客留言板想做成匿名也能发，但想防刷屏，验证码 + 频率限制怎么平衡比较好？",
                 tags: ["backend", "security"],
                 status: "draft",
                 created_at: "2026-08-05 19:00:00",
@@ -261,70 +271,53 @@ const users: SeedUser[] = [
 ];
 
 const seedComments: { post_key: string; author: string; content: string; created_at: string }[] = [
-    {
-        post_key: "bob:0",
-        author: "alice",
-        content: "Bun 这套确实香，我也准备迁移了。",
-        created_at: "2026-08-01 10:00:00",
-    },
-    {
-        post_key: "bob:0",
-        author: "dave",
-        content: "请问 SQLite 并发写入会有问题吗？",
-        created_at: "2026-08-01 10:30:00",
-    },
-    {
-        post_key: "alice:0",
-        author: "bob",
-        content: "博客我还没迁，主要是插件生态顾虑。",
-        created_at: "2026-07-30 12:00:00",
-    },
+    { post_key: "bob:0", author: "alice", content: "Bun 这套确实香，我也准备迁移了。", created_at: "2026-08-01 10:00:00" },
+    { post_key: "bob:0", author: "dave", content: "请问 SQLite 并发写入会有问题吗？", created_at: "2026-08-01 10:30:00" },
+    { post_key: "alice:0", author: "bob", content: "博客我还没迁，主要是插件生态顾虑。", created_at: "2026-07-30 12:00:00" },
     { post_key: "alice:1", author: "carol", content: "zustand 配 immer 简直绝配。", created_at: "2026-07-25 22:00:00" },
-    {
-        post_key: "carol:0",
-        author: "erin",
-        content: "@theme 确实比 tailwind.config 直观。",
-        created_at: "2026-07-29 12:20:00",
-    },
-    {
-        post_key: "dave:0",
-        author: "carol",
-        content: "先学 Vite 吧，上手快，底层理解可以后面补。",
-        created_at: "2026-08-01 09:00:00",
-    },
+    { post_key: "carol:0", author: "erin", content: "@theme 确实比 tailwind.config 直观。", created_at: "2026-07-29 12:20:00" },
+    { post_key: "dave:0", author: "carol", content: "先学 Vite 吧，上手快，底层理解可以后面补。", created_at: "2026-08-01 09:00:00" },
 ];
 
 function insertOrGetId(username: string, email: string, passwordHash: string): number | null {
-    const existing = db.query("SELECT id FROM users WHERE username = ?").get(username) as { id: number } | null;
+    const existing = db.select({ id: users.id }).from(users).where(eq(users.username, username)).get();
     if (existing) return existing.id;
-    const result = db
-        .query("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)")
-        .run(username, email, passwordHash);
-    return Number(result.lastInsertRowid);
+    const row = db.insert(users).values({ username, email, password_hash: passwordHash }).returning().get();
+    return row?.id ?? null;
 }
 
-function buildUserIdMap(): Map<string, number> {
-    const rows = db
-        .query("SELECT id, username FROM users WHERE username IN (SELECT value FROM json_each(?, '$'))")
-        .all(JSON.stringify(SAMPLE_USERNAMES)) as { id: number; username: string }[];
-    return new Map(rows.map((row) => [row.username, row.id]));
+function attachTags(ownerId: number, tagNames: string[], table: "post" | "draft"): void {
+    for (const name of tagNames) {
+        db.insert(tags).values({ name }).onConflictDoNothing().run();
+        const tag = db.select({ id: tags.id }).from(tags).where(eq(tags.name, name)).get();
+        if (tag) {
+            if (table === "post") {
+                db.insert(postTags).values({ post_id: ownerId, tag_id: tag.id }).onConflictDoNothing().run();
+            } else {
+                db.insert(draftTags).values({ draft_id: ownerId, tag_id: tag.id }).onConflictDoNothing().run();
+            }
+        }
+    }
 }
 
 async function main() {
     if (reset) {
-        const ids = db
-            .query("SELECT id FROM users WHERE username IN (SELECT value FROM json_each(?, '$'))")
-            .all(JSON.stringify(SAMPLE_USERNAMES)) as { id: number }[];
-        for (const { id } of ids) {
-            db.query("DELETE FROM drafts WHERE user_id = ?").run(id);
-            db.query("DELETE FROM comments WHERE user_id = ?").run(id);
-            db.query("DELETE FROM favorites WHERE user_id = ?").run(id);
-            db.query("DELETE FROM likes WHERE user_id = ?").run(id);
-            db.query("DELETE FROM follows WHERE follower_id = ? OR following_id = ?").run(id, id);
-            db.query("DELETE FROM posts WHERE user_id = ?").run(id);
-            db.query("DELETE FROM users WHERE id = ?").run(id);
+        const userIds = db
+            .select({ id: users.id })
+            .from(users)
+            .where(inArray(users.username, SAMPLE_USERNAMES))
+            .all()
+            .map((row) => row.id);
+        for (const id of userIds) {
+            db.delete(drafts).where(eq(drafts.user_id, id)).run();
+            db.delete(comments).where(eq(comments.user_id, id)).run();
+            db.delete(favorites).where(eq(favorites.user_id, id)).run();
+            db.delete(likes).where(eq(likes.user_id, id)).run();
+            db.delete(follows).where(or(eq(follows.follower_id, id), eq(follows.following_id, id))).run();
+            db.delete(posts).where(eq(posts.user_id, id)).run();
+            db.delete(users).where(eq(users.id, id)).run();
         }
-        console.log(`已删除 ${ids.length} 个示例账号（含其帖子/评论/收藏/关注/草稿）`);
+        console.log(`已删除 ${userIds.length} 个示例账号（含其帖子/评论/收藏/关注/草稿）`);
     }
 
     const passwordHash = await Bun.password.hash(PASSWORD, {
@@ -334,31 +327,31 @@ async function main() {
     });
 
     const idMap = new Map<string, number>();
-    for (const user of users) {
+    for (const user of seedUsers) {
         const id = insertOrGetId(user.username, user.email, passwordHash);
         if (!id) throw new Error(`创建用户失败: ${user.username}`);
         idMap.set(user.username, id);
     }
 
     const postIds = new Map<string, number>();
-    for (const user of users) {
+    for (const user of seedUsers) {
         user.posts.forEach((post, index) => {
             const existing = db
-                .query("SELECT id FROM posts WHERE user_id = ? AND content = ?")
-                .get(idMap.get(user.username)!, post.content) as { id: number } | null;
+                .select({ id: posts.id })
+                .from(posts)
+                .where(and(eq(posts.user_id, idMap.get(user.username)!), eq(posts.content, post.content)))
+                .get();
             let postId: number;
             if (existing) {
                 postId = existing.id;
             } else {
-                const result = db
-                    .query("INSERT INTO posts (user_id, content, created_at) VALUES (?, ?, ?)")
-                    .run(idMap.get(user.username)!, post.content, post.created_at);
-                postId = Number(result.lastInsertRowid);
-                for (const tag of post.tags) {
-                    db.query("INSERT OR IGNORE INTO tags (name) VALUES (?)").run(tag);
-                    const tagId = db.query("SELECT id FROM tags WHERE name = ?").get(tag) as { id: number };
-                    db.query("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)").run(postId, tagId.id);
-                }
+                const inserted = db
+                    .insert(posts)
+                    .values({ user_id: idMap.get(user.username)!, content: post.content, created_at: post.created_at })
+                    .returning()
+                    .get();
+                postId = inserted.id;
+                attachTags(postId, post.tags, "post");
             }
             postIds.set(`${user.username}:${index}`, postId);
         });
@@ -366,62 +359,46 @@ async function main() {
         for (const draft of user.drafts) {
             const userId = idMap.get(user.username)!;
             const existing = db
-                .query("SELECT id FROM drafts WHERE user_id = ? AND content = ?")
-                .get(userId, draft.content) as { id: number } | null;
-            let draftId: number;
-            if (existing) {
-                draftId = existing.id;
-            } else {
-                const postId =
-                    draft.status === "published" && draft.post_key
-                        ? (postIds.get(draft.post_key) ?? null)
-                        : null;
-                const result = db
-                    .query(
-                        "INSERT INTO drafts (user_id, content, status, post_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    )
-                    .run(userId, draft.content, draft.status, postId, draft.created_at, draft.updated_at);
-                draftId = Number(result.lastInsertRowid);
-                for (const tag of draft.tags) {
-                    db.query("INSERT OR IGNORE INTO tags (name) VALUES (?)").run(tag);
-                    const tagId = db.query("SELECT id FROM tags WHERE name = ?").get(tag) as {
-                        id: number;
-                    };
-                    db.query("INSERT OR IGNORE INTO draft_tags (draft_id, tag_id) VALUES (?, ?)").run(
-                        draftId,
-                        tagId.id,
-                    );
-                }
-            }
+                .select({ id: drafts.id })
+                .from(drafts)
+                .where(and(eq(drafts.user_id, userId), eq(drafts.content, draft.content)))
+                .get();
+            if (existing) continue;
+            const postId = draft.status === "published" && draft.post_key ? (postIds.get(draft.post_key) ?? null) : null;
+            const inserted = db
+                .insert(drafts)
+                .values({
+                    user_id: userId,
+                    content: draft.content,
+                    status: draft.status,
+                    post_id: postId,
+                    created_at: draft.created_at,
+                    updated_at: draft.updated_at,
+                })
+                .returning()
+                .get();
+            attachTags(inserted.id, draft.tags, "draft");
         }
     }
 
-    for (const user of users) {
+    for (const user of seedUsers) {
+        const followerId = idMap.get(user.username)!;
         for (const target of user.follows) {
             const targetId = idMap.get(target);
             if (targetId !== undefined) {
-                db.query("INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)").run(
-                    idMap.get(user.username)!,
-                    targetId,
-                );
+                db.insert(follows).values({ follower_id: followerId, following_id: targetId }).onConflictDoNothing().run();
             }
         }
         for (const key of user.favorites) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
-                db.query("INSERT OR IGNORE INTO favorites (user_id, post_id) VALUES (?, ?)").run(
-                    idMap.get(user.username)!,
-                    postId,
-                );
+                db.insert(favorites).values({ user_id: followerId, post_id: postId }).onConflictDoNothing().run();
             }
         }
         for (const key of user.likes) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
-                db.query("INSERT OR IGNORE INTO likes (user_id, post_id) VALUES (?, ?)").run(
-                    idMap.get(user.username)!,
-                    postId,
-                );
+                db.insert(likes).values({ user_id: followerId, post_id: postId }).onConflictDoNothing().run();
             }
         }
     }
@@ -429,52 +406,57 @@ async function main() {
     for (const comment of seedComments) {
         const postId = postIds.get(comment.post_key);
         const authorId = idMap.get(comment.author);
-        if (postId !== undefined && authorId !== undefined) {
-            const existing = db
-                .query("SELECT id FROM comments WHERE post_id = ? AND user_id = ? AND content = ?")
-                .get(postId, authorId, comment.content);
-            if (!existing) {
-                db.query("INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)").run(
-                    postId,
-                    authorId,
-                    comment.content,
-                    comment.created_at,
-                );
-            }
+        if (postId === undefined || authorId === undefined) continue;
+        const existing = db
+            .select({ id: comments.id })
+            .from(comments)
+            .where(and(eq(comments.post_id, postId), eq(comments.user_id, authorId), eq(comments.content, comment.content)))
+            .get();
+        if (!existing) {
+            db.insert(comments)
+                .values({
+                    post_id: postId,
+                    user_id: authorId,
+                    content: comment.content,
+                    created_at: comment.created_at,
+                })
+                .run();
         }
     }
 
-    for (const user of users) {
+    for (const user of seedUsers) {
         const id = idMap.get(user.username)!;
-        const counts = db
-            .query(
-                `SELECT
-                    (SELECT COUNT(*) FROM posts p WHERE p.user_id = ?) AS posts,
-                    (SELECT COUNT(*) FROM favorites f WHERE f.user_id = ?) AS favorites,
-                    (SELECT COUNT(*) FROM likes l WHERE l.user_id = ?) AS likes,
-                    (SELECT COUNT(*) FROM follows f WHERE f.follower_id = ?) AS following,
-                    (SELECT COUNT(*) FROM follows f WHERE f.following_id = ?) AS followers`,
-            )
-            .get(id, id, id, id, id) as {
-            posts: number;
-            favorites: number;
-            likes: number;
-            following: number;
-            followers: number;
-        };
+        const postsCount = db.select({ n: sql<number>`count(*)` }).from(posts).where(eq(posts.user_id, id)).get()!.n;
+        const favoritesCount = db
+            .select({ n: sql<number>`count(*)` })
+            .from(favorites)
+            .where(eq(favorites.user_id, id))
+            .get()!.n;
+        const likesCount = db.select({ n: sql<number>`count(*)` }).from(likes).where(eq(likes.user_id, id)).get()!.n;
+        const followingCount = db
+            .select({ n: sql<number>`count(*)` })
+            .from(follows)
+            .where(eq(follows.follower_id, id))
+            .get()!.n;
+        const followersCount = db
+            .select({ n: sql<number>`count(*)` })
+            .from(follows)
+            .where(eq(follows.following_id, id))
+            .get()!.n;
         console.log(
-            `${user.username}(${user.email}) 密码 ${PASSWORD} — 帖子 ${counts.posts} / 收藏 ${counts.favorites} / 点赞 ${counts.likes} / 关注 ${counts.following} / 粉丝 ${counts.followers}`,
+            `${user.username}(${user.email}) 密码 ${PASSWORD} — 帖子 ${postsCount} / 收藏 ${favoritesCount} / 点赞 ${likesCount} / 关注 ${followingCount} / 粉丝 ${followersCount}`,
         );
     }
 
     console.log(`共插入帖子 ${postIds.size} 条，评论 ${seedComments.length} 条。`);
 
-    const draftCounts = (db.query(
-        `SELECT
+    const [publishedCount, draftCount] = db.get(
+        sql`
+        SELECT
             (SELECT COUNT(*) FROM drafts WHERE status = 'published') AS published,
             (SELECT COUNT(*) FROM drafts WHERE status = 'draft') AS draft`,
-    ).get() as { published: number; draft: number });
-    console.log(`草稿：已发布 ${draftCounts.published} 条 / 未发布 ${draftCounts.draft} 条。`);
+    ) as [number, number];
+    console.log(`草稿：已发布 ${publishedCount} 条 / 未发布 ${draftCount} 条。`);
     console.log("提示：请先停止运行中的 server（bun index.ts），再启动以刷新数据。");
 }
 
