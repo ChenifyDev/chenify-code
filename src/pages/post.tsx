@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-    Bookmark,
-    Check,
-    Copy,
-    Heart,
-    Loader2,
-    MessageCircle,
-    Send,
-    Trash2,
-    UserCheck,
-    UserPlus,
-} from "lucide-react";
+import { Bookmark, Check, Copy, Heart, Loader2, MessageCircle, Send, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/Markdown.tsx";
@@ -62,21 +51,20 @@ function PostSkeleton() {
     );
 }
 
-function CommentRow({
-    comment,
-    onDelete,
-}: {
-    comment: Comment;
-    onDelete: (commentId: number) => void;
-}) {
+function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: (commentId: number) => void }) {
     const me = useUserStore((s) => s.user);
     const isSelf = me?.id === comment.author.id;
     return (
         <div className="grid gap-1.5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Link to={`/users/${comment.author.id}`} className="flex min-w-0 items-center gap-2 hover:text-foreground">
+                <Link
+                    to={`/users/${comment.author.id}`}
+                    className="flex min-w-0 items-center gap-2 hover:text-foreground"
+                >
                     <Avatar size="sm">
-                        {comment.author.avatar ? <AvatarImage src={comment.author.avatar} alt={comment.author.username} /> : null}
+                        {comment.author.avatar ? (
+                            <AvatarImage src={comment.author.avatar} alt={comment.author.username} />
+                        ) : null}
                         <AvatarFallback>{comment.author.username.slice(0, 2)}</AvatarFallback>
                     </Avatar>
                     <span className="truncate font-medium">{comment.author.username}</span>
@@ -201,7 +189,9 @@ export default function PostDetail() {
         setReactBusy(true);
         try {
             const res = post.is_favorited ? await unFavorite(post.id) : await toggleFavorite(post.id);
-            setPost((prev) => (prev ? { ...prev, is_favorited: res.favorited, favorites_count: res.favorites_count } : prev));
+            setPost((prev) =>
+                prev ? { ...prev, is_favorited: res.favorited, favorites_count: res.favorites_count } : prev,
+            );
         } catch (err) {
             console.error(err);
         } finally {
@@ -289,9 +279,14 @@ export default function PostDetail() {
                 <CardContent className="grid gap-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex min-w-0 items-center gap-2">
-                            <Link to={`/users/${post.author.id}`} className="flex min-w-0 items-center gap-2 hover:text-foreground">
+                            <Link
+                                to={`/users/${post.author.id}`}
+                                className="flex min-w-0 items-center gap-2 hover:text-foreground"
+                            >
                                 <Avatar>
-                                    {post.author.avatar ? <AvatarImage src={post.author.avatar} alt={post.author.username} /> : null}
+                                    {post.author.avatar ? (
+                                        <AvatarImage src={post.author.avatar} alt={post.author.username} />
+                                    ) : null}
                                     <AvatarFallback>{post.author.username.slice(0, 2)}</AvatarFallback>
                                 </Avatar>
                                 <span className="truncate text-sm font-medium">{post.author.username}</span>
@@ -336,7 +331,10 @@ export default function PostDetail() {
                     {post.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
                             {post.tags.map((tag) => (
-                                <span key={tag} className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                <span
+                                    key={tag}
+                                    className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                                >
                                     #{tag}
                                 </span>
                             ))}
@@ -352,7 +350,7 @@ export default function PostDetail() {
                             onClick={handleLike}
                         >
                             <Heart className={cn("size-4", post.is_liked && "fill-current")} />
-                            {post.likes_count}
+                            点赞 {post.likes_count}
                         </Button>
                         <Button
                             variant="ghost"
@@ -362,13 +360,18 @@ export default function PostDetail() {
                             onClick={handleFavorite}
                         >
                             <Bookmark className={cn("size-4", post.is_favorited && "fill-current")} />
-                            {post.favorites_count}
+                            收藏 {post.favorites_count}
                         </Button>
                         <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                             <MessageCircle className="size-4" />
                             {post.comments_count}
                         </span>
-                        <Button variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={handleCopyLink}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-auto text-muted-foreground"
+                            onClick={handleCopyLink}
+                        >
                             {copied ? <Check /> : <Copy />}
                             {copied ? "已复制" : "复制链接"}
                         </Button>
@@ -404,14 +407,23 @@ export default function PostDetail() {
                                 rows={2}
                                 className="min-h-16 w-full flex-1 resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                             />
-                            <Button variant="default" size="sm" className="mt-1 shrink-0" disabled={sending || !draft.trim()} onClick={handleSend}>
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="mt-1 shrink-0"
+                                disabled={sending || !draft.trim()}
+                                onClick={handleSend}
+                            >
                                 {sending ? <Loader2 className="animate-spin" /> : <Send />}
                                 发送
                             </Button>
                         </div>
                     ) : (
                         <p className="text-sm text-muted-foreground">
-                            <button className="text-primary underline underline-offset-2" onClick={() => navigate("/login")}>
+                            <button
+                                className="text-primary underline underline-offset-2"
+                                onClick={() => navigate("/login")}
+                            >
                                 登录
                             </button>
                             &nbsp;后参与评论
@@ -441,7 +453,12 @@ export default function PostDetail() {
                             ))
                         )}
                         {hasMoreComments && !commentsLoading && (
-                            <Button variant="outline" className="w-full" disabled={commentsLoadingMore} onClick={() => void loadComments(false)}>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                disabled={commentsLoadingMore}
+                                onClick={() => void loadComments(false)}
+                            >
                                 {commentsLoadingMore && <Loader2 className="animate-spin" />}
                                 {commentsLoadingMore ? "加载中…" : "加载更多评论"}
                             </Button>
