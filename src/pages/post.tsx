@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bookmark, Check, Copy, Heart, Loader2, MessageCircle, Send, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import Markdown from "@/components/Markdown.tsx";
+import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";

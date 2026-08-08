@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Clock, Compass, Flame, Loader2 } from "lucide-react";
 
-import PostCard from "@/components/PostCard";
+import PostCard from "@/components/forum/PostCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";

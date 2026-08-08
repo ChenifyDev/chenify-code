@@ -1,7 +1,7 @@
 import { Bookmark, Heart, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import Markdown from "@/components/Markdown.tsx";
+import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import type { Post } from "@/lib/api.ts";

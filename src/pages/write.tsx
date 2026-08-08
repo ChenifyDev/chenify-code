@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api.ts";
 import { cn, urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import EditorField from "@/components/MarkdownEditor.tsx";
+import EditorField from "@/components/forum/MarkdownEditor.tsx";
 
 const MAX_IMAGES = 9;
 const MAX_TAGS = 10;

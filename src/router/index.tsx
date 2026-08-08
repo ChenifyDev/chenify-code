@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import NotFound from "../pages/NotFound";
 import App from "@/App.tsx";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout.tsx";
 import Explore from "@/pages/explore.tsx";
 import Drafts from "@/pages/drafts.tsx";
 import Login from "@/pages/login.tsx";

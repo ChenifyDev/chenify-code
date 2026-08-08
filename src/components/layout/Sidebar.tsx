@@ -16,7 +16,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx";
 import { cn } from "@/lib/utils.ts";
-import { ModeToggle } from "@/components/ModeToggle.tsx";
+import { ModeToggle } from "@/components/layout/ModeToggle.tsx";
 
 export default function AppSidebar() {
     const user = useUserStore((s) => s.user);

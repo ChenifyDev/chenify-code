@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Calendar, Loader2, UserCheck, UserPlus } from "lucide-react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
-import PostCard from "@/components/PostCard";
+import PostCard from "@/components/forum/PostCard.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "@/components/ui/card.tsx";
@@ -63,7 +63,9 @@ interface TabData<T> {
     updateItems: (updater: (items: T[]) => T[]) => void;
 }
 
-function useTab<T>(fetcher: (offset: number) => Promise<{ items: T[]; hasMore: boolean; hidden: boolean }>): TabData<T> {
+function useTab<T>(
+    fetcher: (offset: number) => Promise<{ items: T[]; hasMore: boolean; hidden: boolean }>,
+): TabData<T> {
     const [items, setItems] = useState<T[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -100,7 +102,17 @@ function useTab<T>(fetcher: (offset: number) => Promise<{ items: T[]; hasMore: b
 
     const updateItems = useCallback((updater: (items: T[]) => T[]) => setItems(updater), []);
 
-    return { items, loading, loadingMore, hasMore, hidden, error, initialized: initializedRef.current, load, updateItems };
+    return {
+        items,
+        loading,
+        loadingMore,
+        hasMore,
+        hidden,
+        error,
+        initialized: initializedRef.current,
+        load,
+        updateItems,
+    };
 }
 
 function LoadMore<T>({ tab }: { tab: TabData<T> }) {
@@ -211,7 +223,13 @@ function UsersTab({ tab, title }: { tab: TabData<FollowUser>; title: string }) {
     return (
         <div className="grid gap-1">
             {tab.items.map((user) => (
-                <UserRow key={user.id} user={user} onFollowChange={(updated) => tab.updateItems((items) => items.map((u) => (u.id === updated.id ? updated : u)))} />
+                <UserRow
+                    key={user.id}
+                    user={user}
+                    onFollowChange={(updated) =>
+                        tab.updateItems((items) => items.map((u) => (u.id === updated.id ? updated : u)))
+                    }
+                />
             ))}
             <div className="pt-2">
                 <LoadMore tab={tab} />
@@ -435,11 +453,23 @@ export default function Profile() {
                         <div className="grid shrink-0 gap-2">
                             {isSelf ? (
                                 <>
-                                    <PrivacyRow label="收藏公开" checked={user.is_favorites_public} onCheckedChange={(v) => handlePrivacy("is_favorites_public", v)} />
-                                    <PrivacyRow label="关注公开" checked={user.is_follows_public} onCheckedChange={(v) => handlePrivacy("is_follows_public", v)} />
+                                    <PrivacyRow
+                                        label="收藏公开"
+                                        checked={user.is_favorites_public}
+                                        onCheckedChange={(v) => handlePrivacy("is_favorites_public", v)}
+                                    />
+                                    <PrivacyRow
+                                        label="关注公开"
+                                        checked={user.is_follows_public}
+                                        onCheckedChange={(v) => handlePrivacy("is_follows_public", v)}
+                                    />
                                 </>
                             ) : (
-                                <Button variant={following ? "outline" : "default"} disabled={followBusy} onClick={handleFollow}>
+                                <Button
+                                    variant={following ? "outline" : "default"}
+                                    disabled={followBusy}
+                                    onClick={handleFollow}
+                                >
                                     {following ? <UserCheck /> : <UserPlus />}
                                     {following ? "取消关注" : me ? "关注" : "登录后关注"}
                                 </Button>
