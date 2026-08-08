@@ -207,4 +207,16 @@
   .markdown-body .katex-display {
     @apply overflow-x-auto overflow-y-hidden py-1;
   }
+
+  .tiptap {
+    @apply min-h-[50vh] px-4 py-3 text-base leading-relaxed outline-none;
+  }
+
+  .tiptap p.is-editor-empty:first-child::before {
+    color: var(--muted-foreground);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
 }

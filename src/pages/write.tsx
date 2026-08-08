@@ -122,7 +122,7 @@ export default function Write() {
                             <p className="text-xs text-muted-foreground">
                                 {content.length > MAX_CONTENT_LENGTH
                                     ? `内容已超过 ${MAX_CONTENT_LENGTH} 字`
-                                    : `支持 Markdown 与 LaTeX，写作后可保存草稿或直接发布`}
+                                    : `支持富文本与 LaTeX 数学公式，写作后可保存草稿或直接发布`}
                             </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
