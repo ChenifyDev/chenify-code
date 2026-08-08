@@ -117,6 +117,34 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+    --hljs-bg: var(--muted);
+    --hljs-fg: var(--foreground);
+    --hljs-comment: oklch(0.556 0 0);
+    --hljs-keyword: #cf222e;
+    --hljs-string: #0a3069;
+    --hljs-number: #0550ae;
+    --hljs-title: #8250df;
+    --hljs-variable: #953800;
+    --hljs-operator: var(--foreground);
+    --hljs-deletion: #82071e;
+    --hljs-addition: #0b661b;
+}
+
+.dark {
+    --hljs-bg: var(--muted);
+    --hljs-fg: var(--foreground);
+    --hljs-comment: oklch(0.708 0 0);
+    --hljs-keyword: #ff7b72;
+    --hljs-string: #a5d6ff;
+    --hljs-number: #79c0ff;
+    --hljs-title: #d2a8ff;
+    --hljs-variable: #ffa657;
+    --hljs-operator: var(--foreground);
+    --hljs-deletion: #ffdcd7;
+    --hljs-addition: #7ee787;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -183,10 +211,69 @@
     @apply rounded bg-muted px-1 py-0.5 text-[0.85em];
   }
   .markdown-body pre {
-    @apply overflow-x-auto rounded-lg bg-muted p-3;
+    @apply overflow-x-auto rounded-lg;
+    background-color: var(--hljs-bg);
+    color: var(--hljs-fg);
   }
   .markdown-body pre code {
-    @apply bg-transparent p-0;
+    @apply block rounded-none bg-transparent p-3;
+  }
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--hljs-comment);
+    font-style: italic;
+  }
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-template-tag {
+    color: var(--hljs-keyword);
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-selector-pseudo,
+  .hljs-template-variable {
+    color: var(--hljs-string);
+  }
+  .hljs-literal,
+  .hljs-number,
+  .hljs-symbol {
+    color: var(--hljs-number);
+  }
+  .hljs-type,
+  .hljs-built_in,
+  .hljs-doctag,
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-title.class_,
+  .hljs-section,
+  .hljs-name {
+    color: var(--hljs-title);
+  }
+  .hljs-variable,
+  .hljs-variable.language_,
+  .hljs-params,
+  .hljs-meta {
+    color: var(--hljs-variable);
+  }
+  .hljs-operator {
+    color: var(--hljs-operator);
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: 600;
+  }
+  .hljs-deletion {
+    color: var(--hljs-deletion);
+  }
+  .hljs-addition {
+    color: var(--hljs-addition);
   }
   .markdown-body table {
     @apply w-full border-collapse;

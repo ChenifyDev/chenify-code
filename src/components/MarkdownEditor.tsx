@@ -3,6 +3,8 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Markdown } from "@tiptap/markdown";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { lowlight } from "lowlight";
 
 import { MathExtensions } from "@/lib/tiptap-math.ts";
 import {
@@ -38,7 +40,9 @@ const extensions = [
     StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         link: { openOnClick: false },
+        codeBlock: false,
     }),
+    CodeBlockLowlight.configure({ lowlight, defaultLanguage: "auto" }),
     Placeholder.configure({ placeholder: "在这里写文章…" }),
     Markdown.configure({ markedOptions: { breaks: true } }),
 ];
