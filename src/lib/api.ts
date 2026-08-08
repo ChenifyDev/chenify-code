@@ -191,6 +191,14 @@ export function createDraft(content: string, images: File[], tags: string[]): Pr
     return request<Draft>("/drafts", { method: "POST", body: form, headers: authHeaders() });
 }
 
+export function updateDraft(id: number, content: string, images: File[], tags: string[]): Promise<Draft> {
+    const form = new FormData();
+    form.set("content", content);
+    form.set("tags", tags.join(","));
+    for (const image of images) form.append("images", image);
+    return request<Draft>(`/drafts/${id}`, { method: "PATCH", body: form, headers: authHeaders() });
+}
+
 export function toggleFavorite(postId: number): Promise<{ favorited: boolean; favorites_count: number }> {
     return request<{ favorited: boolean; favorites_count: number }>(`/posts/${postId}/favorite`, {
         method: "POST",

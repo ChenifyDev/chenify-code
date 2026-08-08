@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { createDraft, createPost, type Draft, getDraft } from "@/lib/api.ts";
+import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api.ts";
 import { cn, urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import EditorField from "@/components/MarkdownEditor.tsx";
@@ -85,7 +85,9 @@ export default function Write() {
         setMessage(null);
         setError(null);
         try {
-            const draft: Draft = await createDraft(content, imageFiles, tags);
+            const draft: Draft = currentId
+                ? await updateDraft(Number(currentId), content, imageFiles, tags)
+                : await createDraft(content, imageFiles, tags);
             setMessage(`草稿已保存（#${draft.id}）`);
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
@@ -100,7 +102,14 @@ export default function Write() {
         setMessage(null);
         setError(null);
         try {
-            const post = await createPost(content, imageFiles, tags);
+            const post = await (async () => {
+                if (currentId) {
+                    await updateDraft(Number(currentId), content, imageFiles, tags);
+                    return publishDraft(Number(currentId));
+                }
+                const draft = await createDraft(content, imageFiles, tags);
+                return publishDraft(draft.id);
+            })();
             navigate(`/posts/${post.id}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : "发布失败");
