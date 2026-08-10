@@ -76,6 +76,42 @@ export interface Draft {
     tags: string[];
 }
 
+export interface WorkFile {
+    id: number;
+    name: string;
+    path: string;
+    size: number;
+}
+
+export interface WorkSummary {
+    id: number;
+    title: string;
+    description: string;
+    cover: string;
+    parent_id: number | null;
+    created_at: string;
+    updated_at: string;
+    author: UserSummary;
+    files_count: number;
+    comments_count: number;
+    likes_count: number;
+    favorites_count: number;
+    is_liked: boolean;
+    is_favorited: boolean;
+}
+
+export interface WorkDetail extends WorkSummary {
+    files: WorkFile[];
+}
+
+export interface WorkComment {
+    id: number;
+    work_id: number;
+    content: string;
+    created_at: string;
+    author: UserSummary;
+}
+
 interface LoginResponse {
     token: string;
     user: UserPublic;
@@ -158,9 +194,12 @@ export function listPosts(options: {
     tag?: string | null;
     sort?: "latest" | "hot";
 }): Promise<Post[]> {
-    return request<Post[]>(`/posts${qs({ offset: options.offset ?? 0, limit: options.limit ?? 20, tag: options.tag, sort: options.sort })}`, {
-        headers: authHeaders(),
-    });
+    return request<Post[]>(
+        `/posts${qs({ offset: options.offset ?? 0, limit: options.limit ?? 20, tag: options.tag, sort: options.sort })}`,
+        {
+            headers: authHeaders(),
+        },
+    );
 }
 
 export function getPost(id: number): Promise<Post> {
@@ -265,6 +304,10 @@ export function getSpacePosts(userId: number, offset = 0, limit = 20): Promise<P
     return request<Post[]>(`/users/${userId}/space/posts${qs({ offset, limit })}`, { headers: authHeaders() });
 }
 
+export function getSpaceWorks(userId: number, offset = 0, limit = 20): Promise<WorkSummary[]> {
+    return request<WorkSummary[]>(`/users/${userId}/space/works${qs({ offset, limit })}`, { headers: authHeaders() });
+}
+
 export function getSpaceFavorites(
     userId: number,
     offset = 0,
@@ -327,4 +370,114 @@ export function unpublishDraft(id: number): Promise<Draft> {
 
 export function deleteDraft(id: number): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/drafts/${id}`, { method: "DELETE", headers: authHeaders() });
+}
+
+function workForm(title: string, description: string, files: File[], cover?: File | null): FormData {
+    const form = new FormData();
+    form.set("title", title);
+    form.set("description", description);
+    if (cover) form.set("cover", cover);
+    for (const file of files) form.append("files", file);
+    return form;
+}
+
+export function listWorks(options: {
+    offset?: number;
+    limit?: number;
+    sort?: "latest" | "hot";
+    authorId?: number | null;
+}): Promise<WorkSummary[]> {
+    return request<WorkSummary[]>(
+        `/works${qs({ offset: options.offset ?? 0, limit: options.limit ?? 20, sort: options.sort, author_id: options.authorId })}`,
+        {
+            headers: authHeaders(),
+        },
+    );
+}
+
+export function getWork(id: number): Promise<WorkDetail> {
+    return request<WorkDetail>(`/works/${id}`, { headers: authHeaders() });
+}
+
+export function createWork(title: string, description: string, files: File[], cover: File): Promise<WorkDetail> {
+    return request<WorkDetail>("/works", {
+        method: "POST",
+        body: workForm(title, description, files, cover),
+        headers: authHeaders(),
+    });
+}
+
+export function updateWork(id: number, title: string, description: string, files: File[], cover?: File | null): Promise<WorkDetail> {
+    return request<WorkDetail>(`/works/${id}`, {
+        method: "PATCH",
+        body: workForm(title, description, files, cover),
+        headers: authHeaders(),
+    });
+}
+
+export function deleteWork(id: number): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/works/${id}`, { method: "DELETE", headers: authHeaders() });
+}
+
+export function forkWork(id: number, cover?: File | null): Promise<WorkDetail> {
+    const form = cover
+        ? (() => {
+              const f = new FormData();
+              f.set("cover", cover);
+              return f;
+          })()
+        : undefined;
+    return request<WorkDetail>(`/works/${id}/fork`, {
+        method: "POST",
+        body: form,
+        headers: authHeaders(),
+    });
+}
+
+export function listForks(id: number, offset = 0, limit = 20): Promise<WorkSummary[]> {
+    return request<WorkSummary[]>(`/works/${id}/forks${qs({ offset, limit })}`, { headers: authHeaders() });
+}
+
+export function toggleWorkLike(workId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/works/${workId}/like`, {
+        method: "POST",
+        headers: authHeaders(),
+    });
+}
+
+export function unWorkLike(workId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/works/${workId}/like`, {
+        method: "DELETE",
+        headers: authHeaders(),
+    });
+}
+
+export function toggleWorkFavorite(workId: number): Promise<{ favorited: boolean; favorites_count: number }> {
+    return request<{ favorited: boolean; favorites_count: number }>(`/works/${workId}/favorite`, {
+        method: "POST",
+        headers: authHeaders(),
+    });
+}
+
+export function unWorkFavorite(workId: number): Promise<{ favorited: boolean; favorites_count: number }> {
+    return request<{ favorited: boolean; favorites_count: number }>(`/works/${workId}/favorite`, {
+        method: "DELETE",
+        headers: authHeaders(),
+    });
+}
+
+export function listWorkComments(workId: number, offset = 0, limit = 20): Promise<WorkComment[]> {
+    return request<WorkComment[]>(`/works/${workId}/comments${qs({ offset, limit })}`);
+}
+
+export function createWorkComment(workId: number, content: string): Promise<WorkComment> {
+    return request<WorkComment>(`/works/${workId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+        headers: authHeaders(),
+    });
+}
+
+export function deleteWorkComment(commentId: number): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/works/comments/${commentId}`, { method: "DELETE", headers: authHeaders() });
 }

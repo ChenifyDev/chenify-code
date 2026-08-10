@@ -9,6 +9,7 @@ import {
     listUserPosts,
     userExists,
 } from "../db";
+import { listWorks } from "../works";
 
 function paramId(req: Request, name: string): number | Response {
     const raw = (req as Request & { params?: Record<string, string> }).params?.[name] ?? "";
@@ -59,6 +60,17 @@ export const routes: Bun.Serve.Routes<any, any> = {
         },
     },
 
+    "/api/users/:id/space/works": {
+        GET: async (req) => {
+            const id = paramId(req, "id");
+            if (isErr(id)) return id;
+            if (!userExists(id)) return jsonError(404, "用户不存在");
+            const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
+            const viewer = await getAuthUser(req);
+            return Response.json(listWorks({ offset, limit, viewerId: viewer?.id ?? null, authorId: id }));
+        },
+    },
+
     "/api/users/:id/space/favorites": {
         GET: async (req) => {
             const id = paramId(req, "id");
@@ -69,7 +81,12 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_favorites_public;
             if (hidden) return Response.json({ posts: [], hidden: true, offset, limit });
-            return Response.json({ posts: listUserFavorites(id, { offset, limit, viewerId: me?.id ?? null }), hidden: false, offset, limit });
+            return Response.json({
+                posts: listUserFavorites(id, { offset, limit, viewerId: me?.id ?? null }),
+                hidden: false,
+                offset,
+                limit,
+            });
         },
     },
 
@@ -83,7 +100,12 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_follows_public;
             if (hidden) return Response.json({ users: [], hidden: true, offset, limit });
-            return Response.json({ users: listFollowing(id, me?.id ?? null, { offset, limit }), hidden: false, offset, limit });
+            return Response.json({
+                users: listFollowing(id, me?.id ?? null, { offset, limit }),
+                hidden: false,
+                offset,
+                limit,
+            });
         },
     },
 
@@ -97,7 +119,12 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_follows_public;
             if (hidden) return Response.json({ users: [], hidden: true, offset, limit });
-            return Response.json({ users: listFollowers(id, me?.id ?? null, { offset, limit }), hidden: false, offset, limit });
+            return Response.json({
+                users: listFollowers(id, me?.id ?? null, { offset, limit }),
+                hidden: false,
+                offset,
+                limit,
+            });
         },
     },
 };

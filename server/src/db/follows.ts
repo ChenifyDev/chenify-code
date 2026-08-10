@@ -51,7 +51,13 @@ export function isFollowing(followerId: number, followingId: number): boolean {
     );
 }
 
-function followQuery(ownerId: number, viewerId: number | null, options: { offset: number; limit: number }) {
+function followQuery(
+    ownerId: number,
+    viewerId: number | null,
+    options: { offset: number; limit: number },
+    joinColumn: AnySQLiteColumn,
+    filterColumn: AnySQLiteColumn,
+) {
     const other = alias(follows, "f2");
     const base = {
         id: users.id,
@@ -60,16 +66,15 @@ function followQuery(ownerId: number, viewerId: number | null, options: { offset
         created_at: users.created_at,
         is_following: sql<number>`CASE WHEN ${other.follower_id} IS NOT NULL THEN 1 ELSE 0 END`,
     } as const;
-    return (joinColumn: AnySQLiteColumn) =>
-        db
-            .select(base)
-            .from(follows)
-            .innerJoin(users, eq(users.id, joinColumn))
-            .leftJoin(other, and(eq(other.follower_id, viewerId ?? 0), eq(other.following_id, users.id)))
-            .where(eq(joinColumn, ownerId))
-            .orderBy(desc(follows.created_at))
-            .limit(options.limit)
-            .offset(options.offset);
+    return db
+        .select(base)
+        .from(follows)
+        .innerJoin(users, eq(users.id, joinColumn))
+        .leftJoin(other, and(eq(other.follower_id, viewerId ?? 0), eq(other.following_id, users.id)))
+        .where(eq(filterColumn, ownerId))
+        .orderBy(desc(follows.created_at))
+        .limit(options.limit)
+        .offset(options.offset);
 }
 
 export function listFollowing(
@@ -77,7 +82,7 @@ export function listFollowing(
     viewerId: number | null,
     options: { offset: number; limit: number },
 ): FollowUser[] {
-    const rows = followQuery(ownerId, viewerId, options)(follows.following_id).all() as unknown as FollowUserRow[];
+    const rows = followQuery(ownerId, viewerId, options, follows.following_id, follows.follower_id).all() as unknown as FollowUserRow[];
     return rows.map((row) => ({ ...row, is_following: row.is_following === 1 }));
 }
 
@@ -86,6 +91,6 @@ export function listFollowers(
     viewerId: number | null,
     options: { offset: number; limit: number },
 ): FollowUser[] {
-    const rows = followQuery(ownerId, viewerId, options)(follows.follower_id).all() as unknown as FollowUserRow[];
+    const rows = followQuery(ownerId, viewerId, options, follows.follower_id, follows.following_id).all() as unknown as FollowUserRow[];
     return rows.map((row) => ({ ...row, is_following: row.is_following === 1 }));
 }

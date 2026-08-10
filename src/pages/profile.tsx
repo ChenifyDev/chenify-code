@@ -21,10 +21,13 @@ import {
     type FollowUser,
     type Post,
     type SpaceSkeleton,
+    getSpaceWorks,
+    type WorkSummary,
 } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
+import { WorkCard } from "@/components/works/WorkCard.tsx";
 
 const LIMIT = 10;
 
@@ -190,6 +193,25 @@ function PostsTab({ tab }: { tab: TabData<Post> }) {
     );
 }
 
+function WorksTab({ tab }: { tab: TabData<WorkSummary> }) {
+    const { load, initialized } = tab;
+    useEffect(() => {
+        if (!initialized) void load(true);
+    }, [load, initialized]);
+
+    if (tab.loading) return <SkeletonList />;
+    if (tab.error) return <Empty text={tab.error} />;
+    if (tab.items.length === 0) return <Empty text="还没有帖子" />;
+    return (
+        <div className={"m-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2"}>
+            {tab.items.map((work) => (
+                <WorkCard key={work.id} work={work} />
+            ))}
+            <LoadMore tab={tab} />
+        </div>
+    );
+}
+
 function FavoritesTab({ tab }: { tab: TabData<Post> }) {
     const { load, initialized } = tab;
     useEffect(() => {
@@ -275,6 +297,16 @@ function ProfileTabs({ userId }: { userId: number }) {
         ),
     );
 
+    const works = useTab(
+        useCallback(
+            async (offset) => {
+                const list = await getSpaceWorks(userId, offset, LIMIT);
+                return { items: list, hasMore: list.length === LIMIT, hidden: false };
+            },
+            [userId],
+        ),
+    );
+
     const favorites = useTab(
         useCallback(
             async (offset) => {
@@ -311,6 +343,9 @@ function ProfileTabs({ userId }: { userId: number }) {
                 <TabsTrigger value="posts" className="flex-1">
                     帖子
                 </TabsTrigger>
+                <TabsTrigger value={"works"} className="flex-1">
+                    作品
+                </TabsTrigger>
                 <TabsTrigger value="favorites" className="flex-1">
                     收藏
                 </TabsTrigger>
@@ -323,6 +358,9 @@ function ProfileTabs({ userId }: { userId: number }) {
             </TabsList>
             <TabsContent value="posts" className="pt-4">
                 <PostsTab tab={posts} />
+            </TabsContent>
+            <TabsContent value={"works"} className="pt-4">
+                <WorksTab tab={works} />
             </TabsContent>
             <TabsContent value="favorites" className="pt-4">
                 <FavoritesTab tab={favorites} />

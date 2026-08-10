@@ -1,0 +1,1 @@
+ALTER TABLE `works` ADD `cover` text DEFAULT '' NOT NULL;

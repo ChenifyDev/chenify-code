@@ -6,12 +6,21 @@
     "scripts": {
         "start": "bun index.ts",
         "dev": "bun index.ts --debug",
-        "seed": "bun seed.ts",
+        "seed": "bun seed.ts && bun seed-works.ts",
+        "seed:common": "bun seed.ts",
+        "seed:works": "bun seed-works.ts",
         "db:push": "drizzle-kit push",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:studio": "drizzle-kit studio",
+        "db:push:works": "drizzle-kit push --config=drizzle.works.config.ts",
+        "db:generate:works": "drizzle-kit generate --config=drizzle.works.config.ts",
+        "db:migrate:works": "drizzle-kit migrate --config=drizzle.works.config.ts",
+        "db:studio:works": "drizzle-kit studio --config=drizzle.works.config.ts",
         "build": "bun build index.ts --outdir dist --minify --target bun"
+    },
+    "dependencies": {
+        "drizzle-orm": "^0.45.2"
     },
     "devDependencies": {
         "@types/bun": "latest",
@@ -20,8 +29,5 @@
     },
     "peerDependencies": {
         "typescript": "^5"
-    },
-    "dependencies": {
-        "drizzle-orm": "^0.45.2"
     }
 }

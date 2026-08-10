@@ -19,6 +19,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 app.db
 app.db-shm
 app.db-wal
+works.db
+works.db-shm
+works.db-wal
 uploads
 
 # dotenv environment variable files
