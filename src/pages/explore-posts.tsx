@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock, Compass, Flame, Loader2 } from "lucide-react";
+import { Clock, Flame, Loader2, Signpost } from "lucide-react";
 
 import PostCard from "@/components/forum/PostCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -84,7 +84,7 @@ function Empty({ text }: { text: string }) {
     return <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>;
 }
 
-export default function Explore() {
+export default function ExplorePosts() {
     const [sort, setSort] = useState<Sort>("hot");
     const [tag, setTag] = useState<string | null>(null);
     const [tags, setTags] = useState<string[]>([]);
@@ -99,8 +99,8 @@ export default function Explore() {
         <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
             <header className="mb-4">
                 <h1 className="flex items-center gap-2 text-xl font-semibold">
-                    <Compass className="size-5" />
-                    发现
+                    <Signpost className="size-5" />
+                    帖子
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">按热度或时间浏览社区里的好内容</p>
             </header>

@@ -3,12 +3,13 @@ import { createBrowserRouter } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import App from "@/App.tsx";
 import Layout from "@/components/layout/Layout.tsx";
-import Explore from "@/pages/explore.tsx";
+import ExplorePosts from "@/pages/explore-posts.tsx";
 import Drafts from "@/pages/drafts.tsx";
 import Login from "@/pages/login.tsx";
 import Post from "@/pages/post.tsx";
 import Profile from "@/pages/profile.tsx";
 import Write from "@/pages/write.tsx";
+import ExploreWorks from "@/pages/explore-works.tsx";
 
 const router = createBrowserRouter([
     {
@@ -24,8 +25,12 @@ const router = createBrowserRouter([
                 element: <Login />,
             },
             {
-                path: "explore",
-                element: <Explore />,
+                path: "explore-posts",
+                element: <ExplorePosts />,
+            },
+            {
+                path: "explore-works",
+                element: <ExploreWorks />,
             },
             {
                 path: "drafts",

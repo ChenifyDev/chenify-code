@@ -1,4 +1,4 @@
-import { Code2, Compass, FileText, Home, LogOut, LogIn, SquarePen } from "lucide-react";
+import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { clearToken } from "@/lib/api.ts";
@@ -61,33 +61,43 @@ export default function AppSidebar() {
                                 </NavLink>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <NavLink to="/explore">
+                                <NavLink to="/explore-posts">
                                     {({ isActive }) => (
-                                        <SidebarMenuButton isActive={isActive} tooltip="发现/广场">
-                                            <Compass />
-                                            <span>发现/广场</span>
+                                        <SidebarMenuButton isActive={isActive} tooltip="帖子">
+                                            <Signpost />
+                                            <span>帖子</span>
                                         </SidebarMenuButton>
                                     )}
                                 </NavLink>
                             </SidebarMenuItem>
-                            {user && (
-                                <SidebarMenuItem>
-                                    <NavLink to="/drafts">
-                                        {({ isActive }) => (
-                                            <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
-                                                <FileText />
-                                                <span>草稿管理</span>
-                                            </SidebarMenuButton>
-                                        )}
-                                    </NavLink>
-                                </SidebarMenuItem>
-                            )}
+                            <SidebarMenuItem>
+                                <NavLink to="/explore-works">
+                                    {({ isActive }) => (
+                                        <SidebarMenuButton isActive={isActive} tooltip="帖子">
+                                            <Compass />
+                                            <span>作品</span>
+                                        </SidebarMenuButton>
+                                    )}
+                                </NavLink>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter>
+                {user && (
+                    <SidebarMenuItem>
+                        <NavLink to="/drafts">
+                            {({ isActive }) => (
+                                <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
+                                    <FileText />
+                                    <span>草稿管理</span>
+                                </SidebarMenuButton>
+                            )}
+                        </NavLink>
+                    </SidebarMenuItem>
+                )}
                 {user && (
                     <SidebarMenuItem>
                         <NavLink to="/write">
