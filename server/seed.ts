@@ -2,6 +2,7 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./src/db/client";
 import {
+    commentLikes,
     comments,
     draftTags,
     drafts,
@@ -270,13 +271,15 @@ const seedUsers: SeedUser[] = [
     },
 ];
 
-const seedComments: { post_key: string; author: string; content: string; created_at: string }[] = [
-    { post_key: "bob:0", author: "alice", content: "Bun 这套确实香，我也准备迁移了。", created_at: "2026-08-01 10:00:00" },
-    { post_key: "bob:0", author: "dave", content: "请问 SQLite 并发写入会有问题吗？", created_at: "2026-08-01 10:30:00" },
+const seedComments: { post_key: string; author: string; content: string; created_at: string; parent_content?: string; liked_by?: string[] }[] = [
+    { post_key: "bob:0", author: "alice", content: "Bun 这套确实香，我也准备迁移了。", created_at: "2026-08-01 10:00:00", liked_by: ["dave", "carol"] },
+    { post_key: "bob:0", author: "dave", content: "请问 SQLite 并发写入会有问题吗？", created_at: "2026-08-01 10:30:00", liked_by: ["alice"] },
+    { post_key: "bob:0", author: "alice", content: "写了就直接跑，不用管并发，本地先能跑通再说。", created_at: "2026-08-01 10:40:00", parent_content: "请问 SQLite 并发写入会有问题吗？" },
     { post_key: "alice:0", author: "bob", content: "博客我还没迁，主要是插件生态顾虑。", created_at: "2026-07-30 12:00:00" },
-    { post_key: "alice:1", author: "carol", content: "zustand 配 immer 简直绝配。", created_at: "2026-07-25 22:00:00" },
+    { post_key: "alice:1", author: "carol", content: "zustand 配 immer 简直绝配。", created_at: "2026-07-25 22:00:00", liked_by: ["erin", "dave"] },
     { post_key: "carol:0", author: "erin", content: "@theme 确实比 tailwind.config 直观。", created_at: "2026-07-29 12:20:00" },
-    { post_key: "dave:0", author: "carol", content: "先学 Vite 吧，上手快，底层理解可以后面补。", created_at: "2026-08-01 09:00:00" },
+    { post_key: "carol:0", author: "alice", content: "自定义 CSS 变量和 @theme 混用的坑很多，注意版本。", created_at: "2026-07-29 12:40:00", parent_content: "@theme 确实比 tailwind.config 直观。" },
+    { post_key: "dave:0", author: "carol", content: "先学 Vite 吧，上手快，底层理解可以后面补。", created_at: "2026-08-01 09:00:00", liked_by: ["erin"] },
 ];
 
 function insertOrGetId(username: string, email: string, passwordHash: string): number | null {
@@ -310,6 +313,7 @@ async function main() {
             .map((row) => row.id);
         for (const id of userIds) {
             db.delete(drafts).where(eq(drafts.user_id, id)).run();
+            db.delete(commentLikes).where(eq(commentLikes.user_id, id)).run();
             db.delete(comments).where(eq(comments.user_id, id)).run();
             db.delete(favorites).where(eq(favorites.user_id, id)).run();
             db.delete(likes).where(eq(likes.user_id, id)).run();
@@ -412,15 +416,42 @@ async function main() {
             .from(comments)
             .where(and(eq(comments.post_id, postId), eq(comments.user_id, authorId), eq(comments.content, comment.content)))
             .get();
-        if (!existing) {
-            db.insert(comments)
+        let commentId: number;
+        if (existing) {
+            commentId = existing.id;
+        } else {
+            let parentId: number | null = null;
+            if (comment.parent_content) {
+                const parent = db
+                    .select({ id: comments.id })
+                    .from(comments)
+                    .where(and(eq(comments.post_id, postId), eq(comments.content, comment.parent_content)))
+                    .get();
+                parentId = parent?.id ?? null;
+            }
+            const res = db
+                .insert(comments)
                 .values({
                     post_id: postId,
                     user_id: authorId,
                     content: comment.content,
                     created_at: comment.created_at,
+                    parent_id: parentId ?? undefined,
                 })
-                .run();
+                .returning({ id: comments.id })
+                .get();
+            commentId = res?.id ?? 0;
+        }
+        if (comment.liked_by) {
+            for (const liker of comment.liked_by) {
+                const likerId = idMap.get(liker);
+                if (likerId !== undefined && commentId) {
+                    db.insert(commentLikes)
+                        .values({ comment_id: commentId, user_id: likerId, created_at: comment.created_at })
+                        .onConflictDoNothing()
+                        .run();
+                }
+            }
         }
     }
 

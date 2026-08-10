@@ -31,10 +31,14 @@ export interface Post {
 export interface Comment {
     id: number;
     post_id: number;
+    parent_id: number | null;
     content: string;
     created_at: string;
     author: UserSummary;
     post_snippet: string;
+    likes_count: number;
+    is_liked: boolean;
+    replies: Comment[];
 }
 
 export interface SpaceUser extends UserPublic {
@@ -107,9 +111,13 @@ export interface WorkDetail extends WorkSummary {
 export interface WorkComment {
     id: number;
     work_id: number;
+    parent_id: number | null;
     content: string;
     created_at: string;
     author: UserSummary;
+    likes_count: number;
+    is_liked: boolean;
+    replies: WorkComment[];
 }
 
 interface LoginResponse {
@@ -267,19 +275,35 @@ export function unLike(postId: number): Promise<{ liked: boolean; likes_count: n
 }
 
 export function listComments(postId: number, offset = 0, limit = 20): Promise<Comment[]> {
-    return request<Comment[]>(`/posts/${postId}/comments${qs({ offset, limit })}`);
+    return request<Comment[]>(`/posts/${postId}/comments${qs({ offset, limit })}`, {
+        headers: authHeaders(),
+    });
 }
 
-export function createComment(postId: number, content: string): Promise<Comment> {
+export function createComment(postId: number, content: string, parentId?: number | null): Promise<Comment> {
     return request<Comment>(`/posts/${postId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, parent_id: parentId ?? null }),
         headers: authHeaders(),
     });
 }
 
 export function deleteComment(commentId: number): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/comments/${commentId}`, { method: "DELETE", headers: authHeaders() });
+}
+
+export function toggleCommentLike(commentId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/comments/${commentId}/like`, {
+        method: "POST",
+        headers: authHeaders(),
+    });
+}
+
+export function unCommentLike(commentId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/comments/${commentId}/like`, {
+        method: "DELETE",
+        headers: authHeaders(),
+    });
 }
 
 export function toggleFollow(userId: number): Promise<{ following: boolean; followers_count: number }> {
@@ -467,17 +491,33 @@ export function unWorkFavorite(workId: number): Promise<{ favorited: boolean; fa
 }
 
 export function listWorkComments(workId: number, offset = 0, limit = 20): Promise<WorkComment[]> {
-    return request<WorkComment[]>(`/works/${workId}/comments${qs({ offset, limit })}`);
+    return request<WorkComment[]>(`/works/${workId}/comments${qs({ offset, limit })}`, {
+        headers: authHeaders(),
+    });
 }
 
-export function createWorkComment(workId: number, content: string): Promise<WorkComment> {
+export function createWorkComment(workId: number, content: string, parentId?: number | null): Promise<WorkComment> {
     return request<WorkComment>(`/works/${workId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, parent_id: parentId ?? null }),
         headers: authHeaders(),
     });
 }
 
 export function deleteWorkComment(commentId: number): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/works/comments/${commentId}`, { method: "DELETE", headers: authHeaders() });
+}
+
+export function toggleWorkCommentLike(commentId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/works/comments/${commentId}/like`, {
+        method: "POST",
+        headers: authHeaders(),
+    });
+}
+
+export function unWorkCommentLike(commentId: number): Promise<{ liked: boolean; likes_count: number }> {
+    return request<{ liked: boolean; likes_count: number }>(`/works/comments/${commentId}/like`, {
+        method: "DELETE",
+        headers: authHeaders(),
+    });
 }

@@ -3,7 +3,7 @@ import { inArray, sql } from "drizzle-orm";
 import { db as mainDb } from "./src/db/client";
 import { users } from "./src/db/schema";
 import { db } from "./src/works";
-import { workComments, workFavorites, workFiles, workLikes, works } from "./src/works/schema";
+import { workCommentLikes, workComments, workFavorites, workFiles, workLikes, works } from "./src/works/schema";
 
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];
 
@@ -16,6 +16,8 @@ interface SeedComment {
     username: string;
     content: string;
     created_at: string;
+    parent_content?: string;
+    liked_by?: string[];
 }
 
 interface SeedWork {
@@ -51,11 +53,17 @@ const seedWorks: SeedWork[] = [
         likes: ["bob", "carol", "erin"],
         favorites: ["bob", "dave"],
         comments: [
-            { username: "bob", content: "CLI 很干净！建议支持批量查询多个城市。", created_at: "2026-08-02 10:00:00" },
+            { username: "bob", content: "CLI 很干净！建议支持批量查询多个城市。", created_at: "2026-08-02 10:00:00", liked_by: ["carol"] },
             {
                 username: "carol",
                 content: "记得用 requests.Session 复用连接，性能更好。",
                 created_at: "2026-08-02 10:30:00",
+            },
+            {
+                username: "dave",
+                content: "感谢建议，你在 v2 里就实现了 Session 复用。",
+                created_at: "2026-08-02 10:45:00",
+                parent_content: "记得用 requests.Session 复用连接，性能更好。",
             },
         ],
     },
@@ -84,6 +92,13 @@ const seedWorks: SeedWork[] = [
                 username: "alice",
                 content: "并发版本很实用，可以再限定一下同时请求数。",
                 created_at: "2026-08-03 09:00:00",
+                liked_by: ["bob"],
+            },
+            {
+                username: "bob",
+                content: "好主意，下个版本用 ThreadPoolExecutor(max_workers) 控制。",
+                created_at: "2026-08-03 09:20:00",
+                parent_content: "并发版本很实用，可以再限定一下同时请求数。",
             },
         ],
     },
@@ -111,6 +126,7 @@ const seedWorks: SeedWork[] = [
                 username: "dave",
                 content: "单进程内存限流够用，多 worker 场景要换 Redis。",
                 created_at: "2026-08-04 20:00:00",
+                liked_by: ["carol"],
             },
         ],
     },
@@ -365,6 +381,7 @@ async function main() {
 
     if (reset) {
         const removed = await deleteUploadedFiles();
+        db.delete(workCommentLikes).run();
         db.delete(workComments).run();
         db.delete(workFavorites).run();
         db.delete(workLikes).run();
@@ -451,10 +468,35 @@ async function main() {
         for (const comment of seed.comments) {
             const uid = usersById.get(comment.username);
             if (uid == null) continue;
-            db.insert(workComments)
-                .values({ work_id: work.id, user_id: uid, content: comment.content, created_at: comment.created_at })
-                .run();
+            let parentCommentId: number | null = null;
+            if (comment.parent_content) {
+                const parent = db
+                    .select({ id: workComments.id })
+                    .from(workComments)
+                    .where(sql`${workComments.work_id} = ${work.id} AND ${workComments.content} = ${comment.parent_content}`)
+                    .get();
+                parentCommentId = parent?.id ?? null;
+            }
+            const row = db
+                .insert(workComments)
+                .values({
+                    work_id: work.id,
+                    user_id: uid,
+                    content: comment.content,
+                    created_at: comment.created_at,
+                    parent_id: parentCommentId ?? undefined,
+                })
+                .returning({ id: workComments.id })
+                .get();
             commentsCount += 1;
+            for (const liker of comment.liked_by ?? []) {
+                const likerId = usersById.get(liker);
+                if (likerId == null || row == null) continue;
+                db.insert(workCommentLikes)
+                    .values({ work_comment_id: row.id, user_id: likerId, created_at: comment.created_at })
+                    .onConflictDoNothing()
+                    .run();
+            }
         }
     }
 

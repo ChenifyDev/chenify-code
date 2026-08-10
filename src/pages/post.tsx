@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Check, Copy, Heart, Loader2, MessageCircle, Send, Trash2, UserCheck, UserPlus } from "lucide-react";
+import {
+    Bookmark,
+    Check,
+    Copy,
+    CornerDownRight,
+    Heart,
+    Loader2,
+    MessageCircle,
+    Send,
+    Trash2,
+    UserCheck,
+    UserPlus,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -14,9 +26,11 @@ import {
     deletePost,
     getPost,
     listComments,
+    toggleCommentLike,
     toggleFavorite,
     toggleFollow,
     toggleLike,
+    unCommentLike,
     unFavorite,
     unFollow,
     unLike,
@@ -51,11 +65,23 @@ function PostSkeleton() {
     );
 }
 
-function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: (commentId: number) => void }) {
+function CommentRow({
+    comment,
+    parent,
+    onDelete,
+    onLike,
+    onReply,
+}: {
+    comment: Comment;
+    parent: Comment | undefined;
+    onDelete: (commentId: number) => void;
+    onLike: (comment: Comment) => void;
+    onReply: (comment: Comment) => void;
+}) {
     const me = useUserStore((s) => s.user);
     const isSelf = me?.id === comment.author.id;
     return (
-        <div className="grid gap-1.5">
+        <div className="grid gap-1.5" id={`Tag-${comment.id}`}>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Link
                     to={`/users/${comment.author.id}`}
@@ -69,13 +95,45 @@ function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: (commen
                     </Avatar>
                     <span className="truncate font-medium">{comment.author.username}</span>
                 </Link>
+                {parent && (
+                    <div>
+                        {" 回复了 "}
+                        <span
+                            onClick={() => document.getElementById(`Tag-${parent.id}`)?.scrollIntoView()}
+                            className={"cursor-pointer"}
+                        >
+                            {parent.author.username}
+                        </span>
+                    </div>
+                )}
                 <span>·</span>
                 <span className="shrink-0">{formatDateTime(comment.created_at)}</span>
+                <button
+                    type="button"
+                    className={cn(
+                        "ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground",
+                        comment.is_liked && "text-primary",
+                    )}
+                    onClick={() => onLike(comment)}
+                    aria-label="点赞评论"
+                >
+                    <Heart className={cn("size-3.5", comment.is_liked && "fill-current")} />
+                    {comment.likes_count}
+                </button>
+                <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
+                    onClick={() => onReply(comment)}
+                    aria-label="回复评论"
+                >
+                    <CornerDownRight className="size-3.5" />
+                    回复
+                </button>
                 {isSelf && (
                     <Button
                         size="icon-xs"
                         variant="ghost"
-                        className="ml-auto text-muted-foreground hover:text-destructive"
+                        className="text-muted-foreground hover:text-destructive"
                         aria-label="删除评论"
                         onClick={() => onDelete(comment.id)}
                     >
@@ -84,8 +142,40 @@ function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: (commen
                 )}
             </div>
             <p className="whitespace-pre-wrap pl-9 text-sm">{comment.content}</p>
+            {comment.replies.length > 0 && (
+                <div className="grid gap-3 border-l border-border pl-4">
+                    {comment.replies.map((reply) => (
+                        <CommentRow
+                            key={reply.id}
+                            comment={reply}
+                            parent={comment.replies.find((comment) => comment.id === reply.parent_id)}
+                            onDelete={onDelete}
+                            onLike={onLike}
+                            onReply={onReply}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
+}
+
+function insertReply(list: Comment[], reply: Comment): Comment[] {
+    return list.map((root) => {
+        if (root.id === reply.parent_id || root.replies.some((r) => r.id === reply.parent_id)) {
+            return { ...root, replies: [...root.replies, reply] };
+        }
+        return root;
+    });
+}
+
+function updateComment(list: Comment[], commentId: number, updater: (c: Comment) => Comment): Comment[] {
+    return list.map((root) => {
+        const inReplies = root.replies.some((r) => r.id === commentId);
+        if (root.id === commentId) return updater(root);
+        if (inReplies) return { ...root, replies: root.replies.map((r) => (r.id === commentId ? updater(r) : r)) };
+        return root;
+    });
 }
 
 export default function PostDetail() {
@@ -106,6 +196,7 @@ export default function PostDetail() {
     const commentsOffsetRef = useRef(0);
 
     const [draft, setDraft] = useState("");
+    const [replyTo, setReplyTo] = useState<Comment | null>(null);
     const [sending, setSending] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [followBusy, setFollowBusy] = useState(false);
@@ -228,10 +319,15 @@ export default function PostDetail() {
         if (!requireLogin()) return;
         setSending(true);
         try {
-            const comment = await createComment(post.id, draft.trim());
-            setComments((prev) => [comment, ...prev]);
+            const comment = await createComment(post.id, draft.trim(), replyTo?.id ?? null);
+            if (replyTo) {
+                setComments((prev) => insertReply(prev, comment));
+            } else {
+                setComments((prev) => [comment, ...prev]);
+            }
             setPost((prev) => (prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev));
             setDraft("");
+            setReplyTo(null);
         } catch (err) {
             console.error(err);
         } finally {
@@ -239,11 +335,31 @@ export default function PostDetail() {
         }
     };
 
+    const handleLikeComment = async (comment: Comment) => {
+        if (!requireLogin()) return;
+        try {
+            const res = comment.is_liked ? await unCommentLike(comment.id) : await toggleCommentLike(comment.id);
+            setComments((prev) =>
+                updateComment(prev, comment.id, (c) => ({ ...c, is_liked: res.liked, likes_count: res.likes_count })),
+            );
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const handleDeleteComment = async (commentId: number) => {
         try {
             await deleteComment(commentId);
-            setComments((prev) => prev.filter((c) => c.id !== commentId));
-            setPost((prev) => (prev ? { ...prev, comments_count: Math.max(0, prev.comments_count - 1) } : prev));
+            const flat = comments.flatMap((c) => [c, ...c.replies]);
+            const removedCount = flat.filter((c) => c.id === commentId || c.parent_id === commentId).length;
+            setComments((prev) =>
+                prev
+                    .filter((c) => c.id !== commentId)
+                    .map((c) => ({ ...c, replies: c.replies.filter((r) => r.id !== commentId) })),
+            );
+            setPost((prev) =>
+                prev ? { ...prev, comments_count: Math.max(0, prev.comments_count - removedCount) } : prev,
+            );
         } catch (err) {
             console.error(err);
         }
@@ -389,34 +505,56 @@ export default function PostDetail() {
                     </div>
 
                     {me ? (
-                        <div className="flex gap-2">
-                            <Avatar size="sm" className="mt-1 shrink-0">
-                                {me.avatar ? <AvatarImage src={me.avatar} alt={me.username} /> : null}
-                                <AvatarFallback>{me.username.slice(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <textarea
-                                value={draft}
-                                onChange={(e) => setDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        void handleSend();
-                                    }
-                                }}
-                                placeholder="写下你的评论…"
-                                rows={2}
-                                className="min-h-16 w-full flex-1 resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-                            />
-                            <Button
-                                variant="default"
-                                size="sm"
-                                className="mt-1 shrink-0"
-                                disabled={sending || !draft.trim()}
-                                onClick={handleSend}
-                            >
-                                {sending ? <Loader2 className="animate-spin" /> : <Send />}
-                                发送
-                            </Button>
+                        <div className="grid gap-2">
+                            {replyTo && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <CornerDownRight className="size-3.5" />
+                                    正在回复
+                                    <Link
+                                        to={`/users/${replyTo.author.id}`}
+                                        className="truncate font-medium hover:text-foreground"
+                                    >
+                                        @{replyTo.author.username}
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        className="ml-auto hover:text-foreground"
+                                        onClick={() => setReplyTo(null)}
+                                        aria-label="取消回复"
+                                    >
+                                        取消
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Avatar size="sm" className="mt-1 shrink-0">
+                                    {me.avatar ? <AvatarImage src={me.avatar} alt={me.username} /> : null}
+                                    <AvatarFallback>{me.username.slice(0, 2)}</AvatarFallback>
+                                </Avatar>
+                                <textarea
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            void handleSend();
+                                        }
+                                    }}
+                                    placeholder={replyTo ? `回复 @${replyTo.author.username}…` : "写下你的评论…"}
+                                    rows={2}
+                                    className="min-h-16 w-full flex-1 resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                                />
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="mt-1 shrink-0"
+                                    disabled={sending || !draft.trim()}
+                                    onClick={handleSend}
+                                >
+                                    {sending ? <Loader2 className="animate-spin" /> : <Send />}
+                                    发送
+                                </Button>
+                            </div>
                         </div>
                     ) : (
                         <p className="text-sm text-muted-foreground">
@@ -449,7 +587,14 @@ export default function PostDetail() {
                             <p className="text-sm text-muted-foreground">还没有评论，来抢沙发吧。</p>
                         ) : (
                             comments.map((comment) => (
-                                <CommentRow key={comment.id} comment={comment} onDelete={handleDeleteComment} />
+                                <CommentRow
+                                    key={comment.id}
+                                    comment={comment}
+                                    parent={undefined}
+                                    onDelete={handleDeleteComment}
+                                    onLike={handleLikeComment}
+                                    onReply={setReplyTo}
+                                />
                             ))
                         )}
                         {hasMoreComments && !commentsLoading && (

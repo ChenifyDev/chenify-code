@@ -51,10 +51,14 @@ export interface Post {
 export interface Comment {
     id: number;
     post_id: number;
+    parent_id: number | null;
     content: string;
     created_at: string;
     author: UserSummary;
     post_snippet: string;
+    likes_count: number;
+    is_liked: boolean;
+    replies: Comment[];
 }
 
 export interface SpaceCounts {
@@ -91,6 +95,7 @@ export interface PostRow {
 export interface CommentRow {
     id: number;
     post_id: number;
+    parent_id: number | null;
     content: string;
     created_at: string;
     user_id: number;

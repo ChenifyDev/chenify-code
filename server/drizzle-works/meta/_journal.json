@@ -15,6 +15,13 @@
       "when": 1786340170217,
       "tag": "0001_clean_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786356181325,
+      "tag": "0002_powerful_jigsaw",
+      "breakpoints": true
     }
   ]
 }

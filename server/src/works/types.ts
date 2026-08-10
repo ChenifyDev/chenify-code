@@ -36,9 +36,13 @@ export interface WorkDetail extends WorkSummary {
 export interface WorkComment {
     id: number;
     work_id: number;
+    parent_id: number | null;
     content: string;
     created_at: string;
     author: UserSummary;
+    likes_count: number;
+    is_liked: boolean;
+    replies: WorkComment[];
 }
 
 export interface WorkRow {

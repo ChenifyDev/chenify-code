@@ -1,5 +1,6 @@
 import { unlink } from "node:fs/promises";
 import {
+    commentBelongsToPost,
     createComment,
     createDraft,
     createPost,
@@ -16,11 +17,13 @@ import {
     listPosts,
     listTags,
     publishDraft,
+    toggleCommentLike,
     toggleFavorite,
     toggleFollow,
     toggleLike,
     unfavoritePost,
     unfollowUser,
+    unlikeComment,
     unlikePost,
     unpublishDraft,
     updateDraft,
@@ -220,7 +223,8 @@ export const routes: Bun.Serve.Routes<any, any> = {
             if (parsed instanceof Response) return parsed;
             if (getPostOwner(parsed) === null) return jsonError(404, "帖子不存在");
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
-            return Response.json(listComments(parsed, { offset, limit }));
+            const viewer = await getAuthUser(req);
+            return Response.json(listComments(parsed, viewer?.id ?? null, { offset, limit }));
         },
         POST: async (req) => {
             const me = await getAuthUser(req);
@@ -228,12 +232,34 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
             if (getPostOwner(parsed) === null) return jsonError(404, "帖子不存在");
-            const body = (await req.json().catch(() => null)) as { content?: string } | null;
+            const body = (await req.json().catch(() => null)) as { content?: string; parent_id?: number | null } | null;
             const content = body?.content?.trim() ?? "";
             if (!content) return jsonError(400, "评论内容不能为空");
             if (content.length > MAX_COMMENT_LENGTH) return jsonError(400, `评论不能超过 ${MAX_COMMENT_LENGTH} 字`);
-            const comment = createComment(me.id, parsed, content);
+            const parentId = body?.parent_id ?? null;
+            if (parentId != null && !commentBelongsToPost(parentId, parsed))
+                return jsonError(400, "回复目标不在该帖子下");
+            const comment = createComment(me.id, parsed, content, parentId);
             return Response.json(comment, { status: 201 });
+        },
+    },
+
+    "/api/comments/:id/like": {
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            if (getCommentOwner(parsed) === null) return jsonError(404, "评论不存在");
+            return Response.json(toggleCommentLike(me.id, parsed));
+        },
+        DELETE: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            if (getCommentOwner(parsed) === null) return jsonError(404, "评论不存在");
+            return Response.json(unlikeComment(me.id, parsed));
         },
     },
 

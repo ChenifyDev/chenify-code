@@ -214,7 +214,7 @@
 
 `GET /api/posts/:id/comments`
 
-无需登录。查询参数：`offset`、`limit`。返回 `200`，`Comment[]`。
+无需登录。查询参数：`offset`、`limit`。分页仅作用于顶层评论（`parent_id` 为空），回复归入所属顶层评论的 `replies` 数组（平铺，按时间正序）。已登录时返回 `is_liked`、`likes_count`。返回 `200`，`Comment[]`。
 
 错误：`404` 帖子不存在。
 
@@ -227,16 +227,29 @@
 | 字段 | 类型 | 必填 | 说明 |
 | ---- | ---- | ---- | ---- |
 | `content` | string | 是 | 评论内容，≤ 5000 字 |
+| `parent_id` | number | 否 | 回复的目标评论 ID（须属于同一帖子） |
 
-成功返回 `201`，`Comment`。
+成功返回 `201`，`Comment`（顶层评论的 `replies` 为 `[]`）。
 
-错误：`401` 未登录，`400` 内容为空/超长，`404` 帖子不存在。
+错误：`401` 未登录，`400` 内容为空/超长，`404` 帖子不存在或回复目标不存在。
+
+#### 点赞评论 / 取消点赞
+
+`POST /api/comments/:id/like`、`DELETE /api/comments/:id/like`
+
+需要登录。`POST` 为点赞（已赞则切换取消），`DELETE` 为取消点赞。成功返回 `200`：
+
+```json
+{ "liked": true, "likes_count": 1 }
+```
+
+错误：`401` 未登录，`404` 评论不存在。
 
 #### 删除评论
 
 `DELETE /api/comments/:id`
 
-需要登录，仅评论者本人可删。成功返回 `200`：
+需要登录，仅评论者本人可删。会级联删除该评论的所有回复及其点赞。成功返回 `200`：
 
 ```json
 { "success": true }
@@ -556,7 +569,7 @@
 
 `GET /api/works/:id/comments`
 
-无需登录。查询参数：`offset`、`limit`。返回 `200`，`WorkComment[]`。
+无需登录。查询参数：`offset`、`limit`。分页仅作用于顶层评论（`parent_id` 为空），回复归入所属顶层评论的 `replies` 数组（平铺，按时间正序）。已登录时返回 `is_liked`、`likes_count`。返回 `200`，`WorkComment[]`。
 
 错误：`404` 作品不存在。
 
@@ -569,16 +582,29 @@
 | 字段 | 类型 | 必填 | 说明 |
 | ---- | ---- | ---- | ---- |
 | `content` | string | 是 | 评论内容，≤ 5000 字 |
+| `parent_id` | number | 否 | 回复的目标评论 ID（须属于同一作品） |
 
-成功返回 `201`，`WorkComment`。
+成功返回 `201`，`WorkComment`（顶层评论的 `replies` 为 `[]`）。
 
-错误：`401` 未登录，`400` 内容为空/超长，`404` 作品不存在。
+错误：`401` 未登录，`400` 内容为空/超长，`404` 作品不存在或回复目标不存在。
+
+#### 点赞评论 / 取消点赞
+
+`POST /api/works/comments/:id/like`、`DELETE /api/works/comments/:id/like`
+
+需要登录。`POST` 为点赞（已赞则切换取消），`DELETE` 为取消点赞。成功返回 `200`：
+
+```json
+{ "liked": true, "likes_count": 1 }
+```
+
+错误：`401` 未登录，`404` 评论不存在。
 
 #### 删除评论
 
 `DELETE /api/works/comments/:id`
 
-需要登录，仅评论者本人可删。成功返回 `200`：
+需要登录，仅评论者本人可删。会级联删除该评论的所有回复及其点赞。成功返回 `200`：
 
 ```json
 { "success": true }
@@ -674,9 +700,13 @@
 | ---- | ---- | ---- |
 | `id` | number | 评论 ID |
 | `post_id` | number | 所属帖子 ID |
+| `parent_id` | number \| null | 回复目标评论 ID（null 为顶层评论） |
 | `content` | string | 评论内容 |
 | `created_at` | string | 评论时间 |
 | `author` | UserSummary | 评论者信息 |
+| `likes_count` | number | 点赞数 |
+| `is_liked` | boolean | 我是否已点赞 |
+| `replies` | Comment[] | 回复列表（顶层评论包含其下全部后代，平铺） |
 | `post_snippet` | string | 帖子内容摘要 |
 
 ### Draft
@@ -735,9 +765,13 @@
 | ---- | ---- | ---- |
 | `id` | number | 评论 ID |
 | `work_id` | number | 所属作品 ID |
+| `parent_id` | number \| null | 回复目标评论 ID（null 为顶层评论） |
 | `content` | string | 评论内容 |
 | `created_at` | string | 评论时间 |
 | `author` | UserSummary | 评论者信息 |
+| `likes_count` | number | 点赞数 |
+| `is_liked` | boolean | 我是否已点赞 |
+| `replies` | WorkComment[] | 回复列表（顶层评论包含其下全部后代，平铺） |
 
 ## 接口索引
 
@@ -757,6 +791,8 @@
 | GET | `/api/posts/:id/comments` | 否 |
 | POST | `/api/posts/:id/comments` | 是 |
 | DELETE | `/api/comments/:id` | 是（本人） |
+| POST | `/api/comments/:id/like` | 是 |
+| DELETE | `/api/comments/:id/like` | 是 |
 | POST | `/api/users/:id/follow` | 是 |
 | DELETE | `/api/users/:id/follow` | 是 |
 | GET | `/api/tags` | 否 |
@@ -787,4 +823,6 @@
 | GET | `/api/works/:id/comments` | 否 |
 | POST | `/api/works/:id/comments` | 是 |
 | DELETE | `/api/works/comments/:id` | 是（本人） |
+| POST | `/api/works/comments/:id/like` | 是 |
+| DELETE | `/api/works/comments/:id/like` | 是 |
 | GET | `/uploads/*` | 否 |

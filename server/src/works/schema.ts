@@ -77,12 +77,30 @@ export const workComments = sqliteTable(
             .notNull()
             .references(() => works.id, { onDelete: "cascade" }),
         user_id: integer("user_id").notNull(),
+        parent_id: integer("parent_id").references((): AnySQLiteColumn => workComments.id, { onDelete: "cascade" }),
         content: text("content").notNull(),
         created_at: text("created_at").notNull().default(now),
     },
     (table) => [
         index("idx_work_comments_work_id").on(table.work_id),
         index("idx_work_comments_user_id").on(table.user_id),
+        index("idx_work_comments_parent_id").on(table.parent_id),
+    ],
+);
+
+export const workCommentLikes = sqliteTable(
+    "work_comment_likes",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        work_comment_id: integer("work_comment_id")
+            .notNull()
+            .references(() => workComments.id, { onDelete: "cascade" }),
+        user_id: integer("user_id").notNull(),
+        created_at: text("created_at").notNull().default(now),
+    },
+    (table) => [
+        uniqueIndex("work_comment_likes_comment_id_user_id_unique").on(table.work_comment_id, table.user_id),
+        index("idx_work_comment_likes_user_id").on(table.user_id),
     ],
 );
 
@@ -90,3 +108,4 @@ export type WorkRow = typeof works.$inferSelect;
 export type NewWork = typeof works.$inferInsert;
 export type WorkFileRow = typeof workFiles.$inferSelect;
 export type WorkCommentRowRaw = typeof workComments.$inferSelect;
+export type WorkCommentLikeRow = typeof workCommentLikes.$inferSelect;

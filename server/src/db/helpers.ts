@@ -103,9 +103,13 @@ export function toComment(row: CommentRow): Comment {
     return {
         id: row.id,
         post_id: row.post_id,
+        parent_id: row.parent_id,
         content: row.content,
         created_at: row.created_at,
         author: { id: row.user_id, username: row.username, avatar: row.avatar, created_at: "" } satisfies UserSummary,
         post_snippet: row.post_snippet,
+        likes_count: 0,
+        is_liked: false,
+        replies: [],
     };
 }

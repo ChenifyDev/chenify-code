@@ -6,6 +6,7 @@ import {
     sqliteTable,
     text,
     uniqueIndex,
+    type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
 const now = sql`(datetime('now'))`;
@@ -122,12 +123,32 @@ export const comments = sqliteTable(
         user_id: integer("user_id")
             .notNull()
             .references(() => users.id),
+        parent_id: integer("parent_id").references((): AnySQLiteColumn => comments.id, { onDelete: "cascade" }),
         content: text("content").notNull(),
         created_at: text("created_at").notNull().default(now),
     },
     (table) => [
         index("idx_comments_post_id").on(table.post_id),
         index("idx_comments_user_id").on(table.user_id),
+        index("idx_comments_parent_id").on(table.parent_id),
+    ],
+);
+
+export const commentLikes = sqliteTable(
+    "comment_likes",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        comment_id: integer("comment_id")
+            .notNull()
+            .references(() => comments.id, { onDelete: "cascade" }),
+        user_id: integer("user_id")
+            .notNull()
+            .references(() => users.id),
+        created_at: text("created_at").notNull().default(now),
+    },
+    (table) => [
+        uniqueIndex("comment_likes_comment_id_user_id_unique").on(table.comment_id, table.user_id),
+        index("idx_comment_likes_user_id").on(table.user_id),
     ],
 );
 
@@ -234,3 +255,4 @@ export type FollowRow = typeof follows.$inferSelect;
 export type TagRow = typeof tags.$inferSelect;
 export type PostImageRow = typeof postImages.$inferSelect;
 export type FavoriteRow = typeof favorites.$inferSelect;
+export type CommentLikeRow = typeof commentLikes.$inferSelect;
