@@ -60,7 +60,7 @@ function fetchPostLikes(viewer: number, ids: number[]): Set<number> {
     return set;
 }
 
-function fetchFollowedAuthors(viewer: number, authorIds: number[]): Set<number> {
+export function fetchFollowedAuthors(viewer: number, authorIds: number[]): Set<number> {
     const set = new Set<number>();
     if (authorIds.length === 0) return set;
     const rows = db

@@ -8,19 +8,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx"
 export const WorkCard = ({ work, className }: { work: WorkSummary; className?: string }) => {
     const user = work.author;
     const navigate = useNavigate();
+    const workUrl = `/works/${work.id}`;
+
     return (
         <Card key={work.id} className={`relative overflow-hidden ${className || ""}`}>
             <img
-                className={"cursor-pointer"}
                 alt={work.title}
                 src={work.cover}
-                onClick={() => alert("这里什么都没有（")}
+                className={"cursor-pointer"}
+                onClick={() => window.open(workUrl, "_blank")}
             />
 
             <CardHeader>
-                <CardTitle className={"cursor-pointer"} onClick={() => alert("这里什么都没有（")}>
-                    {work.title}
-                </CardTitle>
+                <Link to={workUrl} target="_blank" rel="noopener noreferrer">
+                    <CardTitle>{work.title}</CardTitle>
+                </Link>
                 <CardDescription className="mt-2">{work.description}</CardDescription>
             </CardHeader>
 

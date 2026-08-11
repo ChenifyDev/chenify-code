@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "./client";
+import { db as worksDb } from "../works";
 import { favorites, follows, posts, users } from "./schema";
 import type { User, UserPublic, SpaceUser } from "./types";
+import { works } from "../works/schema.ts";
 
 const publicCols = {
     id: users.id,
@@ -27,20 +29,12 @@ export function createUser(username: string, email: string, passwordHash: string
 }
 
 export function findUserByEmail(email: string): User | null {
-    const row = db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .get();
+    const row = db.select().from(users).where(eq(users.email, email)).get();
     return (row as User | undefined) ?? null;
 }
 
 export function findUserByUsername(username: string): User | null {
-    const row = db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .get();
+    const row = db.select().from(users).where(eq(users.username, username)).get();
     return (row as User | undefined) ?? null;
 }
 
@@ -49,11 +43,7 @@ export function findUserByUsernameOrEmail(login: string): User | null {
 }
 
 export function findUserById(id: number): UserPublic | null {
-    const row = db
-        .select(publicCols)
-        .from(users)
-        .where(eq(users.id, id))
-        .get();
+    const row = db.select(publicCols).from(users).where(eq(users.id, id)).get();
     return row ?? null;
 }
 
@@ -90,6 +80,7 @@ export function userExists(id: number): boolean {
 
 export function getSpaceCounts(userId: number): {
     posts: number;
+    works: number;
     favorites: number;
     following: number;
     followers: number;
@@ -98,6 +89,11 @@ export function getSpaceCounts(userId: number): {
         .select({ n: sql<number>`count(*)` })
         .from(posts)
         .where(eq(posts.user_id, userId))
+        .get()!.n;
+    const worksN = worksDb
+        .select({ n: sql<number>`count(*)` })
+        .from(works)
+        .where(eq(works.user_id, userId))
         .get()!.n;
     const favoritesN = db
         .select({ n: sql<number>`count(*)` })
@@ -114,7 +110,7 @@ export function getSpaceCounts(userId: number): {
         .from(follows)
         .where(eq(follows.following_id, userId))
         .get()!.n;
-    return { posts: postsN, favorites: favoritesN, following: followingN, followers: followersN };
+    return { posts: postsN, works: worksN, favorites: favoritesN, following: followingN, followers: followersN };
 }
 
 export function updatePrivacy(

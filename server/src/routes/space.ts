@@ -36,6 +36,7 @@ export const routes: Bun.Serve.Routes<any, any> = {
 
             const counts = {
                 posts: rawCounts.posts,
+                works: rawCounts.works,
                 favorites: isSelf || user.is_favorites_public ? rawCounts.favorites : null,
                 following: isSelf || user.is_follows_public ? rawCounts.following : null,
                 followers: isSelf || user.is_follows_public ? rawCounts.followers : null,

@@ -25,7 +25,7 @@ import { getAuthUser, jsonError, parsePagination } from "./util";
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_WORK_FILES = 20;
-const MAX_WORK_FILE_SIZE = 1 * 1024 * 1024;
+const MAX_WORK_FILE_SIZE = 1024 * 1024;
 const MAX_COMMENT_LENGTH = 5000;
 
 const ALLOWED_COVER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
@@ -49,7 +49,9 @@ function fileExtension(filename: string): string {
     return /^[a-zA-Z0-9]{1,8}$/.test(ext) ? ext : "txt";
 }
 
-async function saveWorkFiles(files: File[]): Promise<{ rows: { name: string; path: string; size: number }[]; error?: string }> {
+async function saveWorkFiles(
+    files: File[],
+): Promise<{ rows: { name: string; path: string; size: number }[]; error?: string }> {
     const rows: { name: string; path: string; size: number }[] = [];
     for (const file of files) {
         if (file.size > MAX_WORK_FILE_SIZE) {

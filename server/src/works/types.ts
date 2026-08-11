@@ -27,6 +27,7 @@ export interface WorkSummary {
     favorites_count: number;
     is_liked: boolean;
     is_favorited: boolean;
+    is_following_author: boolean;
 }
 
 export interface WorkDetail extends WorkSummary {

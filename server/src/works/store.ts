@@ -4,6 +4,7 @@ import { users } from "../db/schema";
 import { db } from "./db";
 import { workCommentLikes, workComments, workFavorites, workFiles, workLikes, works } from "./schema";
 import type { UserSummary, WorkComment, WorkFile, WorkRow, WorkSummary } from "./types";
+import { fetchFollowedAuthors } from "../db/helpers.ts";
 
 const countCommentsSub = sql<number>`(select count(*) from ${workComments} c where c.work_id = works.id)`;
 const countLikesSub = sql<number>`(select count(*) from ${workLikes} l where l.work_id = works.id)`;
@@ -65,7 +66,10 @@ function hydrateWorks(rows: WorkRow[], viewerId: number | null): WorkSummary[] {
     if (rows.length === 0) return [];
     const ids = rows.map((row) => row.id);
     const authors = fetchAuthors([...new Set(rows.map((r) => r.user_id))]);
-    const viewer = viewerId == null ? { liked: new Set<number>(), favorited: new Set<number>() } : fetchViewerLikes(viewerId, ids);
+    const viewer =
+        viewerId == null ? { liked: new Set<number>(), favorited: new Set<number>() } : fetchViewerLikes(viewerId, ids);
+    const followAuthorIds =
+        viewerId == null ? new Set<number>() : fetchFollowedAuthors(viewerId, [...new Set(rows.map((r) => r.user_id))]);
     return rows.map((row) => ({
         id: row.id,
         title: row.title,
@@ -86,6 +90,7 @@ function hydrateWorks(rows: WorkRow[], viewerId: number | null): WorkSummary[] {
         favorites_count: row.favorites_count,
         is_liked: viewer.liked.has(row.id),
         is_favorited: viewer.favorited.has(row.id),
+        is_following_author: followAuthorIds.has(row.user_id),
     }));
 }
 
@@ -115,7 +120,10 @@ export function createWork(
         .values({ user_id: userId, title, description, cover, parent_id: parentId })
         .returning()
         .get();
-    for (const file of fileRows) db.insert(workFiles).values({ work_id: work.id, ...file }).run();
+    for (const file of fileRows)
+        db.insert(workFiles)
+            .values({ work_id: work.id, ...file })
+            .run();
     return getWorkById(work.id, userId);
 }
 
@@ -136,9 +144,15 @@ export function updateWork(
 ): { work: (WorkSummary & { files: WorkFile[] }) | null; removedFiles: string[]; removedCover: string | null } {
     const oldCover = db.select({ cover: works.cover }).from(works).where(eq(works.id, id)).get()?.cover ?? "";
     const oldPaths = getWorkFiles(id).map((f) => f.path);
-    db.update(works).set({ title, description, cover, updated_at: new Date().toISOString() }).where(eq(works.id, id)).run();
+    db.update(works)
+        .set({ title, description, cover, updated_at: new Date().toISOString() })
+        .where(eq(works.id, id))
+        .run();
     db.delete(workFiles).where(eq(workFiles.work_id, id)).run();
-    for (const file of fileRows) db.insert(workFiles).values({ work_id: id, ...file }).run();
+    for (const file of fileRows)
+        db.insert(workFiles)
+            .values({ work_id: id, ...file })
+            .run();
     const removedCover = oldCover !== cover && oldCover.startsWith("/uploads/") ? oldCover : null;
     return { work: getWorkById(id, getWorkOwner(id) ?? null), removedFiles: oldPaths, removedCover };
 }
@@ -164,10 +178,7 @@ export function listWorks(options: {
     const { offset, limit, viewerId, authorId } = options;
 
     if (options.sort === "hot") {
-        const authorFilter =
-            authorId != null
-                ? sql`WHERE w.user_id = ${authorId}`
-                : sql``;
+        const authorFilter = authorId != null ? sql`WHERE w.user_id = ${authorId}` : sql``;
         const rows = db.all(sql`
             SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 5 + 1)
                 / (1 + ln(1 + (julianday('now') - julianday(created_at)) * 24))) AS heat
@@ -194,7 +205,10 @@ export function listWorks(options: {
     return hydrateWorks(rows, viewerId);
 }
 
-export function listForks(workId: number, options: { offset: number; limit: number; viewerId: number | null }): WorkSummary[] {
+export function listForks(
+    workId: number,
+    options: { offset: number; limit: number; viewerId: number | null },
+): WorkSummary[] {
     const rows = workBoard(eq(works.parent_id, workId))
         .orderBy(desc(works.created_at), desc(works.id))
         .limit(options.limit)
@@ -204,7 +218,11 @@ export function listForks(workId: number, options: { offset: number; limit: numb
 }
 
 function countLikes(workId: number): number {
-    return db.select({ n: sql<number>`count(*)` }).from(workLikes).where(eq(workLikes.work_id, workId)).get()!.n;
+    return db
+        .select({ n: sql<number>`count(*)` })
+        .from(workLikes)
+        .where(eq(workLikes.work_id, workId))
+        .get()!.n;
 }
 
 export function toggleWorkLike(userId: number, workId: number): { liked: boolean; likes_count: number } {
@@ -214,7 +232,9 @@ export function toggleWorkLike(userId: number, workId: number): { liked: boolean
         .where(and(eq(workLikes.user_id, userId), eq(workLikes.work_id, workId)))
         .get();
     if (existing) {
-        db.delete(workLikes).where(and(eq(workLikes.user_id, userId), eq(workLikes.work_id, workId))).run();
+        db.delete(workLikes)
+            .where(and(eq(workLikes.user_id, userId), eq(workLikes.work_id, workId)))
+            .run();
         return { liked: false, likes_count: countLikes(workId) };
     }
     db.insert(workLikes).values({ user_id: userId, work_id: workId }).onConflictDoNothing().run();
@@ -222,12 +242,18 @@ export function toggleWorkLike(userId: number, workId: number): { liked: boolean
 }
 
 export function unlikeWork(userId: number, workId: number): { liked: boolean; likes_count: number } {
-    db.delete(workLikes).where(and(eq(workLikes.user_id, userId), eq(workLikes.work_id, workId))).run();
+    db.delete(workLikes)
+        .where(and(eq(workLikes.user_id, userId), eq(workLikes.work_id, workId)))
+        .run();
     return { liked: false, likes_count: countLikes(workId) };
 }
 
 function countFavorites(workId: number): number {
-    return db.select({ n: sql<number>`count(*)` }).from(workFavorites).where(eq(workFavorites.work_id, workId)).get()!.n;
+    return db
+        .select({ n: sql<number>`count(*)` })
+        .from(workFavorites)
+        .where(eq(workFavorites.work_id, workId))
+        .get()!.n;
 }
 
 export function toggleWorkFavorite(userId: number, workId: number): { favorited: boolean; favorites_count: number } {
@@ -237,7 +263,9 @@ export function toggleWorkFavorite(userId: number, workId: number): { favorited:
         .where(and(eq(workFavorites.user_id, userId), eq(workFavorites.work_id, workId)))
         .get();
     if (existing) {
-        db.delete(workFavorites).where(and(eq(workFavorites.user_id, userId), eq(workFavorites.work_id, workId))).run();
+        db.delete(workFavorites)
+            .where(and(eq(workFavorites.user_id, userId), eq(workFavorites.work_id, workId)))
+            .run();
         return { favorited: false, favorites_count: countFavorites(workId) };
     }
     db.insert(workFavorites).values({ user_id: userId, work_id: workId }).onConflictDoNothing().run();
@@ -245,11 +273,18 @@ export function toggleWorkFavorite(userId: number, workId: number): { favorited:
 }
 
 export function unfavoriteWork(userId: number, workId: number): { favorited: boolean; favorites_count: number } {
-    db.delete(workFavorites).where(and(eq(workFavorites.user_id, userId), eq(workFavorites.work_id, workId))).run();
+    db.delete(workFavorites)
+        .where(and(eq(workFavorites.user_id, userId), eq(workFavorites.work_id, workId)))
+        .run();
     return { favorited: false, favorites_count: countFavorites(workId) };
 }
 
-export function createWorkComment(userId: number, workId: number, content: string, parentId?: number | null): WorkComment | null {
+export function createWorkComment(
+    userId: number,
+    workId: number,
+    content: string,
+    parentId?: number | null,
+): WorkComment | null {
     const insertValues = parentId
         ? { work_id: workId, user_id: userId, content, parent_id: parentId }
         : { work_id: workId, user_id: userId, content };
@@ -324,7 +359,10 @@ export function listWorkComments(
 
     const authors = fetchAuthors([...new Set(rows.map((r) => r.user_id))]);
     const likeCounts = countWorkCommentLikes(rows.map((r) => r.id));
-    const likedIds = fetchLikedWorkComments(viewerId, rows.map((r) => r.id));
+    const likedIds = fetchLikedWorkComments(
+        viewerId,
+        rows.map((r) => r.id),
+    );
 
     const withAuthor: (WorkCommentFlat & { author: UserSummary })[] = rows.map((row) => ({
         ...row,
@@ -387,12 +425,20 @@ export function getWorkCommentOwner(id: number): number | null {
 }
 
 export function workCommentBelongsToWork(commentId: number, workId: number): boolean {
-    const row = db.select({ work_id: workComments.work_id }).from(workComments).where(eq(workComments.id, commentId)).get();
+    const row = db
+        .select({ work_id: workComments.work_id })
+        .from(workComments)
+        .where(eq(workComments.id, commentId))
+        .get();
     return row != null && row.work_id === workId;
 }
 
 function countWorkCommentLikesFor(commentId: number): number {
-    return db.select({ n: sql<number>`count(*)` }).from(workCommentLikes).where(eq(workCommentLikes.work_comment_id, commentId)).get()!.n;
+    return db
+        .select({ n: sql<number>`count(*)` })
+        .from(workCommentLikes)
+        .where(eq(workCommentLikes.work_comment_id, commentId))
+        .get()!.n;
 }
 
 export function toggleWorkCommentLike(userId: number, commentId: number): { liked: boolean; likes_count: number } {

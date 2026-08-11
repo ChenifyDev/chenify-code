@@ -203,7 +203,7 @@ function WorksTab({ tab }: { tab: TabData<WorkSummary> }) {
     if (tab.error) return <Empty text={tab.error} />;
     if (tab.items.length === 0) return <Empty text="还没有帖子" />;
     return (
-        <div className={"m-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2"}>
+        <div className={"m-4 columns-2 sm:columns-3 md:columns-3 lg:columns-3 gap-4 space-y-2"}>
             {tab.items.map((work) => (
                 <WorkCard key={work.id} work={work} />
             ))}
@@ -517,6 +517,7 @@ export default function Profile() {
                     <Separator className="mt-4" />
                     <div className="flex items-center justify-around pt-2">
                         <Stat label="帖子" value={counts.posts} />
+                        <Stat label={"作品"} value={counts.works} />
                         <Stat label="收藏" value={counts.favorites} />
                         <Stat label="关注" value={counts.following} />
                         <Stat label="粉丝" value={counts.followers} />
