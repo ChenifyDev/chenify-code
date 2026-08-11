@@ -1,17 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-    Bookmark,
-    Check,
-    Copy,
-    CornerDownRight,
-    Heart,
-    Loader2,
-    MessageCircle,
-    Send,
-    Trash2,
-    UserCheck,
-    UserPlus,
-} from "lucide-react";
+import { Bookmark, Check, Copy, Heart, MessageCircle, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -34,12 +22,15 @@ import {
     unFavorite,
     unFollow,
     unLike,
-    type Comment,
+    type PostComment as Comment,
     type Post,
 } from "@/lib/api.ts";
 import { formatDateTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
+import { insertReply, updateComment } from "@/components/comments/utils.ts";
+import CommentInput from "@/components/comments/CommentInput.tsx";
+import CommentList from "@/components/comments/CommentList.tsx";
 
 const COMMENTS_LIMIT = 20;
 
@@ -63,119 +54,6 @@ function PostSkeleton() {
             </div>
         </div>
     );
-}
-
-function CommentRow({
-    comment,
-    parent,
-    onDelete,
-    onLike,
-    onReply,
-}: {
-    comment: Comment;
-    parent: Comment | undefined;
-    onDelete: (commentId: number) => void;
-    onLike: (comment: Comment) => void;
-    onReply: (comment: Comment) => void;
-}) {
-    const me = useUserStore((s) => s.user);
-    const isSelf = me?.id === comment.author.id;
-    return (
-        <div className="grid gap-1.5" id={`Tag-${comment.id}`}>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Link
-                    to={`/users/${comment.author.id}`}
-                    className="flex min-w-0 items-center gap-2 hover:text-foreground"
-                >
-                    <Avatar size="sm">
-                        {comment.author.avatar ? (
-                            <AvatarImage src={comment.author.avatar} alt={comment.author.username} />
-                        ) : null}
-                        <AvatarFallback>{comment.author.username.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <span className="truncate font-medium">{comment.author.username}</span>
-                </Link>
-                {parent && (
-                    <div>
-                        {" 回复了 "}
-                        <span
-                            onClick={() => document.getElementById(`Tag-${parent.id}`)?.scrollIntoView()}
-                            className={"cursor-pointer"}
-                        >
-                            {parent.author.username}
-                        </span>
-                    </div>
-                )}
-                <span>·</span>
-                <span className="shrink-0">{formatDateTime(comment.created_at)}</span>
-                <button
-                    type="button"
-                    className={cn(
-                        "ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground",
-                        comment.is_liked && "text-primary",
-                    )}
-                    onClick={() => onLike(comment)}
-                    aria-label="点赞评论"
-                >
-                    <Heart className={cn("size-3.5", comment.is_liked && "fill-current")} />
-                    {comment.likes_count}
-                </button>
-                <button
-                    type="button"
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
-                    onClick={() => onReply(comment)}
-                    aria-label="回复评论"
-                >
-                    <CornerDownRight className="size-3.5" />
-                    回复
-                </button>
-                {isSelf && (
-                    <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label="删除评论"
-                        onClick={() => onDelete(comment.id)}
-                    >
-                        <Trash2 />
-                    </Button>
-                )}
-            </div>
-            <p className="whitespace-pre-wrap pl-9 text-sm">{comment.content}</p>
-            {comment.replies.length > 0 && (
-                <div className="grid gap-3 border-l border-border pl-4">
-                    {comment.replies.map((reply) => (
-                        <CommentRow
-                            key={reply.id}
-                            comment={reply}
-                            parent={comment.replies.find((comment) => comment.id === reply.parent_id)}
-                            onDelete={onDelete}
-                            onLike={onLike}
-                            onReply={onReply}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function insertReply(list: Comment[], reply: Comment): Comment[] {
-    return list.map((root) => {
-        if (root.id === reply.parent_id || root.replies.some((r) => r.id === reply.parent_id)) {
-            return { ...root, replies: [...root.replies, reply] };
-        }
-        return root;
-    });
-}
-
-function updateComment(list: Comment[], commentId: number, updater: (c: Comment) => Comment): Comment[] {
-    return list.map((root) => {
-        const inReplies = root.replies.some((r) => r.id === commentId);
-        if (root.id === commentId) return updater(root);
-        if (inReplies) return { ...root, replies: root.replies.map((r) => (r.id === commentId ? updater(r) : r)) };
-        return root;
-    });
 }
 
 export default function PostDetail() {
@@ -504,111 +382,27 @@ export default function PostDetail() {
                         评论 {post.comments_count}
                     </div>
 
-                    {me ? (
-                        <div className="grid gap-2">
-                            {replyTo && (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <CornerDownRight className="size-3.5" />
-                                    正在回复
-                                    <Link
-                                        to={`/users/${replyTo.author.id}`}
-                                        className="truncate font-medium hover:text-foreground"
-                                    >
-                                        @{replyTo.author.username}
-                                    </Link>
-                                    <button
-                                        type="button"
-                                        className="ml-auto hover:text-foreground"
-                                        onClick={() => setReplyTo(null)}
-                                        aria-label="取消回复"
-                                    >
-                                        取消
-                                    </button>
-                                </div>
-                            )}
-                            <div className="flex gap-2">
-                                <Avatar size="sm" className="mt-1 shrink-0">
-                                    {me.avatar ? <AvatarImage src={me.avatar} alt={me.username} /> : null}
-                                    <AvatarFallback>{me.username.slice(0, 2)}</AvatarFallback>
-                                </Avatar>
-                                <textarea
-                                    value={draft}
-                                    onChange={(e) => setDraft(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" && !e.shiftKey) {
-                                            e.preventDefault();
-                                            void handleSend();
-                                        }
-                                    }}
-                                    placeholder={replyTo ? `回复 @${replyTo.author.username}…` : "写下你的评论…"}
-                                    rows={2}
-                                    className="min-h-16 w-full flex-1 resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-                                />
-                                <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="mt-1 shrink-0"
-                                    disabled={sending || !draft.trim()}
-                                    onClick={handleSend}
-                                >
-                                    {sending ? <Loader2 className="animate-spin" /> : <Send />}
-                                    发送
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            <button
-                                className="text-primary underline underline-offset-2"
-                                onClick={() => navigate("/login")}
-                            >
-                                登录
-                            </button>
-                            &nbsp;后参与评论
-                        </p>
-                    )}
+                    <CommentInput
+                        me={me}
+                        draft={draft}
+                        sending={sending}
+                        replyTo={replyTo}
+                        setDraft={setDraft}
+                        setReplyTo={setReplyTo}
+                        handleSend={handleSend}
+                    />
 
-                    <div className="grid gap-4">
-                        {commentsLoading ? (
-                            <div className="grid gap-4">
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="grid gap-1.5">
-                                        <div className="flex items-center gap-2">
-                                            <Skeleton className="size-6 rounded-full" />
-                                            <Skeleton className="h-3 w-20" />
-                                        </div>
-                                        <Skeleton className="h-3 w-2/3" />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : commentError ? (
-                            <p className="text-sm text-muted-foreground">{commentError}</p>
-                        ) : comments.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">还没有评论，来抢沙发吧。</p>
-                        ) : (
-                            comments.map((comment) => (
-                                <CommentRow
-                                    key={comment.id}
-                                    comment={comment}
-                                    parent={undefined}
-                                    onDelete={handleDeleteComment}
-                                    onLike={handleLikeComment}
-                                    onReply={setReplyTo}
-                                />
-                            ))
-                        )}
-                        {hasMoreComments && !commentsLoading && (
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                disabled={commentsLoadingMore}
-                                onClick={() => void loadComments(false)}
-                            >
-                                {commentsLoadingMore && <Loader2 className="animate-spin" />}
-                                {commentsLoadingMore ? "加载中…" : "加载更多评论"}
-                            </Button>
-                        )}
-                    </div>
+                    <CommentList
+                        commentsLoading={commentsLoading}
+                        commentError={commentError}
+                        comments={comments}
+                        handleDeleteComment={handleDeleteComment}
+                        setReplyTo={setReplyTo}
+                        loadComments={loadComments}
+                        hasMoreComments={hasMoreComments}
+                        handleLikeComment={handleLikeComment}
+                        commentsLoadingMore={commentsLoadingMore}
+                    />
                 </CardContent>
             </Card>
         </div>

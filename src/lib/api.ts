@@ -28,7 +28,7 @@ export interface Post {
     is_following_author: boolean;
 }
 
-export interface Comment {
+export interface PostComment {
     id: number;
     post_id: number;
     parent_id: number | null;
@@ -38,7 +38,7 @@ export interface Comment {
     post_snippet: string;
     likes_count: number;
     is_liked: boolean;
-    replies: Comment[];
+    replies: PostComment[];
 }
 
 export interface SpaceUser extends UserPublic {
@@ -48,6 +48,7 @@ export interface SpaceUser extends UserPublic {
 
 export interface SpaceCounts {
     posts: number;
+    works: number;
     favorites: number | null;
     following: number | null;
     followers: number | null;
@@ -102,6 +103,7 @@ export interface WorkSummary {
     favorites_count: number;
     is_liked: boolean;
     is_favorited: boolean;
+    is_following_author: boolean;
 }
 
 export interface WorkDetail extends WorkSummary {
@@ -274,6 +276,7 @@ export function unLike(postId: number): Promise<{ liked: boolean; likes_count: n
     });
 }
 
+type Comment = PostComment;
 export function listComments(postId: number, offset = 0, limit = 20): Promise<Comment[]> {
     return request<Comment[]>(`/posts/${postId}/comments${qs({ offset, limit })}`, {
         headers: authHeaders(),
@@ -431,7 +434,13 @@ export function createWork(title: string, description: string, files: File[], co
     });
 }
 
-export function updateWork(id: number, title: string, description: string, files: File[], cover?: File | null): Promise<WorkDetail> {
+export function updateWork(
+    id: number,
+    title: string,
+    description: string,
+    files: File[],
+    cover?: File | null,
+): Promise<WorkDetail> {
     return request<WorkDetail>(`/works/${id}`, {
         method: "PATCH",
         body: workForm(title, description, files, cover),
