@@ -1,8 +1,8 @@
-import { eq, sql } from "drizzle-orm";
+import { count, desc, eq, like, sql } from "drizzle-orm";
 import { db } from "./client";
 import { db as worksDb } from "../works";
 import { favorites, follows, posts, users } from "./schema";
-import type { User, UserPublic, SpaceUser } from "./types";
+import type { SpaceUser, User, UserPublic } from "./types";
 import { works } from "../works/schema.ts";
 
 const publicCols = {
@@ -14,7 +14,7 @@ const publicCols = {
 } as const;
 
 export function createUser(username: string, email: string, passwordHash: string, avatar: string | null): UserPublic {
-    const row = db
+    return db
         .insert(users)
         .values({
             username,
@@ -25,7 +25,6 @@ export function createUser(username: string, email: string, passwordHash: string
         })
         .returning(publicCols)
         .get();
-    return row;
 }
 
 export function findUserByEmail(email: string): User | null {
@@ -71,7 +70,7 @@ export function getSpaceUser(id: number): SpaceUser | null {
 
 export function userExists(id: number): boolean {
     const row = db
-        .select({ one: sql`1` })
+        .select({ one: sql.raw("1") })
         .from(users)
         .where(eq(users.id, id))
         .get();
@@ -85,31 +84,11 @@ export function getSpaceCounts(userId: number): {
     following: number;
     followers: number;
 } {
-    const postsN = db
-        .select({ n: sql<number>`count(*)` })
-        .from(posts)
-        .where(eq(posts.user_id, userId))
-        .get()!.n;
-    const worksN = worksDb
-        .select({ n: sql<number>`count(*)` })
-        .from(works)
-        .where(eq(works.user_id, userId))
-        .get()!.n;
-    const favoritesN = db
-        .select({ n: sql<number>`count(*)` })
-        .from(favorites)
-        .where(eq(favorites.user_id, userId))
-        .get()!.n;
-    const followingN = db
-        .select({ n: sql<number>`count(*)` })
-        .from(follows)
-        .where(eq(follows.follower_id, userId))
-        .get()!.n;
-    const followersN = db
-        .select({ n: sql<number>`count(*)` })
-        .from(follows)
-        .where(eq(follows.following_id, userId))
-        .get()!.n;
+    const postsN = db.select({ n: count() }).from(posts).where(eq(posts.user_id, userId)).get()!.n;
+    const worksN = worksDb.select({ n: count() }).from(works).where(eq(works.user_id, userId)).get()!.n;
+    const favoritesN = db.select({ n: count() }).from(favorites).where(eq(favorites.user_id, userId)).get()!.n;
+    const followingN = db.select({ n: count() }).from(follows).where(eq(follows.follower_id, userId)).get()!.n;
+    const followersN = db.select({ n: count() }).from(follows).where(eq(follows.following_id, userId)).get()!.n;
     return { posts: postsN, works: worksN, favorites: favoritesN, following: followingN, followers: followersN };
 }
 
@@ -123,4 +102,21 @@ export function updatePrivacy(
     if (isFollowsPublic !== undefined) set.is_follows_public = isFollowsPublic;
     if (Object.keys(set).length === 0) return;
     db.update(users).set(set).where(eq(users.id, userId)).run();
+}
+
+export async function searchUsers(options: { offset: number; limit: number; keyword: string }): Promise<UserPublic[]> {
+    const { offset, limit, keyword } = options;
+
+    const followerCount = sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.following_id} = ${users.id})`;
+    const workCount = sql<number>`(SELECT COUNT(*) FROM ${works} WHERE ${works.user_id} = ${users.id})`;
+    const score = sql<number>`(${followerCount} * 3 + ${workCount} * 2)`;
+
+    return db
+        .select(publicCols)
+        .from(users)
+        .where(like(users.username, `%${keyword}%`))
+        .orderBy(desc(score), desc(users.created_at))
+        .limit(limit)
+        .offset(offset)
+        .all();
 }

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import { commentLikes, comments, posts, users } from "./schema";
 import { toComment } from "./helpers";
@@ -33,7 +33,7 @@ function countCommentLikes(commentIds: number[]): Map<number, number> {
     const map = new Map<number, number>();
     if (commentIds.length === 0) return map;
     const rows = db
-        .select({ comment_id: commentLikes.comment_id, n: sql<number>`count(*)` })
+        .select({ comment_id: commentLikes.comment_id, n: count() })
         .from(commentLikes)
         .where(inArray(commentLikes.comment_id, commentIds))
         .groupBy(commentLikes.comment_id)
@@ -54,8 +54,15 @@ function fetchLikedComments(viewerId: number | null, commentIds: number[]): Set<
     return set;
 }
 
-export function createComment(userId: number, postId: number, content: string, parentId?: number | null): Comment | null {
-    const insertValues = parentId ? { post_id: postId, user_id: userId, content, parent_id: parentId } : { post_id: postId, user_id: userId, content };
+export function createComment(
+    userId: number,
+    postId: number,
+    content: string,
+    parentId?: number | null,
+): Comment | null {
+    const insertValues = parentId
+        ? { post_id: postId, user_id: userId, content, parent_id: parentId }
+        : { post_id: postId, user_id: userId, content };
     const result = db.insert(comments).values(insertValues).returning().get();
     const row = db
         .select(commentSelect)
@@ -81,7 +88,10 @@ export function listComments(
 
     const authors = fetchCommentAuthors(rows);
     const likeCounts = countCommentLikes(rows.map((r) => r.id));
-    const likedIds = fetchLikedComments(viewerId, rows.map((r) => r.id));
+    const likedIds = fetchLikedComments(
+        viewerId,
+        rows.map((r) => r.id),
+    );
 
     const base: (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[] = rows.map((row) => ({
         ...row,
@@ -92,15 +102,23 @@ export function listComments(
 
     // 顶层评论按创建时间倒序；每条顶层评论的回复（含所有后代）按时间正序平铺
     const roots = base.filter((c) => c.parent_id == null);
-    const childrenMap = new Map<number, (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[]>();
+    const childrenMap = new Map<
+        number,
+        (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[]
+    >();
     for (const c of base) {
         if (c.parent_id == null) continue;
         const arr = childrenMap.get(c.parent_id) ?? [];
         arr.push(c);
         childrenMap.set(c.parent_id, arr);
     }
-    const descendants = new Map<number, (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[]>();
-    const collect = (rootId: number): (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[] => {
+    const descendants = new Map<
+        number,
+        (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[]
+    >();
+    const collect = (
+        rootId: number,
+    ): (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[] => {
         if (descendants.has(rootId)) return descendants.get(rootId)!;
         const out: (CommentRow & { author: UserSummary; likes_count: number; is_liked: boolean })[] = [];
         const queue = [rootId];
@@ -139,25 +157,17 @@ export function listComments(
 }
 
 export function getCommentOwner(id: number): number | null {
-    const row = db
-        .select({ user_id: comments.user_id })
-        .from(comments)
-        .where(eq(comments.id, id))
-        .get();
+    const row = db.select({ user_id: comments.user_id }).from(comments).where(eq(comments.id, id)).get();
     return row?.user_id ?? null;
 }
 
 export function commentBelongsToPost(commentId: number, postId: number): boolean {
-    const row = db
-        .select({ post_id: comments.post_id })
-        .from(comments)
-        .where(eq(comments.id, commentId))
-        .get();
+    const row = db.select({ post_id: comments.post_id }).from(comments).where(eq(comments.id, commentId)).get();
     return row != null && row.post_id === postId;
 }
 
 function countCommentLikesFor(commentId: number): number {
-    return db.select({ n: sql<number>`count(*)` }).from(commentLikes).where(eq(commentLikes.comment_id, commentId)).get()!.n;
+    return db.select({ n: count() }).from(commentLikes).where(eq(commentLikes.comment_id, commentId)).get()!.n;
 }
 
 export function toggleCommentLike(userId: number, commentId: number): { liked: boolean; likes_count: number } {
@@ -167,7 +177,9 @@ export function toggleCommentLike(userId: number, commentId: number): { liked: b
         .where(and(eq(commentLikes.user_id, userId), eq(commentLikes.comment_id, commentId)))
         .get();
     if (existing) {
-        db.delete(commentLikes).where(and(eq(commentLikes.user_id, userId), eq(commentLikes.comment_id, commentId))).run();
+        db.delete(commentLikes)
+            .where(and(eq(commentLikes.user_id, userId), eq(commentLikes.comment_id, commentId)))
+            .run();
         return { liked: false, likes_count: countCommentLikesFor(commentId) };
     }
     db.insert(commentLikes).values({ user_id: userId, comment_id: commentId }).onConflictDoNothing().run();
@@ -175,13 +187,15 @@ export function toggleCommentLike(userId: number, commentId: number): { liked: b
 }
 
 export function unlikeComment(userId: number, commentId: number): { liked: boolean; likes_count: number } {
-    db.delete(commentLikes).where(and(eq(commentLikes.user_id, userId), eq(commentLikes.comment_id, commentId))).run();
+    db.delete(commentLikes)
+        .where(and(eq(commentLikes.user_id, userId), eq(commentLikes.comment_id, commentId)))
+        .run();
     return { liked: false, likes_count: countCommentLikesFor(commentId) };
 }
 
 export function deleteComment(id: number): boolean {
     const existed = db
-        .select({ one: sql`1` })
+        .select({ one: sql.raw("1") })
         .from(comments)
         .where(eq(comments.id, id))
         .get();

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
-const now = sql`(datetime('now'))`;
+const now = sql.raw("datetime('now')");
 
 export const works = sqliteTable(
     "works",

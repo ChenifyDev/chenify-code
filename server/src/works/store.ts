@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db as mainDb } from "../db/client";
 import { users } from "../db/schema";
 import { db } from "./db";
@@ -218,11 +218,7 @@ export function listForks(
 }
 
 function countLikes(workId: number): number {
-    return db
-        .select({ n: sql<number>`count(*)` })
-        .from(workLikes)
-        .where(eq(workLikes.work_id, workId))
-        .get()!.n;
+    return db.select({ n: count() }).from(workLikes).where(eq(workLikes.work_id, workId)).get()!.n;
 }
 
 export function toggleWorkLike(userId: number, workId: number): { liked: boolean; likes_count: number } {
@@ -249,11 +245,7 @@ export function unlikeWork(userId: number, workId: number): { liked: boolean; li
 }
 
 function countFavorites(workId: number): number {
-    return db
-        .select({ n: sql<number>`count(*)` })
-        .from(workFavorites)
-        .where(eq(workFavorites.work_id, workId))
-        .get()!.n;
+    return db.select({ n: count() }).from(workFavorites).where(eq(workFavorites.work_id, workId)).get()!.n;
 }
 
 export function toggleWorkFavorite(userId: number, workId: number): { favorited: boolean; favorites_count: number } {
@@ -316,7 +308,7 @@ function countWorkCommentLikes(commentIds: number[]): Map<number, number> {
     const map = new Map<number, number>();
     if (commentIds.length === 0) return map;
     const rows = db
-        .select({ comment_id: workCommentLikes.work_comment_id, n: sql<number>`count(*)` })
+        .select({ comment_id: workCommentLikes.work_comment_id, n: count() })
         .from(workCommentLikes)
         .where(inArray(workCommentLikes.work_comment_id, commentIds))
         .groupBy(workCommentLikes.work_comment_id)
@@ -435,7 +427,7 @@ export function workCommentBelongsToWork(commentId: number, workId: number): boo
 
 function countWorkCommentLikesFor(commentId: number): number {
     return db
-        .select({ n: sql<number>`count(*)` })
+        .select({ n: count() })
         .from(workCommentLikes)
         .where(eq(workCommentLikes.work_comment_id, commentId))
         .get()!.n;

@@ -8,12 +8,11 @@ const DB_PATH = join(import.meta.dir, "../../app.db");
 
 const sqlite = new Database(DB_PATH, { create: true });
 
-sqlite.exec("PRAGMA foreign_keys = ON");
+sqlite.run("PRAGMA foreign_keys = ON");
 
 export const db: BunSQLiteDatabase<typeof schema> = drizzle(sqlite, { schema, logger: false });
 
-const hasSchema =
-    sqlite.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'").get() != null;
+const hasSchema = sqlite.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'").get() != null;
 
 if (!hasSchema) {
     const migrationsFolder = join(import.meta.dir, "../../drizzle");

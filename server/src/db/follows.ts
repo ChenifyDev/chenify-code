@@ -1,23 +1,16 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { alias, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { db } from "./client";
 import { follows, users } from "./schema";
 import type { FollowUser, FollowUserRow } from "./types";
 
 function countFollowers(userId: number): number {
-    return db
-        .select({ n: sql<number>`count(*)` })
-        .from(follows)
-        .where(eq(follows.following_id, userId))
-        .get()!.n;
+    return db.select({ n: count() }).from(follows).where(eq(follows.following_id, userId)).get()!.n;
 }
 
-export function toggleFollow(
-    followerId: number,
-    followingId: number,
-): { following: boolean; followers_count: number } {
+export function toggleFollow(followerId: number, followingId: number): { following: boolean; followers_count: number } {
     const existing = db
-        .select({ one: sql`1` })
+        .select({ one: sql.raw("1") })
         .from(follows)
         .where(and(eq(follows.follower_id, followerId), eq(follows.following_id, followingId)))
         .get();
@@ -31,10 +24,7 @@ export function toggleFollow(
     return { following: true, followers_count: countFollowers(followingId) };
 }
 
-export function unfollowUser(
-    followerId: number,
-    followingId: number,
-): { following: boolean; followers_count: number } {
+export function unfollowUser(followerId: number, followingId: number): { following: boolean; followers_count: number } {
     db.delete(follows)
         .where(and(eq(follows.follower_id, followerId), eq(follows.following_id, followingId)))
         .run();
@@ -44,7 +34,7 @@ export function unfollowUser(
 export function isFollowing(followerId: number, followingId: number): boolean {
     return (
         db
-            .select({ one: sql`1` })
+            .select({ one: sql.raw("1") })
             .from(follows)
             .where(and(eq(follows.follower_id, followerId), eq(follows.following_id, followingId)))
             .get() != null
@@ -82,7 +72,13 @@ export function listFollowing(
     viewerId: number | null,
     options: { offset: number; limit: number },
 ): FollowUser[] {
-    const rows = followQuery(ownerId, viewerId, options, follows.following_id, follows.follower_id).all() as unknown as FollowUserRow[];
+    const rows = followQuery(
+        ownerId,
+        viewerId,
+        options,
+        follows.following_id,
+        follows.follower_id,
+    ).all() as unknown as FollowUserRow[];
     return rows.map((row) => ({ ...row, is_following: row.is_following === 1 }));
 }
 
@@ -91,6 +87,12 @@ export function listFollowers(
     viewerId: number | null,
     options: { offset: number; limit: number },
 ): FollowUser[] {
-    const rows = followQuery(ownerId, viewerId, options, follows.follower_id, follows.following_id).all() as unknown as FollowUserRow[];
+    const rows = followQuery(
+        ownerId,
+        viewerId,
+        options,
+        follows.follower_id,
+        follows.following_id,
+    ).all() as unknown as FollowUserRow[];
     return rows.map((row) => ({ ...row, is_following: row.is_following === 1 }));
 }

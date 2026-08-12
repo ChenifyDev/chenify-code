@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { desc, eq, inArray, like, sql, type SQL } from "drizzle-orm";
 import { db } from "./client";
 import { comments, favorites, likes, postImages, postTags, posts, tags, users } from "./schema";
 import { getOrCreateTag } from "./tags";
@@ -27,11 +27,7 @@ function postBoard(where?: SQL) {
 }
 
 export function getPostOwner(id: number): number | null {
-    const row = db
-        .select({ user_id: posts.user_id })
-        .from(posts)
-        .where(eq(posts.id, id))
-        .get();
+    const row = db.select({ user_id: posts.user_id }).from(posts).where(eq(posts.id, id)).get();
     return row?.user_id ?? null;
 }
 
@@ -70,8 +66,7 @@ export function listPosts(options: {
             tag != null
                 ? sql`WHERE p.id IN (SELECT pt.post_id FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = ${tag})`
                 : sql``;
-        const rows =
-            db.all(sql`
+        const rows = db.all(sql`
             SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 5 + 1)
                 / (1 + ln(1 + (julianday('now') - julianday(created_at)) * 24))) AS heat
             FROM (
@@ -153,4 +148,41 @@ export function deletePost(id: number): string[] {
 
 export function deletePostRow(id: number): void {
     deletePostRowsOnly(id);
+}
+
+export async function searchPosts(options: {
+    offset: number;
+    limit: number;
+    sort?: "latest" | "hot";
+    keyword: string;
+}): Promise<Post[]> {
+    const { offset, limit, sort = "latest", keyword } = options;
+    const whereCond = like(posts.content, `%${keyword}%`);
+
+    let rows: PostRow[];
+
+    if (sort === "hot") {
+        rows = db.all(sql`
+            SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 5 + 1)
+                / (1 + ln(1 + (julianday('now') - julianday(created_at)) * 24))) AS heat
+            FROM (
+                SELECT p.id, p.user_id, p.content, p.created_at, u.username, u.avatar,
+                    (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comments_count,
+                    (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes_count,
+                    (SELECT COUNT(*) FROM favorites f WHERE f.post_id = p.id) AS favorites_count
+                FROM posts p JOIN users u ON u.id = p.user_id
+                WHERE p.content LIKE ${`%${keyword}%`}
+            )
+            ORDER BY heat DESC, created_at DESC, id DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `) as unknown as PostRow[];
+    } else {
+        rows = postBoard(whereCond)
+            .orderBy(desc(posts.created_at), desc(posts.id))
+            .limit(limit)
+            .offset(offset)
+            .all() as PostRow[];
+    }
+
+    return hydratePosts(rows, null);
 }

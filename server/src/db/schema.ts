@@ -9,7 +9,7 @@ import {
     type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
-const now = sql`(datetime('now'))`;
+const now = sql.raw("datetime('now')");
 
 export const users = sqliteTable("users", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -18,12 +18,8 @@ export const users = sqliteTable("users", {
     password_hash: text("password_hash").notNull(),
     avatar: text("avatar"),
     created_at: text("created_at").notNull().default(now),
-    is_favorites_public: integer("is_favorites_public", { mode: "boolean" })
-        .notNull()
-        .default(true),
-    is_follows_public: integer("is_follows_public", { mode: "boolean" })
-        .notNull()
-        .default(true),
+    is_favorites_public: integer("is_favorites_public", { mode: "boolean" }).notNull().default(true),
+    is_follows_public: integer("is_follows_public", { mode: "boolean" }).notNull().default(true),
 });
 
 export const posts = sqliteTable(
@@ -36,10 +32,7 @@ export const posts = sqliteTable(
         content: text("content").notNull(),
         created_at: text("created_at").notNull().default(now),
     },
-    (table) => [
-        index("idx_posts_user_id").on(table.user_id),
-        index("idx_posts_created_at").on(table.created_at),
-    ],
+    (table) => [index("idx_posts_user_id").on(table.user_id), index("idx_posts_created_at").on(table.created_at)],
 );
 
 export const postImages = sqliteTable(
@@ -69,10 +62,7 @@ export const postTags = sqliteTable(
             .notNull()
             .references(() => tags.id),
     },
-    (table) => [
-        primaryKey({ columns: [table.post_id, table.tag_id] }),
-        index("idx_post_tags_tag_id").on(table.tag_id),
-    ],
+    (table) => [primaryKey({ columns: [table.post_id, table.tag_id] }), index("idx_post_tags_tag_id").on(table.tag_id)],
 );
 
 export const favorites = sqliteTable(

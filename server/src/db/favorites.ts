@@ -1,13 +1,9 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import { favorites } from "./schema";
 
 function countFavorites(postId: number): number {
-    return db
-        .select({ n: sql<number>`count(*)` })
-        .from(favorites)
-        .where(eq(favorites.post_id, postId))
-        .get()!.n;
+    return db.select({ n: count() }).from(favorites).where(eq(favorites.post_id, postId)).get()!.n;
 }
 
 export function toggleFavorite(userId: number, postId: number): { favorited: boolean; favorites_count: number } {

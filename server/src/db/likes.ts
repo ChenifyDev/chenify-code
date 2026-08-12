@@ -1,13 +1,9 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "./client";
 import { likes } from "./schema";
 
 function countLikes(postId: number): number {
-    return db
-        .select({ n: sql<number>`count(*)` })
-        .from(likes)
-        .where(eq(likes.post_id, postId))
-        .get()!.n;
+    return db.select({ n: count() }).from(likes).where(eq(likes.post_id, postId)).get()!.n;
 }
 
 export function toggleLike(userId: number, postId: number): { liked: boolean; likes_count: number } {
