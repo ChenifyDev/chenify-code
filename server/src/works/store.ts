@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, like, or, sql, type SQL } from "drizzle-orm";
 import { db as mainDb } from "../db/client";
 import { users } from "../db/schema";
 import { db } from "./db";
@@ -473,4 +473,42 @@ export function deleteWorkComment(id: number): boolean {
         db.delete(workComments).where(inArray(workComments.id, descendantIds)).run();
     }
     return row != null;
+}
+
+export async function searchWorks(options: {
+    offset: number;
+    limit: number;
+    sort?: "latest" | "hot";
+    keyword: string;
+}): Promise<WorkSummary[]> {
+    const { offset, limit, sort = "latest", keyword } = options;
+
+    let rows: WorkRow[];
+
+    if (sort === "hot") {
+        rows = db.all(sql`
+            SELECT *, ((likes_count * 3 + favorites_count * 4 + comments_count * 5 + 1)
+                / (1 + ln(1 + (julianday('now') - julianday(created_at)) * 24))) AS heat
+            FROM (
+                SELECT w.id, w.user_id, w.title, w.description, w.cover, w.parent_id, w.created_at, w.updated_at,
+                    (SELECT COUNT(*) FROM work_comments c WHERE c.work_id = w.id) AS comments_count,
+                    (SELECT COUNT(*) FROM work_likes l WHERE l.work_id = w.id) AS likes_count,
+                    (SELECT COUNT(*) FROM work_favorites f WHERE f.work_id = w.id) AS favorites_count,
+                    (SELECT COUNT(*) FROM work_files wf WHERE wf.work_id = w.id) AS files_count
+                FROM works w
+                WHERE w.title LIKE ${`%${keyword}%`} OR w.description LIKE ${`%${keyword}%`}
+            )
+            ORDER BY heat DESC, created_at DESC, id DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `) as unknown as WorkRow[];
+    } else {
+        const whereCond = or(like(works.title, `%${keyword}%`), like(works.description, `%${keyword}%`));
+        rows = workBoard(whereCond)
+            .orderBy(desc(works.created_at), desc(works.id))
+            .limit(limit)
+            .offset(offset)
+            .all() as WorkRow[];
+    }
+
+    return hydrateWorks(rows, null);
 }
