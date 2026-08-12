@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/stores/useUser.ts";
-import DraftList from "@/components/forum/drafts/DraftList.tsx";
+import PostDraftList from "@/components/forum/drafts/DraftList.tsx";
+import WorkDraftList from "@/components/works/drafts/DraftList.tsx";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 
 type DraftType = "posts" | "works";
@@ -39,7 +40,7 @@ export default function Drafts() {
                 <p className="mt-1 text-sm text-muted-foreground">管理你的未发布内容和已发布的文章</p>
             </header>
 
-            {draftType === "posts" ? <DraftList /> : <>Hello!</>}
+            {draftType === "posts" ? <PostDraftList /> : <WorkDraftList />}
         </div>
     );
 }

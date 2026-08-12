@@ -34,6 +34,21 @@ export interface WorkDetail extends WorkSummary {
     files: WorkFile[];
 }
 
+export interface WorkDraft {
+    id: number;
+    user_id: number;
+    title: string;
+    description: string;
+    cover: string;
+    status: "draft" | "published";
+    work_id: number | null;
+    draft_id: number | null;
+    created_at: string;
+    updated_at: string;
+    files_count: number;
+    files: WorkFile[];
+}
+
 export interface WorkComment {
     id: number;
     work_id: number;

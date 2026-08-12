@@ -3,21 +3,29 @@ import { userExists } from "../db";
 import {
     createWork,
     createWorkComment,
+    createWorkDraft,
     deleteWork,
     deleteWorkComment,
+    deleteWorkDraft,
     getWorkById,
     getWorkCommentOwner,
+    getWorkDraftById,
+    getWorkDraftOwner,
     getWorkOwner,
     listForks,
     listWorkComments,
+    listWorkDrafts,
     listWorks,
+    publishWorkDraft,
     toggleWorkCommentLike,
     toggleWorkFavorite,
     toggleWorkLike,
     unfavoriteWork,
     unlikeWork,
     unlikeWorkComment,
+    unpublishWorkDraft,
     updateWork,
+    updateWorkDraft,
     workCommentBelongsToWork,
 } from "../works";
 import { getAuthUser, jsonError, parsePagination } from "./util";
@@ -74,6 +82,12 @@ async function deleteFilePaths(paths: string[]): Promise<void> {
 async function parseNonEmptyTitle(form: RequestFormData): Promise<string | Response> {
     const title = form.get("title")?.toString().trim() ?? "";
     if (!title) return jsonError(400, "作品标题不能为空");
+    if (title.length > MAX_TITLE_LENGTH) return jsonError(400, `作品标题不能超过 ${MAX_TITLE_LENGTH} 个字符`);
+    return title;
+}
+
+async function parseDraftTitle(form: RequestFormData): Promise<string | Response> {
+    const title = form.get("title")?.toString().trim() ?? "";
     if (title.length > MAX_TITLE_LENGTH) return jsonError(400, `作品标题不能超过 ${MAX_TITLE_LENGTH} 个字符`);
     return title;
 }
@@ -407,6 +421,160 @@ export const routes: Bun.Serve.Routes<any, any> = {
             if (ownerId !== me.id) return jsonError(403, "无权删除该评论");
             deleteWorkComment(parsed);
             return Response.json({ success: true });
+        },
+    },
+
+    "/api/work-drafts": {
+        GET: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const url = new URL(req.url);
+            const { offset, limit } = parsePagination(url);
+            const status = url.searchParams.get("status") as "draft" | "published" | null;
+            const parsed = status === "draft" || status === "published" ? status : undefined;
+            return Response.json(listWorkDrafts(me.id, { offset, limit, status: parsed }));
+        },
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const form = await req.formData();
+            const title = await parseDraftTitle(form);
+            if (title instanceof Response) return title;
+            const description = parseDescription(form);
+            if (description instanceof Response) return description;
+            const filesResult = collectFiles(form);
+            if (filesResult instanceof Response) return filesResult;
+            const saved = await saveWorkFiles(filesResult.files);
+            if (saved.error) return jsonError(400, saved.error);
+            let cover = "";
+            const coverFile = coverField(form);
+            if (coverFile) {
+                const coverResult = await processCover(coverFile);
+                if ("error" in coverResult) return jsonError(400, coverResult.error);
+                cover = coverResult.path;
+            }
+            const draft = createWorkDraft(me.id, {
+                title,
+                description: description.description,
+                cover,
+                fileRows: saved.rows,
+            });
+            return Response.json(draft, { status: 201 });
+        },
+    },
+
+    "/api/work-drafts/:id": {
+        GET: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getWorkDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权查看该草稿");
+            return Response.json(getWorkDraftById(parsed));
+        },
+        PATCH: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getWorkDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权修改该草稿");
+            const existing = getWorkDraftById(parsed);
+            if (!existing) return jsonError(404, "草稿不存在");
+            if (existing.status === "published") return jsonError(400, "已发布的草稿请先取消发布再编辑");
+
+            const form = await req.formData();
+            const title = await parseDraftTitle(form);
+            if (title instanceof Response) return title;
+            const description = parseDescription(form);
+            if (description instanceof Response) return description;
+            const filesResult = collectFiles(form);
+            if (filesResult instanceof Response) return filesResult;
+            let fileRows: { name: string; path: string; size: number }[];
+            if (filesResult.files.length > 0) {
+                const saved = await saveWorkFiles(filesResult.files);
+                if (saved.error) return jsonError(400, saved.error);
+                fileRows = saved.rows;
+            } else {
+                fileRows = existing.files.map((f) => ({
+                    name: f.name,
+                    path: f.path,
+                    size: f.size,
+                }));
+            }
+
+            let cover = existing?.cover ?? "";
+            const coverFile = coverField(form);
+            if (coverFile) {
+                const coverResult = await processCover(coverFile);
+                if ("error" in coverResult) return jsonError(400, coverResult.error);
+                cover = coverResult.path;
+            }
+
+            const { draft, removedFiles, removedCover } = updateWorkDraft(parsed, {
+                title,
+                description: description.description,
+                cover,
+                fileRows,
+            });
+            await deleteFilePaths(removedFiles);
+            if (removedCover) await unlink(removedCover.replace(/^\//, "")).catch(() => {});
+            if (!draft) return jsonError(500, "更新草稿失败");
+            return Response.json(draft);
+        },
+        DELETE: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getWorkDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权删除该草稿");
+            const { filePaths, coverPath } = deleteWorkDraft(parsed);
+            await deleteFilePaths(filePaths);
+            if (coverPath) await unlink(coverPath.replace(/^\//, "")).catch(() => {});
+            return Response.json({ success: true });
+        },
+    },
+
+    "/api/work-drafts/:id/publish": {
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getWorkDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权发布该草稿");
+            const draft = getWorkDraftById(parsed);
+            if (!draft) return jsonError(404, "草稿不存在");
+            if (draft.status === "published") return jsonError(400, "草稿已发布，请勿重复发布");
+            if (!draft.title) return jsonError(400, "发布标题不能为空");
+            if (!draft.cover) return jsonError(400, "发布封面不能为空");
+            const result = publishWorkDraft(parsed);
+            if (!result) return jsonError(500, "发布失败");
+            return Response.json(result.work, { status: 201 });
+        },
+    },
+
+    "/api/work-drafts/:id/unpublish": {
+        POST: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = getWorkDraftOwner(parsed);
+            if (ownerId === null) return jsonError(404, "草稿不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权取消发布该草稿");
+            const draft = getWorkDraftById(parsed);
+            if (!draft) return jsonError(404, "草稿不存在");
+            if (draft.status !== "published") return jsonError(400, "该草稿尚未发布");
+            const updated = unpublishWorkDraft(parsed);
+            if (!updated) return jsonError(500, "取消发布失败");
+            return Response.json(updated);
         },
     },
 };

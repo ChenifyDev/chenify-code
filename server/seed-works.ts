@@ -3,7 +3,7 @@ import { inArray, sql } from "drizzle-orm";
 import { db as mainDb } from "./src/db/client";
 import { users } from "./src/db/schema";
 import { db } from "./src/works";
-import { workCommentLikes, workComments, workFavorites, workFiles, workLikes, works } from "./src/works/schema";
+import { workCommentLikes, workComments, workDraftFiles, workDrafts, workFavorites, workFiles, workLikes, works } from "./src/works/schema";
 
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];
 
@@ -30,6 +30,13 @@ interface SeedWork {
     favorites: string[];
     comments: SeedComment[];
     created_at: string;
+}
+
+interface SeedWorkDraft {
+    username: string;
+    title: string;
+    description: string;
+    files: SeedFile[];
 }
 
 const seedWorks: SeedWork[] = [
@@ -221,6 +228,78 @@ const seedWorks: SeedWork[] = [
             },
         ],
     },
+    {
+        username: "erin",
+        title: "Go 并发求和",
+        description: "用 goroutine + channel 对 1..1000 并发求和，演示 Go 并发基础用法。",
+        created_at: "2026-08-06 09:00:00",
+        files: [
+            {
+                name: "main.go",
+                content:
+                    'package main\n\nimport (\n\t"fmt"\n\t"sync"\n)\n\nfunc main() {\n\tnums := make([]int, 1000)\n\tfor i := range nums {\n\t\tnums[i] = i + 1\n\t}\n\n\tconst workers = 8\n\tchunk := len(nums) / workers\n\tresults := make(chan int, workers)\n\tvar wg sync.WaitGroup\n\n\tfor w := 0; w < workers; w++ {\n\t\twg.Add(1)\n\t\tgo func(w int) {\n\t\t\tdefer wg.Done()\n\t\t\tlo := w * chunk\n\t\t\thi := lo + chunk\n\t\t\tif w == workers-1 {\n\t\t\t\thi = len(nums)\n\t\t\t}\n\t\t\tsum := 0\n\t\t\tfor _, n := range nums[lo:hi] {\n\t\t\t\tsum += n\n\t\t\t}\n\t\t\tresults <- sum\n\t\t}(w)\n\t}\n\n\twg.Wait()\n\tclose(results)\n\ttotal := 0\n\tfor s := range results {\n\t\ttotal += s\n\t}\n\tfmt.Printf("1..1000 并发求和 = %d\\n", total)\n}\n',
+            },
+        ],
+        likes: ["dave", "alice"],
+        favorites: ["bob"],
+        comments: [
+            {
+                username: "dave",
+                content: "channel 收尾很干净，可以试试 sync.Map 的对比。",
+                created_at: "2026-08-06 09:30:00",
+                liked_by: ["erin"],
+            },
+        ],
+    },
+    {
+        username: "dave",
+        title: "C 单链表练习",
+        description: "用 malloc 手写单链表：尾插、遍历打印与手动释放，演示 C 内存管理。",
+        created_at: "2026-08-06 14:00:00",
+        files: [
+            {
+                name: "main.c",
+                content:
+                    '#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct node {\n    int value;\n    struct node *next;\n} Node;\n\nNode *append(Node *head, int value) {\n    Node *node = malloc(sizeof(Node));\n    if (!node) return head;\n    node->value = value;\n    node->next = NULL;\n    if (!head) return node;\n    Node *cur = head;\n    while (cur->next) cur = cur->next;\n    cur->next = node;\n    return head;\n}\n\nvoid print_list(const Node *head) {\n    for (const Node *cur = head; cur; cur = cur->next) {\n        printf("%d%s", cur->value, cur->next ? " -> " : "\\n");\n    }\n}\n\nvoid free_list(Node *head) {\n    while (head) {\n        Node *next = head->next;\n        free(head);\n        head = next;\n    }\n}\n\nint main(void) {\n    Node *head = NULL;\n    for (int i = 1; i <= 5; i++) head = append(head, i * 10);\n    print_list(head);\n    free_list(head);\n    return 0;\n}\n',
+            },
+        ],
+        likes: ["carol"],
+        favorites: ["erin"],
+        comments: [
+            {
+                username: "carol",
+                content: "记得检查 malloc 返回值，这个例子做得很规范。",
+                created_at: "2026-08-06 14:20:00",
+            },
+        ],
+    },
+];
+
+const seedWorkDrafts: SeedWorkDraft[] = [
+    {
+        username: "alice",
+        title: "Python 网络爬虫骨架（草稿）",
+        description: "还没写完的爬虫骨架，先存草稿，后续再补解析与存储。",
+        files: [
+            {
+                name: "crawler.py",
+                content:
+                    'import argparse\nimport sys\n\n\ndef fetch(url: str) -> str:\n    # TODO: 用 requests 拉取页面，还没写完\n    raise NotImplementedError("待实现")\n\n\ndef main() -> int:\n    parser = argparse.ArgumentParser(description="极简爬虫骨架")\n    parser.add_argument("url")\n    args = parser.parse_args()\n    print(f"准备抓取: {args.url}")\n    # TODO: 解析与存储尚未完成\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n',
+            },
+        ],
+    },
+    {
+        username: "erin",
+        title: "Go 猜数字游戏（草稿）",
+        description: "一个交互式猜数字小游戏的草稿。",
+        files: [
+            {
+                name: "main.go",
+                content:
+                    'package main\n\nimport (\n\t"bufio"\n\t"fmt"\n\t"math/rand"\n\t"os"\n\t"strconv"\n\t"strings"\n)\n\nfunc main() {\n\ttarget := rand.Intn(100) + 1\n\tfmt.Println("猜一个 1..100 的数字:")\n\tscanner := bufio.NewScanner(os.Stdin)\n\tfor tries := 1; scanner.Scan(); tries++ {\n\t\tn, err := strconv.Atoi(strings.TrimSpace(scanner.Text()))\n\t\tif err != nil {\n\t\t\tfmt.Println("输入无效，请输入整数")\n\t\t\tcontinue\n\t\t}\n\t\tif n < target {\n\t\t\tfmt.Println("太小了，再试:")\n\t\t} else if n > target {\n\t\t\tfmt.Println("太大了，再试:")\n\t\t} else {\n\t\t\tfmt.Printf("猜对了！用了 %d 次\\n", tries)\n\t\t\treturn\n\t\t}\n\t}\n}\n',
+            },
+        ],
+    },
 ];
 
 const reset = process.argv.includes("--reset");
@@ -354,8 +433,19 @@ async function deleteUploadedFiles(): Promise<number> {
             .all()
             .map((r) => r.path),
         ...db
+            .select({ path: workDraftFiles.path })
+            .from(workDraftFiles)
+            .all()
+            .map((r) => r.path),
+        ...db
             .select({ cover: works.cover })
             .from(works)
+            .all()
+            .map((r) => r.cover)
+            .filter((p) => p.startsWith("/uploads/")),
+        ...db
+            .select({ cover: workDrafts.cover })
+            .from(workDrafts)
             .all()
             .map((r) => r.cover)
             .filter((p) => p.startsWith("/uploads/")),
@@ -385,6 +475,8 @@ async function main() {
         db.delete(workComments).run();
         db.delete(workFavorites).run();
         db.delete(workLikes).run();
+        db.delete(workDraftFiles).run();
+        db.delete(workDrafts).run();
         db.delete(workFiles).run();
         db.delete(works).run();
         console.log(`已清空作品数据（含 ${removed} 个磁盘文件）`);
@@ -395,10 +487,16 @@ async function main() {
         workIdByKey.set(`${row.user_id}:${row.title}`, row.id);
     }
 
+    const draftIdByKey = new Map<string, number>();
+    for (const row of db.select({ id: workDrafts.id, user_id: workDrafts.user_id, title: workDrafts.title }).from(workDrafts).all()) {
+        draftIdByKey.set(`${row.user_id}:${row.title}`, row.id);
+    }
+
     let worksCount = 0;
     let filesCount = 0;
     let commentsCount = 0;
     let adaptCount = 0;
+    let draftsCount = 0;
 
     for (let wi = 0; wi < seedWorks.length; wi++) {
         const seed = seedWorks[wi]!;
@@ -500,13 +598,38 @@ async function main() {
         }
     }
 
+    for (let di = 0; di < seedWorkDrafts.length; di++) {
+        const seed = seedWorkDrafts[di]!;
+        const userId = usersById.get(seed.username) ?? null;
+        if (userId == null) {
+            console.warn(`用户 ${seed.username} 不存在，跳过该草稿「${seed.title}」`);
+            continue;
+        }
+        const key = `${userId}:${seed.title}`;
+        if (draftIdByKey.has(key)) continue;
+        const cover = await writeSeedCover(di + seedWorks.length);
+        const draft = db
+            .insert(workDrafts)
+            .values({ user_id: userId, title: seed.title, description: seed.description, cover })
+            .returning()
+            .get();
+        draftIdByKey.set(key, draft.id);
+        draftsCount += 1;
+        for (const file of seed.files) {
+            const stored = await writeSeedFile(file);
+            db.insert(workDraftFiles)
+                .values({ draft_id: draft.id, ...stored })
+                .run();
+        }
+    }
+
     const [likeTotal, favTotal] = db.get(
         sql`SELECT
             (SELECT COUNT(*) FROM work_likes) AS likes,
             (SELECT COUNT(*) FROM work_favorites) AS favorites`,
     ) as [number, number];
     console.log(
-        `插入作品 ${worksCount} 个（含 ${adaptCount} 条改编 / ${filesCount} 个文件），评论 ${commentsCount} 条。`,
+        `插入作品 ${worksCount} 个（含 ${adaptCount} 条改编 / ${filesCount} 个文件）、草稿 ${draftsCount} 个，评论 ${commentsCount} 条。`,
     );
     console.log(`点赞 ${likeTotal} 条，收藏 ${favTotal} 条。`);
 }

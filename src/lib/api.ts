@@ -122,6 +122,21 @@ export interface WorkComment {
     replies: WorkComment[];
 }
 
+export interface WorkDraft {
+    id: number;
+    user_id: number;
+    title: string;
+    description: string;
+    cover: string;
+    status: "draft" | "published";
+    work_id: number | null;
+    draft_id: number | null;
+    created_at: string;
+    updated_at: string;
+    files_count: number;
+    files: WorkFile[];
+}
+
 interface LoginResponse {
     token: string;
     user: UserPublic;
@@ -529,4 +544,51 @@ export function unWorkCommentLike(commentId: number): Promise<{ liked: boolean; 
         method: "DELETE",
         headers: authHeaders(),
     });
+}
+
+export function listWorkDrafts(status?: "draft" | "published", offset = 0, limit = 20): Promise<WorkDraft[]> {
+    return request<WorkDraft[]>(`/work-drafts${qs({ status, offset, limit })}`, { headers: authHeaders() });
+}
+
+export function getWorkDraft(id: number): Promise<WorkDraft> {
+    return request<WorkDraft>(`/work-drafts/${id}`, { headers: authHeaders() });
+}
+
+export function createWorkDraft(
+    title: string,
+    description: string,
+    files: File[],
+    cover?: File | null,
+): Promise<WorkDraft> {
+    return request<WorkDraft>("/work-drafts", {
+        method: "POST",
+        body: workForm(title, description, files, cover),
+        headers: authHeaders(),
+    });
+}
+
+export function updateWorkDraft(
+    id: number,
+    title: string,
+    description: string,
+    files?: File[],
+    cover?: File | null,
+): Promise<WorkDraft> {
+    return request<WorkDraft>(`/work-drafts/${id}`, {
+        method: "PATCH",
+        body: workForm(title, description, files ?? [], cover),
+        headers: authHeaders(),
+    });
+}
+
+export function publishWorkDraft(id: number): Promise<WorkDetail> {
+    return request<WorkDetail>(`/work-drafts/${id}/publish`, { method: "POST", headers: authHeaders() });
+}
+
+export function unpublishWorkDraft(id: number): Promise<WorkDraft> {
+    return request<WorkDraft>(`/work-drafts/${id}/unpublish`, { method: "POST", headers: authHeaders() });
+}
+
+export function deleteWorkDraft(id: number): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/work-drafts/${id}`, { method: "DELETE", headers: authHeaders() });
 }

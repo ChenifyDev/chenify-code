@@ -104,8 +104,43 @@ export const workCommentLikes = sqliteTable(
     ],
 );
 
+export const workDrafts = sqliteTable(
+    "work_drafts",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        user_id: integer("user_id").notNull(),
+        title: text("title").notNull().default(""),
+        description: text("description").notNull().default(""),
+        cover: text("cover").notNull().default(""),
+        status: text("status", { enum: ["draft", "published"] })
+            .notNull()
+            .default("draft"),
+        work_id: integer("work_id").references(() => works.id),
+        created_at: text("created_at").notNull().default(now),
+        updated_at: text("updated_at").notNull().default(now),
+    },
+    (table) => [index("idx_work_drafts_user_id").on(table.user_id)],
+);
+
+export const workDraftFiles = sqliteTable(
+    "work_draft_files",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        draft_id: integer("draft_id")
+            .notNull()
+            .references(() => workDrafts.id, { onDelete: "cascade" }),
+        name: text("name").notNull(),
+        path: text("path").notNull(),
+        size: integer("size").notNull().default(0),
+        created_at: text("created_at").notNull().default(now),
+    },
+    (table) => [index("idx_work_draft_files_draft_id").on(table.draft_id)],
+);
+
 export type WorkRow = typeof works.$inferSelect;
 export type NewWork = typeof works.$inferInsert;
 export type WorkFileRow = typeof workFiles.$inferSelect;
+export type WorkDraftRowRaw = typeof workDrafts.$inferSelect;
+export type WorkDraftFileRow = typeof workDraftFiles.$inferSelect;
 export type WorkCommentRowRaw = typeof workComments.$inferSelect;
 export type WorkCommentLikeRow = typeof workCommentLikes.$inferSelect;
