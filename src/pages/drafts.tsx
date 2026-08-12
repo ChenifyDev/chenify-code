@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FileText } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/stores/useUser.ts";
 import PostDraftList from "@/components/forum/drafts/DraftList.tsx";
 import WorkDraftList from "@/components/works/drafts/DraftList.tsx";
@@ -12,11 +11,6 @@ export default function Drafts() {
     const [draftType, setDraftType] = useState<DraftType>("posts");
 
     const me = useUserStore((s) => s.user);
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        if (!me) navigate("/login");
-    }, [me, navigate]);
 
     if (!me) return null;
 
