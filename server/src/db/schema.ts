@@ -160,6 +160,29 @@ export const follows = sqliteTable(
     ],
 );
 
+export const notifications = sqliteTable(
+    "notifications",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        user_id: integer("user_id")
+            .notNull()
+            .references(() => users.id),
+        actor_id: integer("actor_id")
+            .notNull()
+            .references(() => users.id),
+        type: text("type", { enum: ["post_comment", "post_reply", "work_comment", "work_reply"] }).notNull(),
+        post_id: integer("post_id"),
+        work_id: integer("work_id"),
+        comment_id: integer("comment_id"),
+        is_read: integer("is_read", { mode: "boolean" }).notNull().default(false),
+        created_at: text("created_at").notNull().default(now),
+    },
+    (table) => [
+        index("idx_notifications_user").on(table.user_id),
+        index("idx_notifications_user_read").on(table.user_id, table.is_read),
+    ],
+);
+
 export const drafts = sqliteTable(
     "drafts",
     {

@@ -1,5 +1,5 @@
 import { unlink } from "node:fs/promises";
-import { userExists } from "../db";
+import { createNotification, userExists } from "../db";
 import {
     createWork,
     createWorkComment,
@@ -387,6 +387,35 @@ export const routes: Bun.Serve.Routes<any, any> = {
             if (parentId != null && !workCommentBelongsToWork(parentId, parsed))
                 return jsonError(400, "回复目标不在该作品下");
             const comment = createWorkComment(me.id, parsed, content, parentId);
+            if (comment) {
+                try {
+                    if (parentId != null) {
+                        const targetOwner = getWorkCommentOwner(parentId);
+                        if (targetOwner != null && targetOwner !== me.id) {
+                            createNotification({
+                                userId: targetOwner,
+                                actorId: me.id,
+                                type: "work_reply",
+                                workId: parsed,
+                                commentId: comment.id,
+                            });
+                        }
+                    } else {
+                        const workOwner = getWorkOwner(parsed);
+                        if (workOwner != null && workOwner !== me.id) {
+                            createNotification({
+                                userId: workOwner,
+                                actorId: me.id,
+                                type: "work_comment",
+                                workId: parsed,
+                                commentId: comment.id,
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("create notification failed", err);
+                }
+            }
             return Response.json(comment, { status: 201 });
         },
     },

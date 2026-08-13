@@ -3,6 +3,7 @@ import { db as mainDb } from "../db/client";
 import { users } from "../db/schema";
 import { db } from "./db";
 import { workCommentLikes, workComments, workFavorites, workFiles, workLikes, works } from "./schema";
+import { deleteNotificationsForComment, deleteNotificationsForWork } from "../db/notifications";
 import type { UserSummary, WorkComment, WorkFile, WorkRow, WorkSummary } from "./types";
 import { fetchFollowedAuthors } from "../db/helpers.ts";
 
@@ -160,10 +161,18 @@ export function updateWork(
 export function deleteWork(id: number): { filePaths: string[]; coverPath: string | null } {
     const oldPaths = getWorkFiles(id).map((f) => f.path);
     const coverPath = db.select({ cover: works.cover }).from(works).where(eq(works.id, id)).get()?.cover ?? "";
+    const commentIds = db
+        .select({ id: workComments.id })
+        .from(workComments)
+        .where(eq(workComments.work_id, id))
+        .all()
+        .map((r) => r.id);
     db.delete(workLikes).where(eq(workLikes.work_id, id)).run();
     db.delete(workFavorites).where(eq(workFavorites.work_id, id)).run();
     db.delete(workComments).where(eq(workComments.work_id, id)).run();
     db.delete(workFiles).where(eq(workFiles.work_id, id)).run();
+    deleteNotificationsForComment(commentIds);
+    deleteNotificationsForWork(id);
     db.delete(works).where(eq(works.id, id)).run();
     return { filePaths: oldPaths, coverPath: coverPath.startsWith("/uploads/") ? coverPath : null };
 }
@@ -470,6 +479,7 @@ export function deleteWorkComment(id: number): boolean {
     }
     if (descendantIds.length > 0) {
         db.delete(workCommentLikes).where(inArray(workCommentLikes.work_comment_id, descendantIds)).run();
+        deleteNotificationsForComment(descendantIds);
         db.delete(workComments).where(inArray(workComments.id, descendantIds)).run();
     }
     return row != null;

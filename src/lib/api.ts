@@ -67,6 +67,8 @@ export interface SpaceSkeleton {
 
 export interface FollowUser extends UserSummary {
     is_following: boolean;
+    email: string;
+    followers: number;
 }
 
 export interface Draft {
@@ -644,5 +646,40 @@ export function searchUsers({
     limit: number;
     keyword: string;
 }): Promise<FollowUser[]> {
-    return request<FollowUser[]>(`/search${qs({ offset, limit, type: "users", keyword })}`, { headers: authHeaders() });
+    return request<FollowUser[]>(
+        `/search${qs({ offset, limit, type: "users", keyword })}`,
+        { headers: authHeaders() },
+    );
+}
+
+export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply";
+
+export interface AppNotification {
+    id: number;
+    type: NotificationType;
+    actor: UserSummary;
+    is_read: boolean;
+    created_at: string;
+    post_id: number | null;
+    work_id: number | null;
+    comment_id: number | null;
+    snippet: string;
+    reply_to: string | null;
+    comment: string;
+}
+
+export function listNotifications(offset = 0, limit = 20): Promise<AppNotification[]> {
+    return request<AppNotification[]>(`/notifications${qs({ offset, limit })}`, { headers: authHeaders() });
+}
+
+export function getUnreadNotifications(): Promise<{ count: number }> {
+    return request<{ count: number }>("/notifications/unread-count", { headers: authHeaders() });
+}
+
+export function markNotificationsRead(ids?: number[]): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>("/notifications/read", {
+        method: "POST",
+        body: JSON.stringify(ids ? { ids } : {}),
+        headers: authHeaders(),
+    });
 }

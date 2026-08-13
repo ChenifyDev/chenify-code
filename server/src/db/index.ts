@@ -10,3 +10,4 @@ export * from "./favorites";
 export * from "./follows";
 export * from "./drafts";
 export * from "./tags";
+export * from "./notifications";

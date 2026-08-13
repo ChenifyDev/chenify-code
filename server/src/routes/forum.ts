@@ -3,6 +3,7 @@ import {
     commentBelongsToPost,
     createComment,
     createDraft,
+    createNotification,
     createPost,
     deleteComment,
     deleteDraft,
@@ -243,6 +244,35 @@ export const routes: Bun.Serve.Routes<any, any> = {
             if (parentId != null && !commentBelongsToPost(parentId, parsed))
                 return jsonError(400, "回复目标不在该帖子下");
             const comment = createComment(me.id, parsed, content, parentId);
+            if (comment) {
+                try {
+                    if (parentId != null) {
+                        const targetOwner = getCommentOwner(parentId);
+                        if (targetOwner != null && targetOwner !== me.id) {
+                            createNotification({
+                                userId: targetOwner,
+                                actorId: me.id,
+                                type: "post_reply",
+                                postId: parsed,
+                                commentId: comment.id,
+                            });
+                        }
+                    } else {
+                        const postOwner = getPostOwner(parsed);
+                        if (postOwner != null && postOwner !== me.id) {
+                            createNotification({
+                                userId: postOwner,
+                                actorId: me.id,
+                                type: "post_comment",
+                                postId: parsed,
+                                commentId: comment.id,
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("create notification failed", err);
+                }
+            }
             return Response.json(comment, { status: 201 });
         },
     },

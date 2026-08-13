@@ -14,6 +14,7 @@ import ExploreWorks from "@/pages/explore/works.tsx";
 import CodeRunner from "@/pages/code-runner.tsx";
 import Search from "@/pages/search/index.tsx";
 import SettingsPage from "@/pages/settings.tsx";
+import NotificationsPage from "@/pages/notifications.tsx";
 const router = createBrowserRouter([
     {
         path: "/",
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
             {
                 path: "settings",
                 element: <SettingsPage />,
+            },
+            {
+                path: "notifications",
+                element: <NotificationsPage />,
             },
             {
                 path: "drafts",

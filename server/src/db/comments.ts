@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import { commentLikes, comments, posts, users } from "./schema";
+import { deleteNotificationsForComment } from "./notifications";
 import { toComment } from "./helpers";
 import type { Comment, CommentRow, UserSummary } from "./types";
 
@@ -212,6 +213,7 @@ export function deleteComment(id: number): boolean {
     }
     if (descendantIds.length > 0) {
         db.delete(commentLikes).where(inArray(commentLikes.comment_id, descendantIds)).run();
+        deleteNotificationsForComment(descendantIds);
         db.delete(comments).where(inArray(comments.id, descendantIds)).run();
     }
     return existed != null;

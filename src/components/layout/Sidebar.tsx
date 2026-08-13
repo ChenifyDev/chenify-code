@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass, Settings } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass, Settings, Bell } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
-import { clearToken } from "@/lib/api.ts";
+import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import SearchBox from "@/components/search/SearchBox.tsx";
@@ -24,7 +24,32 @@ export default function AppSidebar() {
     const user = useUserStore((s) => s.user);
     const setUser = useUserStore((s) => s.setUser);
     const navigate = useNavigate();
+    const location = useLocation();
     const [keyword, setKeyword] = useState("");
+    const [unread, setUnread] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+        const refresh = async () => {
+            try {
+                const { count } = await getUnreadNotifications();
+                if (!cancelled) setUnread(count);
+            } catch {
+                // 忽略轮询失败
+            }
+        };
+        void refresh();
+        const timer = setInterval(refresh, 30_000);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, [user]);
+
+    useEffect(() => {
+        if (location.pathname === "/notifications") setUnread(0);
+    }, [location.pathname]);
 
     const handleLogout = () => {
         clearToken();
@@ -132,6 +157,30 @@ export default function AppSidebar() {
                                     <SidebarMenuButton isActive={isActive} tooltip="设置">
                                         <Settings />
                                         <span>设置</span>
+                                    </SidebarMenuButton>
+                                )}
+                            </NavLink>
+                        </SidebarMenuItem>
+                    )}
+                    {user && (
+                        <SidebarMenuItem>
+                            <NavLink to="/notifications">
+                                {({ isActive }) => (
+                                    <SidebarMenuButton isActive={isActive} tooltip="消息">
+                                        <span className="relative inline-flex">
+                                            <Bell />
+                                            {unread > 0 && (
+                                                <span className="absolute -top-1.5 -right-1.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
+                                                    {unread > 99 ? "99+" : unread}
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span>消息</span>
+                                        {unread > 0 && (
+                                            <span className="ml-auto rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
+                                                {unread > 99 ? "99+" : unread}
+                                            </span>
+                                        )}
                                     </SidebarMenuButton>
                                 )}
                             </NavLink>

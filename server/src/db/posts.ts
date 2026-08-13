@@ -2,6 +2,7 @@ import { desc, eq, inArray, like, sql, type SQL } from "drizzle-orm";
 import { db } from "./client";
 import { comments, favorites, likes, postImages, postTags, posts, tags, users } from "./schema";
 import { getOrCreateTag } from "./tags";
+import { deleteNotificationsForComment, deleteNotificationsForPost } from "./notifications";
 import { hydratePosts } from "./helpers";
 import type { Post, PostRow } from "./types";
 
@@ -131,7 +132,10 @@ function deletePostRowsOnly(id: number): void {
     db.delete(postImages).where(eq(postImages.post_id, id)).run();
     db.delete(postTags).where(eq(postTags.post_id, id)).run();
     db.delete(favorites).where(eq(favorites.post_id, id)).run();
+    const commentIds = db.select({ id: comments.id }).from(comments).where(eq(comments.post_id, id)).all().map((r) => r.id);
     db.delete(comments).where(eq(comments.post_id, id)).run();
+    deleteNotificationsForComment(commentIds);
+    deleteNotificationsForPost(id);
     db.delete(posts).where(eq(posts.id, id)).run();
 }
 
