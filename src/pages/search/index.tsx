@@ -35,7 +35,7 @@ export default function SearchPage() {
     const tabKey = `${keyword}:${type}:${sort}`;
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="mx-auto w-full p-4 md:p-6">
             <header className="mb-4">
                 <h1 className="flex items-center gap-2 text-xl font-semibold">
                     <Search className="size-5" />

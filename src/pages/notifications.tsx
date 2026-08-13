@@ -21,25 +21,37 @@ function NotificationMessage({ notification }: { notification: AppNotification }
         case "post_comment":
             return (
                 <span>
-                    <span className="font-medium">{name}</span> 评论了你的帖子
+                    <Link to={`/users/${notification.actor.id}`}>
+                        <span className="font-medium">{name}</span>
+                    </Link>{" "}
+                    评论了你的帖子
                 </span>
             );
         case "work_comment":
             return (
                 <span>
-                    <span className="font-medium">{name}</span> 评论了你的作品
+                    <Link to={`/users/${notification.actor.id}`}>
+                        <span className="font-medium">{name}</span>
+                    </Link>{" "}
+                    评论了你的作品
                 </span>
             );
         case "post_reply":
             return (
                 <span>
-                    <span className="font-medium">{name}</span> 回复了你的评论
+                    <Link to={`/users/${notification.actor.id}`}>
+                        <span className="font-medium">{name}</span>
+                    </Link>{" "}
+                    回复了你的评论
                 </span>
             );
         case "work_reply":
             return (
                 <span>
-                    <span className="font-medium">{name}</span> 回复了你的评论
+                    <Link to={`/users/${notification.actor.id}`}>
+                        <span className="font-medium">{name}</span>
+                    </Link>{" "}
+                    回复了你的评论
                 </span>
             );
     }
@@ -112,7 +124,7 @@ export default function NotificationsPage() {
     const unreadCount = items.filter((item) => !item.is_read && !marked.includes(item.id)).length;
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="mx-auto w-full p-4 md:p-6">
             <header className="mb-4 flex items-center justify-between">
                 <h1 className="flex items-center gap-2 text-xl font-semibold">
                     <Bell className="size-5" />
@@ -138,8 +150,7 @@ export default function NotificationsPage() {
                                 <CardContent
                                     role="button"
                                     tabIndex={0}
-                                    className={cn("flex cursor-pointer items-start gap-3 p-3", !read && "font-medium")}
-                                    onClick={() => void handleOpen(notification)}
+                                    className={cn("flex items-start gap-3 p-3", !read && "font-medium")}
                                     onKeyDown={(event) => {
                                         if (event.key === "Enter" || event.key === " ") {
                                             event.preventDefault();
@@ -147,16 +158,18 @@ export default function NotificationsPage() {
                                         }
                                     }}
                                 >
-                                    <Avatar className="shrink-0">
-                                        {notification.actor.avatar ? (
-                                            <AvatarImage
-                                                src={notification.actor.avatar}
-                                                alt={notification.actor.username}
-                                            />
-                                        ) : null}
-                                        <AvatarFallback>{notification.actor.username.slice(0, 2)}</AvatarFallback>
-                                        {!read && <AvatarBadge2 className={"bg-destructive"} />}
-                                    </Avatar>
+                                    <Link to={`/users/${notification.actor.id}`}>
+                                        <Avatar className="shrink-0">
+                                            {notification.actor.avatar ? (
+                                                <AvatarImage
+                                                    src={notification.actor.avatar}
+                                                    alt={notification.actor.username}
+                                                />
+                                            ) : null}
+                                            <AvatarFallback>{notification.actor.username.slice(0, 2)}</AvatarFallback>
+                                            {!read && <AvatarBadge2 className={"bg-destructive"} />}
+                                        </Avatar>
+                                    </Link>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 text-sm">
                                             <span className="truncate">

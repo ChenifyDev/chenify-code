@@ -313,7 +313,7 @@ export default function WorkDetail() {
     const following = work.is_following_author;
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="mx-auto w-full p-4 md:p-6">
             <Card>
                 <CardHeader>
                     <CardTitle>{work.title}</CardTitle>

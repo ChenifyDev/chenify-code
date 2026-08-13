@@ -146,7 +146,11 @@ export default function DraftList() {
                                 </Card>
                             ) : (
                                 <>
-                                    <div className={"m-4 columns-3 gap-4 space-y-2"}>
+                                    <div
+                                        className={
+                                            "m-4 columns-3 sm:columns-2 md:columns-4 lg:columns-4 gap-4 space-y-2"
+                                        }
+                                    >
                                         {items.map((draft) => (
                                             <DraftCard
                                                 work={draft}
