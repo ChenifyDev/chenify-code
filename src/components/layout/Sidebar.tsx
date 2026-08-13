@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass, Settings, Bell } from "lucide-react";
+import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Compass, Settings, Bell, Ellipsis } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
@@ -16,9 +16,19 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarRail,
+    SidebarTrigger,
+    useSidebar,
 } from "@/components/ui/sidebar.tsx";
 import { cn } from "@/lib/utils.ts";
 import { ModeToggle } from "@/components/layout/ModeToggle.tsx";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
 
 export default function AppSidebar() {
     const user = useUserStore((s) => s.user);
@@ -27,6 +37,8 @@ export default function AppSidebar() {
     const location = useLocation();
     const [keyword, setKeyword] = useState("");
     const [unread, setUnread] = useState(0);
+    const { state, toggleSidebar } = useSidebar();
+    const isCollapsed = state === "collapsed";
 
     useEffect(() => {
         if (!user) return;
@@ -63,19 +75,25 @@ export default function AppSidebar() {
     };
 
     return (
-        <Sidebar>
+        <Sidebar collapsible={"icon"}>
             <SidebarHeader>
-                <div className={"flex gap-3 justify-between"}>
-                    <div className="flex items-center gap-3 px-2 py-1">
+                <div className={cn("flex gap-3 justify-between", "group-data-[collapsible=icon]:justify-center")}>
+                    <div className={cn("flex items-center gap-3 px-2 py-1", "group-data-[collapsible=icon]:gap-0")}>
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <Code2 className="size-5" />
+                            <Code2
+                                className={cn("size-5", isCollapsed && "cursor-pointer")}
+                                onClick={isCollapsed ? () => toggleSidebar() : () => {}}
+                            />
                         </div>
-                        <div className="grid gap-0.5 leading-tight">
+                        <div className={cn("grid gap-0.5 leading-tight", "group-data-[collapsible=icon]:hidden")}>
                             <p className="text-sm font-semibold">ChenifyCode</p>
                             <p className="text-xs text-muted-foreground">更好的编程社区</p>
                         </div>
                     </div>
-                    <ModeToggle />
+                    <div className={cn("flex gap-1.5 items-center", "group-data-[collapsible=icon]:hidden")}>
+                        <SidebarTrigger className="h-9 w-9 rounded-lg transition-all duration-200 hover:bg-sidebar-accent active:scale-95" />
+                        <ModeToggle />
+                    </div>
                 </div>
                 <SearchBox
                     value={keyword}
@@ -112,7 +130,7 @@ export default function AppSidebar() {
                             <SidebarMenuItem>
                                 <NavLink to="/explore-works">
                                     {({ isActive }) => (
-                                        <SidebarMenuButton isActive={isActive} tooltip="帖子">
+                                        <SidebarMenuButton isActive={isActive} tooltip="作品">
                                             <Compass />
                                             <span>作品</span>
                                         </SidebarMenuButton>
@@ -152,18 +170,6 @@ export default function AppSidebar() {
                     )}
                     {user && (
                         <SidebarMenuItem>
-                            <NavLink to="/settings">
-                                {({ isActive }) => (
-                                    <SidebarMenuButton isActive={isActive} tooltip="设置">
-                                        <Settings />
-                                        <span>设置</span>
-                                    </SidebarMenuButton>
-                                )}
-                            </NavLink>
-                        </SidebarMenuItem>
-                    )}
-                    {user && (
-                        <SidebarMenuItem>
                             <NavLink to="/notifications">
                                 {({ isActive }) => (
                                     <SidebarMenuButton isActive={isActive} tooltip="消息">
@@ -177,7 +183,7 @@ export default function AppSidebar() {
                                         </span>
                                         <span>消息</span>
                                         {unread > 0 && (
-                                            <span className="ml-auto rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
+                                            <span className="ml-auto rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground group-data-[collapsible=icon]:hidden">
                                                 {unread > 99 ? "99+" : unread}
                                             </span>
                                         )}
@@ -195,7 +201,12 @@ export default function AppSidebar() {
                         {user?.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
                         <AvatarFallback>{user ? user.username.slice(0, 2) : <Code2 />}</AvatarFallback>
                     </Avatar>
-                    <div className="grid min-w-0 flex-1 gap-0 leading-tight">
+                    <div
+                        className={cn(
+                            "grid min-w-0 flex-1 gap-0 leading-tight",
+                            "group-data-[collapsible=icon]:hidden",
+                        )}
+                    >
                         <p
                             className={cn("truncate text-sm font-medium", user && "cursor-pointer")}
                             onClick={() => user && navigate(`/users/${user?.id}`)}
@@ -206,14 +217,40 @@ export default function AppSidebar() {
                             {user?.email ?? "欢迎来到 ChenifyCode"}
                         </p>
                     </div>
-                    <SidebarMenuButton
-                        className="h-8 w-8 justify-center px-0 group-data-[collapsible=icon]:hidden"
-                        onClick={handleLogout}
-                    >
-                        {user ? <LogOut /> : <LogIn />}
-                    </SidebarMenuButton>
+                    {user ? (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                render={
+                                    <SidebarMenuButton className="h-8 w-8 justify-center px-0 group-data-[collapsible=icon]:hidden">
+                                        <Ellipsis />
+                                    </SidebarMenuButton>
+                                }
+                            />
+                            <DropdownMenuContent side="top" align="end">
+                                <NavLink to={"/settings"}>
+                                    <DropdownMenuItem>
+                                        <Settings className="mr-2 h‑4 w‑4" />
+                                        设置
+                                    </DropdownMenuItem>
+                                </NavLink>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                                    <LogOut className="mr-2 h‑4 w‑4" />
+                                    退出登录
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : (
+                        <SidebarMenuButton
+                            className="h-8 w-8 justify-center px-0 group-data-[collapsible=icon]:hidden"
+                            onClick={() => navigate("/login")}
+                        >
+                            <LogOut className={"size-4"} />
+                        </SidebarMenuButton>
+                    )}
                 </div>
             </SidebarFooter>
+            <SidebarRail />
         </Sidebar>
     );
 }
