@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { clearToken } from "@/lib/api.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import SearchBox from "@/components/search/SearchBox.tsx";
 import {
     Sidebar,
     SidebarContent,
@@ -22,11 +24,17 @@ export default function AppSidebar() {
     const user = useUserStore((s) => s.user);
     const setUser = useUserStore((s) => s.setUser);
     const navigate = useNavigate();
+    const [keyword, setKeyword] = useState("");
 
     const handleLogout = () => {
         clearToken();
         setUser(null);
         navigate("/login");
+    };
+
+    const handleSearch = (keyword: string) => {
+        setKeyword("");
+        navigate(keyword ? `/search?q=${encodeURIComponent(keyword)}` : "/search");
     };
 
     return (
@@ -44,6 +52,12 @@ export default function AppSidebar() {
                     </div>
                     <ModeToggle />
                 </div>
+                <SearchBox
+                    value={keyword}
+                    onValueChange={setKeyword}
+                    onSubmit={handleSearch}
+                    className="px-2 pb-1 group-data-[collapsible=icon]:hidden"
+                />
             </SidebarHeader>
 
             <SidebarContent>

@@ -592,3 +592,45 @@ export function unpublishWorkDraft(id: number): Promise<WorkDraft> {
 export function deleteWorkDraft(id: number): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/work-drafts/${id}`, { method: "DELETE", headers: authHeaders() });
 }
+
+export function searchPosts({
+    offset,
+    limit,
+    sort,
+    keyword,
+}: {
+    offset: number;
+    limit: number;
+    sort: "latest" | "hot";
+    keyword: string;
+}): Promise<Post[]> {
+    return request<Post[]>(`/search${qs({ offset, limit, type: "posts", keyword, sort })}`, { headers: authHeaders() });
+}
+
+export function searchWorks({
+    offset,
+    limit,
+    sort,
+    keyword,
+}: {
+    offset: number;
+    limit: number;
+    sort: "latest" | "hot";
+    keyword: string;
+}): Promise<WorkSummary[]> {
+    return request<WorkSummary[]>(`/search${qs({ offset, limit, type: "works", keyword, sort })}`, {
+        headers: authHeaders(),
+    });
+}
+
+export function searchUsers({
+    offset,
+    limit,
+    keyword,
+}: {
+    offset: number;
+    limit: number;
+    keyword: string;
+}): Promise<FollowUser[]> {
+    return request<FollowUser[]>(`/search${qs({ offset, limit, type: "users", keyword })}`, { headers: authHeaders() });
+}

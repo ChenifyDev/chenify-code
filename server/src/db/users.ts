@@ -1,8 +1,8 @@
-import { count, desc, eq, like, sql } from "drizzle-orm";
+import { count, eq, inArray, like, type SQL, sql } from "drizzle-orm";
 import { db } from "./client";
 import { db as worksDb } from "../works";
 import { favorites, follows, posts, users } from "./schema";
-import type { SpaceUser, User, UserPublic } from "./types";
+import type { FollowUser, SpaceUser, User, UserPublic } from "./types";
 import { works } from "../works/schema.ts";
 
 const publicCols = {
@@ -104,19 +104,60 @@ export function updatePrivacy(
     db.update(users).set(set).where(eq(users.id, userId)).run();
 }
 
-export async function searchUsers(options: { offset: number; limit: number; keyword: string }): Promise<UserPublic[]> {
+export async function searchUsers(
+    options: { offset: number; limit: number; keyword: string },
+    viewerId: number | null,
+): Promise<FollowUser[]> {
     const { offset, limit, keyword } = options;
 
     const followerCount = sql<number>`(SELECT COUNT(*) FROM ${follows} WHERE ${follows.following_id} = ${users.id})`;
-    const workCount = sql<number>`(SELECT COUNT(*) FROM ${works} WHERE ${works.user_id} = ${users.id})`;
-    const score = sql<number>`(${followerCount} * 3 + ${workCount} * 2)`;
+    const isFollowingExpr = viewerId
+        ? sql<boolean>`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.follower_id} = ${viewerId} AND ${follows.following_id} = ${users.id})`
+        : (sql.raw("0") as SQL<boolean>);
 
-    return db
-        .select(publicCols)
+    const rows = db
+        .select({
+            id: users.id,
+            username: users.username,
+            email: users.email,
+            avatar: users.avatar,
+            created_at: users.created_at,
+            followers: followerCount,
+            is_following: isFollowingExpr,
+        })
         .from(users)
         .where(like(users.username, `%${keyword}%`))
-        .orderBy(desc(score), desc(users.created_at))
-        .limit(limit)
-        .offset(offset)
         .all();
+
+    const workCounts = new Map<number, number>();
+    if (rows.length > 0) {
+        const counts = worksDb
+            .select({ user_id: works.user_id, n: count() })
+            .from(works)
+            .where(
+                inArray(
+                    works.user_id,
+                    rows.map((r) => r.id),
+                ),
+            )
+            .groupBy(works.user_id)
+            .all();
+        for (const row of counts) workCounts.set(row.user_id, row.n);
+    }
+
+    const scored = rows
+        .map((row) => ({
+            id: row.id,
+            username: row.username,
+            email: row.email,
+            avatar: row.avatar,
+            created_at: row.created_at,
+            followers: row.followers,
+            is_following: row.is_following,
+            score: row.followers * 3 + (workCounts.get(row.id) ?? 0) * 2,
+        }))
+        .sort((a, b) => b.score - a.score || b.created_at.localeCompare(a.created_at))
+        .slice(offset, offset + limit);
+
+    return scored.map(({ score: _score, ...user }) => user);
 }

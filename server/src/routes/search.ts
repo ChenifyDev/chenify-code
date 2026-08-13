@@ -1,4 +1,4 @@
-import { parsePagination } from "./util.ts";
+import { getAuthUser, parsePagination } from "./util.ts";
 import { searchPosts, searchUsers } from "../db";
 import { searchWorks } from "../works";
 
@@ -20,7 +20,8 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const data = await searchWorks({ offset, limit, sort, keyword });
             return Response.json(data);
         } else {
-            const data = await searchUsers({ offset, limit, keyword });
+            const me = await getAuthUser(req);
+            const data = await searchUsers({ offset, limit, keyword }, me?.id || null);
             return Response.json(data);
         }
     },
