@@ -203,7 +203,7 @@ function WorksTab({ tab }: { tab: TabData<WorkSummary> }) {
     if (tab.error) return <Empty text={tab.error} />;
     if (tab.items.length === 0) return <Empty text="还没有帖子" />;
     return (
-        <div className={"m-4 columns-2 sm:columns-3 md:columns-3 lg:columns-3 gap-4 space-y-2"}>
+        <div className={"m-4 columns-3 sm:columns-2 md:columns-4 lg:columns-4 gap-4 space-y-2"}>
             {tab.items.map((work) => (
                 <WorkCard key={work.id} work={work} />
             ))}

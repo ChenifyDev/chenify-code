@@ -16,11 +16,11 @@ export default function WorksTab({ keyword, sort }: { keyword: string; sort: "ho
     const { items, loading, loadingMore, hasMore, error, load } = useSearchFeed<WorkSummary>(fetcher, LIMIT);
 
     if (loading)
-        return <SkeletonList className="m-4 columns-2 gap-4 space-y-2 sm:columns-3 md:columns-3 lg:columns-3" />;
+        return <SkeletonList className="m-4 columns-3 gap-4 space-y-2 sm:columns-2 md:columns-4 lg:columns-4" />;
     if (error) return <Empty text={error} />;
     if (items.length === 0) return <Empty text="没有找到相关作品" />;
     return (
-        <div className="m-4 columns-2 gap-4 space-y-2 sm:columns-3 md:columns-3 lg:columns-3">
+        <div className="m-4 columns-3 gap-4 space-y-2 sm:columns-2 md:columns-4 lg:columns-4">
             {items.map((work) => (
                 <WorkCard key={work.id} work={work} className="break-inside-avoid" />
             ))}

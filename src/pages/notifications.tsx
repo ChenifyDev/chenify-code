@@ -112,7 +112,7 @@ export default function NotificationsPage() {
     const unreadCount = items.filter((item) => !item.is_read && !marked.includes(item.id)).length;
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="mx-auto w-full p-4 md:p-6">
             <header className="mb-4 flex items-center justify-between">
                 <h1 className="flex items-center gap-2 text-xl font-semibold">
                     <Bell className="size-5" />

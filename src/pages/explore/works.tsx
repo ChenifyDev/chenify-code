@@ -65,7 +65,7 @@ function Feed({ sort }: { sort: Sort }) {
     if (error) return <Empty text={error} />;
     if (items.length === 0) return <Empty text="这里还空空如也" />;
     return (
-        <div className="m-4 columns-2 sm:columns-3 md:columns-3 lg:columns-3 gap-4 space-y-2">
+        <div className="m-4 columns-3 sm:columns-2 md:columns-4 lg:columns-4 gap-4 space-y-2">
             {items.map((work) => (
                 <WorkCard work={work} key={work.id} className={"break-inside-avoid"} />
             ))}
@@ -87,7 +87,7 @@ export default function Works() {
     const [sort, setSort] = useState<Sort>("hot");
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="mx-auto w-full p-4 md:p-6">
             <header className="mb-4">
                 <h1 className="flex items-center gap-2 text-xl font-semibold">
                     <Compass className="size-5" />
