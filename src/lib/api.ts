@@ -394,6 +394,18 @@ export function updatePrivacy(flags: {
     });
 }
 
+export function updateProfile(options: {
+    username?: string;
+    avatar?: File | null;
+    removeAvatar?: boolean;
+}): Promise<UserPublic> {
+    const form = new FormData();
+    if (options.username) form.set("username", options.username);
+    if (options.avatar) form.set("avatar", options.avatar);
+    if (options.removeAvatar) form.set("remove_avatar", "1");
+    return request<UserPublic>("/user/profile", { method: "PATCH", body: form, headers: authHeaders() });
+}
+
 export function listDrafts(status?: "draft" | "published", offset = 0, limit = 20): Promise<Draft[]> {
     return request<Draft[]>(`/drafts${qs({ status, offset, limit })}`, { headers: authHeaders() });
 }

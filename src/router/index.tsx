@@ -13,6 +13,7 @@ import Write from "@/pages/write.tsx";
 import ExploreWorks from "@/pages/explore/works.tsx";
 import CodeRunner from "@/pages/code-runner.tsx";
 import Search from "@/pages/search/index.tsx";
+import SettingsPage from "@/pages/settings.tsx";
 const router = createBrowserRouter([
     {
         path: "/",
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
             {
                 path: "search",
                 element: <Search />,
+            },
+            {
+                path: "settings",
+                element: <SettingsPage />,
             },
             {
                 path: "drafts",

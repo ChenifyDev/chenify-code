@@ -7,32 +7,9 @@ import {
 } from "../db";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
+import { saveAvatar } from "./avatar";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-const AVATAR_EXTENSIONS: Record<string, string> = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/webp": "webp",
-    "image/gif": "gif",
-};
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-const MAX_AVATAR_DIMENSION = 512;
-const AVATAR_WEBP_QUALITY = 80;
-
-async function processAvatar(file: File, originalExt: string): Promise<{ data: Uint8Array | File; ext: string }> {
-    if (file.type === "image/gif") return { data: file, ext: originalExt };
-    try {
-        const bytes = await new Bun.Image(file)
-            .resize(MAX_AVATAR_DIMENSION, MAX_AVATAR_DIMENSION, { fit: "inside" })
-            .webp({ quality: AVATAR_WEBP_QUALITY })
-            .bytes();
-        if (bytes.length < file.size) return { data: bytes, ext: "webp" };
-        return { data: file, ext: originalExt };
-    } catch {
-        return { data: file, ext: originalExt };
-    }
-}
 
 export const routes: Bun.Serve.Routes<any, any> = {
     "/api/passport/register": async (req) => {
@@ -63,18 +40,9 @@ export const routes: Bun.Serve.Routes<any, any> = {
         let avatar: string | null = null;
         const avatarFile = form.get("avatar");
         if (avatarFile instanceof File && avatarFile.size > 0) {
-            const type = avatarFile.type;
-            if (!ALLOWED_AVATAR_TYPES.has(type)) {
-                return jsonError(400, "头像仅支持 png、jpg、webp、gif 格式");
-            }
-            if (avatarFile.size > MAX_AVATAR_SIZE) {
-                return jsonError(400, "头像大小不能超过 2MB");
-            }
-            const ext = AVATAR_EXTENSIONS[type]!;
-            const base = crypto.randomUUID();
-            const processed = await processAvatar(avatarFile, ext);
-            await Bun.write(`./uploads/${base}.${processed.ext}`, processed.data);
-            avatar = `/uploads/${base}.${processed.ext}`;
+            const saved = await saveAvatar(avatarFile);
+            if ("error" in saved) return saved.error;
+            avatar = saved.path;
         }
 
         const passwordHash = await Bun.password.hash(password, {

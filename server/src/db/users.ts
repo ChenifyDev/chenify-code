@@ -104,6 +104,17 @@ export function updatePrivacy(
     db.update(users).set(set).where(eq(users.id, userId)).run();
 }
 
+export function updateUserProfile(
+    userId: number,
+    changes: { username?: string; avatar?: string | null },
+): UserPublic | null {
+    const set: Partial<{ username: string; avatar: string | null }> = {};
+    if (changes.username !== undefined) set.username = changes.username;
+    if (changes.avatar !== undefined) set.avatar = changes.avatar;
+    if (Object.keys(set).length === 0) return findUserById(userId);
+    return db.update(users).set(set).where(eq(users.id, userId)).returning(publicCols).get() ?? null;
+}
+
 export async function searchUsers(
     options: { offset: number; limit: number; keyword: string },
     viewerId: number | null,

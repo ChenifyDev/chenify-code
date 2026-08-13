@@ -28,9 +28,12 @@ import {
     unpublishDraft,
     updateDraft,
     updatePrivacy,
+    updateUserProfile,
     userExists,
+    findUserByUsername,
 } from "../db";
 import { getAuthUser, jsonError, parsePagination } from "./util";
+import { saveAvatar } from "./avatar";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 const IMAGE_EXTENSIONS: Record<string, string> = {
@@ -316,6 +319,54 @@ export const routes: Bun.Serve.Routes<any, any> = {
             }
             updatePrivacy(me.id, favPublic, followPublic);
             return Response.json({ success: true });
+        },
+    },
+
+    "/api/user/profile": {
+        PATCH: async (req) => {
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+
+            const form = await req.formData();
+            const username = form.get("username")?.toString().trim() ?? "";
+            const avatarFile = form.get("avatar");
+            const removeAvatar = form.get("remove_avatar") === "1";
+
+            let avatar: string | null | undefined;
+            if (removeAvatar) {
+                avatar = null;
+            } else if (avatarFile instanceof File && avatarFile.size > 0) {
+                const saved = await saveAvatar(avatarFile);
+                if ("error" in saved) return saved.error;
+                avatar = saved.path;
+            }
+
+            if (!username && avatar === undefined) {
+                return jsonError(400, "请提供要修改的内容");
+            }
+            if (username) {
+                if (username.length < 2 || username.length > 32) {
+                    return jsonError(400, "用户名长度需在 2-32 个字符之间");
+                }
+                const existing = findUserByUsername(username);
+                if (existing && existing.id !== me.id) {
+                    return jsonError(409, "该用户名已被使用");
+                }
+            }
+
+            const updated = updateUserProfile(me.id, {
+                username: username || undefined,
+                avatar,
+            });
+            if (!updated) return jsonError(500, "更新失败");
+
+            if (avatar && me.avatar) {
+                await unlink(me.avatar.replace(/^\//, "")).catch(() => {});
+            } else if (removeAvatar && me.avatar) {
+                await unlink(me.avatar.replace(/^\//, "")).catch(() => {});
+            }
+
+            return Response.json(updated);
         },
     },
 

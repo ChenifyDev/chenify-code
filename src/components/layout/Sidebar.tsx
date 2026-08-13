@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass } from "lucide-react";
+import { Code2, FileText, Home, LogOut, LogIn, SquarePen, Signpost, Compass, Settings } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { clearToken } from "@/lib/api.ts";
@@ -100,30 +100,44 @@ export default function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                {user && (
-                    <SidebarMenuItem>
-                        <NavLink to="/drafts">
-                            {({ isActive }) => (
-                                <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
-                                    <FileText />
-                                    <span>草稿管理</span>
-                                </SidebarMenuButton>
-                            )}
-                        </NavLink>
-                    </SidebarMenuItem>
-                )}
-                {user && (
-                    <SidebarMenuItem>
-                        <NavLink to="/write">
-                            {({ isActive }) => (
-                                <SidebarMenuButton isActive={isActive} tooltip="写文章">
-                                    <SquarePen />
-                                    <span>写文章</span>
-                                </SidebarMenuButton>
-                            )}
-                        </NavLink>
-                    </SidebarMenuItem>
-                )}
+                <SidebarMenu>
+                    {user && (
+                        <SidebarMenuItem>
+                            <NavLink to="/drafts">
+                                {({ isActive }) => (
+                                    <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
+                                        <FileText />
+                                        <span>草稿管理</span>
+                                    </SidebarMenuButton>
+                                )}
+                            </NavLink>
+                        </SidebarMenuItem>
+                    )}
+                    {user && (
+                        <SidebarMenuItem>
+                            <NavLink to="/write">
+                                {({ isActive }) => (
+                                    <SidebarMenuButton isActive={isActive} tooltip="写文章">
+                                        <SquarePen />
+                                        <span>写文章</span>
+                                    </SidebarMenuButton>
+                                )}
+                            </NavLink>
+                        </SidebarMenuItem>
+                    )}
+                    {user && (
+                        <SidebarMenuItem>
+                            <NavLink to="/settings">
+                                {({ isActive }) => (
+                                    <SidebarMenuButton isActive={isActive} tooltip="设置">
+                                        <Settings />
+                                        <span>设置</span>
+                                    </SidebarMenuButton>
+                                )}
+                            </NavLink>
+                        </SidebarMenuItem>
+                    )}
+                </SidebarMenu>
                 <div className="flex items-center gap-2 rounded-md px-2 py-1 group-data-[collapsible=icon]:justify-center">
                     <Avatar
                         onClick={() => navigate(`/users/${user?.id}`)}
