@@ -21,6 +21,9 @@ export async function getAuthUser(req: Request): Promise<UserPublic | null> {
 
 export function parsePagination(url: URL, defaultLimit = 20, maxLimit = 50): { offset: number; limit: number } {
     const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0) || 0);
-    const limit = Math.min(maxLimit, Math.max(1, Number(url.searchParams.get("limit") ?? defaultLimit) || defaultLimit));
+    const limit = Math.min(
+        maxLimit,
+        Math.max(1, Number(url.searchParams.get("limit") ?? defaultLimit) || defaultLimit),
+    );
     return { offset, limit };
 }

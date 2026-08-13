@@ -3,13 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { discoverPorts } from "./ports";
 import { decodeS2C, encodeC2S, type S2CMessage } from "./protocol";
 
-export type ConnStatus =
-    | "idle"
-    | "discovering"
-    | "connecting"
-    | "connected"
-    | "ended"
-    | "error";
+export type ConnStatus = "idle" | "discovering" | "connecting" | "connected" | "ended" | "error";
 
 export interface UseWebttyOptions {
     onMessage: (msg: S2CMessage) => void;
@@ -85,9 +79,7 @@ export function useWebtty({ onMessage }: UseWebttyOptions): Webtty {
                 const found = await discoverPorts();
                 if (!found) {
                     setStatus("error");
-                    setError(
-                        "未发现 coding-helper 服务，请先启动后端或手动填写 WebSocket 端口",
-                    );
+                    setError("未发现 coding-helper 服务，请先启动后端或手动填写 WebSocket 端口");
                     reject(new Error("coding-helper 服务未发现"));
                     return;
                 }

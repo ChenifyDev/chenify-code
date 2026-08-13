@@ -9,7 +9,10 @@ const AVATAR_EXTENSIONS: Record<string, string> = {
     "image/gif": "gif",
 };
 
-export async function processAvatar(file: File, originalExt: string): Promise<{ data: Uint8Array | File; ext: string }> {
+export async function processAvatar(
+    file: File,
+    originalExt: string,
+): Promise<{ data: Uint8Array | File; ext: string }> {
     if (file.type === "image/gif") return { data: file, ext: originalExt };
     try {
         const bytes = await new Bun.Image(file)

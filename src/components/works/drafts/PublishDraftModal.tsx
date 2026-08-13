@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -236,11 +230,7 @@ export function PublishDraftModal({
                 </div>
 
                 <div className="flex justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        disabled={publishing || editing}
-                        onClick={() => onOpenChange(false)}
-                    >
+                    <Button variant="outline" disabled={publishing || editing} onClick={() => onOpenChange(false)}>
                         取消
                     </Button>
                     <Button disabled={publishing || editing || !canPublish} onClick={() => void handlePublish()}>

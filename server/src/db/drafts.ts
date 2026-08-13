@@ -53,7 +53,8 @@ export function createDraft(userId: number, content: string, imagePaths: string[
     for (const path of imagePaths) db.insert(draftImages).values({ draft_id: draft.id, path }).run();
     for (const tag of tagNames) {
         const tagId = getOrCreateTag(tag);
-        if (tagId != null) db.insert(draftTags).values({ draft_id: draft.id, tag_id: tagId }).onConflictDoNothing().run();
+        if (tagId != null)
+            db.insert(draftTags).values({ draft_id: draft.id, tag_id: tagId }).onConflictDoNothing().run();
     }
     return toDraft(draft);
 }
@@ -63,7 +64,9 @@ export function listDrafts(
     options: { offset: number; limit: number; status?: "draft" | "published" },
 ): Draft[] {
     const query = db.select(draftCols).from(drafts);
-    const where = options.status ? and(eq(drafts.user_id, userId), eq(drafts.status, options.status)) : eq(drafts.user_id, userId);
+    const where = options.status
+        ? and(eq(drafts.user_id, userId), eq(drafts.status, options.status))
+        : eq(drafts.user_id, userId);
     const rows = query
         .where(where)
         .orderBy(desc(drafts.updated_at), desc(drafts.id))
@@ -74,20 +77,12 @@ export function listDrafts(
 }
 
 export function getDraftById(id: number): Draft | null {
-    const row = db
-        .select(draftCols)
-        .from(drafts)
-        .where(eq(drafts.id, id))
-        .get() as DraftRow | undefined;
+    const row = db.select(draftCols).from(drafts).where(eq(drafts.id, id)).get() as DraftRow | undefined;
     return row ? toDraft(row) : null;
 }
 
 export function getDraftOwner(id: number): number | null {
-    const row = db
-        .select({ user_id: drafts.user_id })
-        .from(drafts)
-        .where(eq(drafts.id, id))
-        .get();
+    const row = db.select({ user_id: drafts.user_id }).from(drafts).where(eq(drafts.id, id)).get();
     return row?.user_id ?? null;
 }
 
@@ -126,21 +121,13 @@ export function updateDraft(
     const keepImages = new Set(imagePaths);
     const goneImages = removedImages.filter((path) => !keepImages.has(path));
 
-    const row = db
-        .select(draftCols)
-        .from(drafts)
-        .where(eq(drafts.id, id))
-        .get() as DraftRow | undefined;
+    const row = db.select(draftCols).from(drafts).where(eq(drafts.id, id)).get() as DraftRow | undefined;
     return { draft: row ? toDraft(row) : null, removedImages: goneImages };
 }
 
 export function deleteDraft(id: number): string[] {
     const images = getDraftImages(id);
-    const row = db
-        .select(draftCols)
-        .from(drafts)
-        .where(eq(drafts.id, id))
-        .get() as DraftRow | undefined;
+    const row = db.select(draftCols).from(drafts).where(eq(drafts.id, id)).get() as DraftRow | undefined;
     db.delete(draftImages).where(eq(draftImages.draft_id, id)).run();
     db.delete(draftTags).where(eq(draftTags.draft_id, id)).run();
     db.delete(drafts).where(eq(drafts.id, id)).run();

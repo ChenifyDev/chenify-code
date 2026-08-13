@@ -6,7 +6,12 @@ import type { WorkDraft, WorkFile } from "./types";
 
 function getDraftFiles(id: number): WorkFile[] {
     return db
-        .select({ id: workDraftFiles.id, name: workDraftFiles.name, path: workDraftFiles.path, size: workDraftFiles.size })
+        .select({
+            id: workDraftFiles.id,
+            name: workDraftFiles.name,
+            path: workDraftFiles.path,
+            size: workDraftFiles.size,
+        })
         .from(workDraftFiles)
         .where(eq(workDraftFiles.draft_id, id))
         .all();
@@ -100,9 +105,7 @@ function toPublishedDraftMeta(row: {
 }
 
 function attachFilesToPage(entries: WorkDraftOrMeta[]): WorkDraft[] {
-    const workIds = entries
-        .filter((e) => e.status === "published" && e.work_id != null)
-        .map((e) => e.work_id!);
+    const workIds = entries.filter((e) => e.status === "published" && e.work_id != null).map((e) => e.work_id!);
     const filesByWork = getWorkFilesByWorkIds(workIds);
     const draftByWork = new Map<number, number>();
     if (workIds.length > 0) {
@@ -168,19 +171,19 @@ export function listWorkDrafts(
         return attachFilesToPage(published.slice(options.offset, options.offset + options.limit));
     }
 
-    const unpublishedDrafts = (db
-        .select()
-        .from(workDrafts)
-        .where(eq(workDrafts.user_id, userId))
-        .orderBy(desc(workDrafts.updated_at), desc(workDrafts.id))
-        .all() as unknown as WorkDraftRowRaw[])
+    const unpublishedDrafts = (
+        db
+            .select()
+            .from(workDrafts)
+            .where(eq(workDrafts.user_id, userId))
+            .orderBy(desc(workDrafts.updated_at), desc(workDrafts.id))
+            .all() as unknown as WorkDraftRowRaw[]
+    )
         .map(toDraft)
         .filter((d) => d.status !== "published");
 
     const page = [...published, ...unpublishedDrafts]
-        .sort((a, b) =>
-            a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : b.id - a.id,
-        )
+        .sort((a, b) => (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : b.id - a.id))
         .slice(options.offset, options.offset + options.limit);
     return attachFilesToPage(page);
 }
@@ -212,7 +215,12 @@ export function updateWorkDraft(
     const oldCover = old.cover;
 
     db.update(workDrafts)
-        .set({ title: data.title, description: data.description, cover: data.cover, updated_at: new Date().toISOString() })
+        .set({
+            title: data.title,
+            description: data.description,
+            cover: data.cover,
+            updated_at: new Date().toISOString(),
+        })
         .where(eq(workDrafts.id, id))
         .run();
     db.delete(workDraftFiles).where(eq(workDraftFiles.draft_id, id)).run();

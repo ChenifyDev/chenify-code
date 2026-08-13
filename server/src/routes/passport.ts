@@ -1,10 +1,4 @@
-import {
-    createUser,
-    findUserByEmail,
-    findUserByUsername,
-    findUserByUsernameOrEmail,
-    toPublicUser,
-} from "../db";
+import { createUser, findUserByEmail, findUserByUsername, findUserByUsernameOrEmail, toPublicUser } from "../db";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
 import { saveAvatar } from "./avatar";

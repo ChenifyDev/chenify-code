@@ -24,9 +24,7 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const body = (await req.json().catch(() => null)) as { ids?: number[] } | null;
-            const ids = Array.isArray(body?.ids)
-                ? body.ids.filter((id) => Number.isInteger(id))
-                : undefined;
+            const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => Number.isInteger(id)) : undefined;
             markNotificationsRead(me.id, ids);
             return Response.json({ success: true });
         },

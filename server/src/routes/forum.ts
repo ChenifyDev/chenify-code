@@ -65,7 +65,14 @@ async function processImage(file: File): Promise<{ data: Uint8Array | File; ext:
 }
 
 function splitTags(raw: string): string[] {
-    return [...new Set(raw.split(/[,，\s]+/).map((tag) => tag.trim().toLowerCase()).filter(Boolean))].slice(0, MAX_TAGS);
+    return [
+        ...new Set(
+            raw
+                .split(/[,，\s]+/)
+                .map((tag) => tag.trim().toLowerCase())
+                .filter(Boolean),
+        ),
+    ].slice(0, MAX_TAGS);
 }
 
 function validTags(tags: string[]): boolean {
@@ -98,10 +105,9 @@ function numericIdError(raw: string): number | Response {
     return id;
 }
 
-async function parseDraftForm(req: Request): Promise<
-    | { content: string; tags: string[]; imageFiles: File[] }
-    | { error: Response }
-> {
+async function parseDraftForm(
+    req: Request,
+): Promise<{ content: string; tags: string[]; imageFiles: File[] } | { error: Response }> {
     const form = await req.formData();
     const content = form.get("content")?.toString().trim() ?? "";
     if (content.length > MAX_CONTENT_LENGTH) {
@@ -407,8 +413,7 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const url = new URL(req.url);
             const { offset, limit } = parsePagination(url);
             const status = url.searchParams.get("status") as "draft" | "published" | null;
-            const parsed =
-                status === "draft" || status === "published" ? status : undefined;
+            const parsed = status === "draft" || status === "published" ? status : undefined;
             return Response.json(listDrafts(me.id, { offset, limit, status: parsed }));
         },
         POST: async (req) => {

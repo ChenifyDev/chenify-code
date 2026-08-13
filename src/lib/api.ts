@@ -646,10 +646,7 @@ export function searchUsers({
     limit: number;
     keyword: string;
 }): Promise<FollowUser[]> {
-    return request<FollowUser[]>(
-        `/search${qs({ offset, limit, type: "users", keyword })}`,
-        { headers: authHeaders() },
-    );
+    return request<FollowUser[]>(`/search${qs({ offset, limit, type: "users", keyword })}`, { headers: authHeaders() });
 }
 
 export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply";

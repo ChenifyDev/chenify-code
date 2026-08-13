@@ -3,7 +3,16 @@ import { inArray, sql } from "drizzle-orm";
 import { db as mainDb } from "./src/db/client";
 import { users } from "./src/db/schema";
 import { db } from "./src/works";
-import { workCommentLikes, workComments, workDraftFiles, workDrafts, workFavorites, workFiles, workLikes, works } from "./src/works/schema";
+import {
+    workCommentLikes,
+    workComments,
+    workDraftFiles,
+    workDrafts,
+    workFavorites,
+    workFiles,
+    workLikes,
+    works,
+} from "./src/works/schema";
 
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];
 
@@ -60,7 +69,12 @@ const seedWorks: SeedWork[] = [
         likes: ["bob", "carol", "erin"],
         favorites: ["bob", "dave"],
         comments: [
-            { username: "bob", content: "CLI 很干净！建议支持批量查询多个城市。", created_at: "2026-08-02 10:00:00", liked_by: ["carol"] },
+            {
+                username: "bob",
+                content: "CLI 很干净！建议支持批量查询多个城市。",
+                created_at: "2026-08-02 10:00:00",
+                liked_by: ["carol"],
+            },
             {
                 username: "carol",
                 content: "记得用 requests.Session 复用连接，性能更好。",
@@ -488,7 +502,10 @@ async function main() {
     }
 
     const draftIdByKey = new Map<string, number>();
-    for (const row of db.select({ id: workDrafts.id, user_id: workDrafts.user_id, title: workDrafts.title }).from(workDrafts).all()) {
+    for (const row of db
+        .select({ id: workDrafts.id, user_id: workDrafts.user_id, title: workDrafts.title })
+        .from(workDrafts)
+        .all()) {
         draftIdByKey.set(`${row.user_id}:${row.title}`, row.id);
     }
 
@@ -571,7 +588,9 @@ async function main() {
                 const parent = db
                     .select({ id: workComments.id })
                     .from(workComments)
-                    .where(sql`${workComments.work_id} = ${work.id} AND ${workComments.content} = ${comment.parent_content}`)
+                    .where(
+                        sql`${workComments.work_id} = ${work.id} AND ${workComments.content} = ${comment.parent_content}`,
+                    )
                     .get();
                 parentCommentId = parent?.id ?? null;
             }

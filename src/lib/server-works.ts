@@ -50,7 +50,6 @@ export async function loadWorkForRunner(workId: number): Promise<RunnerWork> {
             content: await fetchWorkFileContent(file.path),
         })),
     );
-    const main =
-        files.find((file) => MAIN_CANDIDATES.includes(file.path.toLowerCase())) ?? null;
+    const main = files.find((file) => MAIN_CANDIDATES.includes(file.path.toLowerCase())) ?? null;
     return { workId: work.id, title: work.title, files, main };
 }

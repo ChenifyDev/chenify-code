@@ -79,7 +79,8 @@ const seedUsers: SeedUser[] = [
                 updated_at: "2026-07-25 21:05:00",
             },
             {
-                content: "最近在整理一份 React 性能优化清单：useMemo/useCallback 别乱用，子树拆分会更直接。写一半还没想好怎么组织。",
+                content:
+                    "最近在整理一份 React 性能优化清单：useMemo/useCallback 别乱用，子树拆分会更直接。写一半还没想好怎么组织。",
                 tags: ["react"],
                 status: "draft",
                 created_at: "2026-08-04 09:00:00",
@@ -251,7 +252,8 @@ const seedUsers: SeedUser[] = [
                 updated_at: "2026-08-02 08:55:00",
             },
             {
-                content: "打算写篇 JWT 在前后端怎么安全存放的文章：放 localStorage 容易 XSS 偷，放在内存会丢登录态，纠结。",
+                content:
+                    "打算写篇 JWT 在前后端怎么安全存放的文章：放 localStorage 容易 XSS 偷，放在内存会丢登录态，纠结。",
                 tags: ["security", "jwt"],
                 status: "draft",
                 created_at: "2026-08-05 22:00:00",
@@ -271,15 +273,68 @@ const seedUsers: SeedUser[] = [
     },
 ];
 
-const seedComments: { post_key: string; author: string; content: string; created_at: string; parent_content?: string; liked_by?: string[] }[] = [
-    { post_key: "bob:0", author: "alice", content: "Bun 这套确实香，我也准备迁移了。", created_at: "2026-08-01 10:00:00", liked_by: ["dave", "carol"] },
-    { post_key: "bob:0", author: "dave", content: "请问 SQLite 并发写入会有问题吗？", created_at: "2026-08-01 10:30:00", liked_by: ["alice"] },
-    { post_key: "bob:0", author: "alice", content: "写了就直接跑，不用管并发，本地先能跑通再说。", created_at: "2026-08-01 10:40:00", parent_content: "请问 SQLite 并发写入会有问题吗？" },
-    { post_key: "alice:0", author: "bob", content: "博客我还没迁，主要是插件生态顾虑。", created_at: "2026-07-30 12:00:00" },
-    { post_key: "alice:1", author: "carol", content: "zustand 配 immer 简直绝配。", created_at: "2026-07-25 22:00:00", liked_by: ["erin", "dave"] },
-    { post_key: "carol:0", author: "erin", content: "@theme 确实比 tailwind.config 直观。", created_at: "2026-07-29 12:20:00" },
-    { post_key: "carol:0", author: "alice", content: "自定义 CSS 变量和 @theme 混用的坑很多，注意版本。", created_at: "2026-07-29 12:40:00", parent_content: "@theme 确实比 tailwind.config 直观。" },
-    { post_key: "dave:0", author: "carol", content: "先学 Vite 吧，上手快，底层理解可以后面补。", created_at: "2026-08-01 09:00:00", liked_by: ["erin"] },
+const seedComments: {
+    post_key: string;
+    author: string;
+    content: string;
+    created_at: string;
+    parent_content?: string;
+    liked_by?: string[];
+}[] = [
+    {
+        post_key: "bob:0",
+        author: "alice",
+        content: "Bun 这套确实香，我也准备迁移了。",
+        created_at: "2026-08-01 10:00:00",
+        liked_by: ["dave", "carol"],
+    },
+    {
+        post_key: "bob:0",
+        author: "dave",
+        content: "请问 SQLite 并发写入会有问题吗？",
+        created_at: "2026-08-01 10:30:00",
+        liked_by: ["alice"],
+    },
+    {
+        post_key: "bob:0",
+        author: "alice",
+        content: "写了就直接跑，不用管并发，本地先能跑通再说。",
+        created_at: "2026-08-01 10:40:00",
+        parent_content: "请问 SQLite 并发写入会有问题吗？",
+    },
+    {
+        post_key: "alice:0",
+        author: "bob",
+        content: "博客我还没迁，主要是插件生态顾虑。",
+        created_at: "2026-07-30 12:00:00",
+    },
+    {
+        post_key: "alice:1",
+        author: "carol",
+        content: "zustand 配 immer 简直绝配。",
+        created_at: "2026-07-25 22:00:00",
+        liked_by: ["erin", "dave"],
+    },
+    {
+        post_key: "carol:0",
+        author: "erin",
+        content: "@theme 确实比 tailwind.config 直观。",
+        created_at: "2026-07-29 12:20:00",
+    },
+    {
+        post_key: "carol:0",
+        author: "alice",
+        content: "自定义 CSS 变量和 @theme 混用的坑很多，注意版本。",
+        created_at: "2026-07-29 12:40:00",
+        parent_content: "@theme 确实比 tailwind.config 直观。",
+    },
+    {
+        post_key: "dave:0",
+        author: "carol",
+        content: "先学 Vite 吧，上手快，底层理解可以后面补。",
+        created_at: "2026-08-01 09:00:00",
+        liked_by: ["erin"],
+    },
 ];
 
 function insertOrGetId(username: string, email: string, passwordHash: string): number | null {
@@ -317,7 +372,9 @@ async function main() {
             db.delete(comments).where(eq(comments.user_id, id)).run();
             db.delete(favorites).where(eq(favorites.user_id, id)).run();
             db.delete(likes).where(eq(likes.user_id, id)).run();
-            db.delete(follows).where(or(eq(follows.follower_id, id), eq(follows.following_id, id))).run();
+            db.delete(follows)
+                .where(or(eq(follows.follower_id, id), eq(follows.following_id, id)))
+                .run();
             db.delete(posts).where(eq(posts.user_id, id)).run();
             db.delete(users).where(eq(users.id, id)).run();
         }
@@ -368,7 +425,8 @@ async function main() {
                 .where(and(eq(drafts.user_id, userId), eq(drafts.content, draft.content)))
                 .get();
             if (existing) continue;
-            const postId = draft.status === "published" && draft.post_key ? (postIds.get(draft.post_key) ?? null) : null;
+            const postId =
+                draft.status === "published" && draft.post_key ? (postIds.get(draft.post_key) ?? null) : null;
             const inserted = db
                 .insert(drafts)
                 .values({
@@ -390,7 +448,10 @@ async function main() {
         for (const target of user.follows) {
             const targetId = idMap.get(target);
             if (targetId !== undefined) {
-                db.insert(follows).values({ follower_id: followerId, following_id: targetId }).onConflictDoNothing().run();
+                db.insert(follows)
+                    .values({ follower_id: followerId, following_id: targetId })
+                    .onConflictDoNothing()
+                    .run();
             }
         }
         for (const key of user.favorites) {
@@ -414,7 +475,13 @@ async function main() {
         const existing = db
             .select({ id: comments.id })
             .from(comments)
-            .where(and(eq(comments.post_id, postId), eq(comments.user_id, authorId), eq(comments.content, comment.content)))
+            .where(
+                and(
+                    eq(comments.post_id, postId),
+                    eq(comments.user_id, authorId),
+                    eq(comments.content, comment.content),
+                ),
+            )
             .get();
         let commentId: number;
         if (existing) {
@@ -457,13 +524,21 @@ async function main() {
 
     for (const user of seedUsers) {
         const id = idMap.get(user.username)!;
-        const postsCount = db.select({ n: sql<number>`count(*)` }).from(posts).where(eq(posts.user_id, id)).get()!.n;
+        const postsCount = db
+            .select({ n: sql<number>`count(*)` })
+            .from(posts)
+            .where(eq(posts.user_id, id))
+            .get()!.n;
         const favoritesCount = db
             .select({ n: sql<number>`count(*)` })
             .from(favorites)
             .where(eq(favorites.user_id, id))
             .get()!.n;
-        const likesCount = db.select({ n: sql<number>`count(*)` }).from(likes).where(eq(likes.user_id, id)).get()!.n;
+        const likesCount = db
+            .select({ n: sql<number>`count(*)` })
+            .from(likes)
+            .where(eq(likes.user_id, id))
+            .get()!.n;
         const followingCount = db
             .select({ n: sql<number>`count(*)` })
             .from(follows)

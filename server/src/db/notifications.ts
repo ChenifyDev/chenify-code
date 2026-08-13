@@ -183,7 +183,10 @@ export function listNotifications(userId: number, options: { offset: number; lim
             post_id: row.post_id,
             work_id: row.work_id,
             comment_id: row.comment_id,
-            snippet: row.post_id != null ? (postSnippets.get(row.post_id) ?? "") : (workSnippets.get(row.work_id as number) ?? ""),
+            snippet:
+                row.post_id != null
+                    ? (postSnippets.get(row.post_id) ?? "")
+                    : (workSnippets.get(row.work_id as number) ?? ""),
             reply_to: replyTo.get(replyCommentId) ?? null,
             comment: row.comment_id != null ? (commentContents.get(row.comment_id) ?? "") : "",
         };

@@ -55,10 +55,7 @@ export type S2CMessage =
 
 export function encodeC2S(payload: unknown): ArrayBuffer {
     const bytes = encode(payload as never);
-    return bytes.buffer.slice(
-        bytes.byteOffset,
-        bytes.byteOffset + bytes.byteLength,
-    ) as ArrayBuffer;
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
 export function decodeS2C(data: ArrayBuffer): S2CMessage {

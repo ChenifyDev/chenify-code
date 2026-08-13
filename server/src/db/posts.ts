@@ -132,7 +132,12 @@ function deletePostRowsOnly(id: number): void {
     db.delete(postImages).where(eq(postImages.post_id, id)).run();
     db.delete(postTags).where(eq(postTags.post_id, id)).run();
     db.delete(favorites).where(eq(favorites.post_id, id)).run();
-    const commentIds = db.select({ id: comments.id }).from(comments).where(eq(comments.post_id, id)).all().map((r) => r.id);
+    const commentIds = db
+        .select({ id: comments.id })
+        .from(comments)
+        .where(eq(comments.post_id, id))
+        .all()
+        .map((r) => r.id);
     db.delete(comments).where(eq(comments.post_id, id)).run();
     deleteNotificationsForComment(commentIds);
     deleteNotificationsForPost(id);
