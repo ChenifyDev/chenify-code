@@ -3,14 +3,14 @@ import { createBrowserRouter } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import App from "@/App.tsx";
 import Layout from "@/components/layout/Layout.tsx";
-import ExplorePosts from "@/pages/explore-posts.tsx";
+import ExplorePosts from "@/pages/explore/posts.tsx";
 import Drafts from "@/pages/drafts.tsx";
 import Login from "@/pages/login.tsx";
 import Post from "@/pages/post.tsx";
 import Work from "@/pages/work.tsx";
 import Profile from "@/pages/profile.tsx";
 import Write from "@/pages/write.tsx";
-import ExploreWorks from "@/pages/explore-works.tsx";
+import ExploreWorks from "@/pages/explore/works.tsx";
 import CodeRunner from "@/pages/code-runner.tsx";
 
 const router = createBrowserRouter([

@@ -84,7 +84,7 @@ function Empty({ text }: { text: string }) {
     return <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>;
 }
 
-export default function ExplorePosts() {
+export default function Posts() {
     const [sort, setSort] = useState<Sort>("hot");
     const [tag, setTag] = useState<string | null>(null);
     const [tags, setTags] = useState<string[]>([]);

@@ -83,7 +83,7 @@ function Empty({ text }: { text: string }) {
     return <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>;
 }
 
-export default function ExploreWorks() {
+export default function Works() {
     const [sort, setSort] = useState<Sort>("hot");
 
     return (
