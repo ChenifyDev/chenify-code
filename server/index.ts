@@ -2,7 +2,6 @@ import { mkdirSync } from "node:fs";
 import { routes as passportRoutes } from "./src/routes/passport";
 import { routes as forumRoutes } from "./src/routes/forum";
 import { routes as spaceRoutes } from "./src/routes/space";
-import { routes as worksRoutes } from "./src/routes/works";
 import { routes as searchRoutes } from "./src/routes/search";
 import { routes as notificationRoutes } from "./src/routes/notifications";
 
@@ -14,7 +13,6 @@ Bun.serve({
         ...passportRoutes,
         ...forumRoutes,
         ...spaceRoutes,
-        ...worksRoutes,
         ...searchRoutes,
         ...notificationRoutes,
         "/uploads/*": (req) => {

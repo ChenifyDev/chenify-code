@@ -1,11 +1,9 @@
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import { comments, notifications, posts, users } from "./schema";
-import { db as worksDb } from "../works/db";
-import { workComments, works } from "../works/schema";
 import type { UserSummary } from "./types";
 
-export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply";
+export type NotificationType = "post_comment" | "post_reply";
 
 export interface AppNotification {
     id: number;
@@ -26,7 +24,6 @@ export function createNotification(input: {
     actorId: number;
     type: NotificationType;
     postId?: number | null;
-    workId?: number | null;
     commentId?: number | null;
 }): void {
     db.insert(notifications)
@@ -35,7 +32,7 @@ export function createNotification(input: {
             actor_id: input.actorId,
             type: input.type,
             post_id: input.postId ?? null,
-            work_id: input.workId ?? null,
+            work_id: null,
             comment_id: input.commentId ?? null,
         })
         .run();
@@ -93,17 +90,6 @@ export function listNotifications(userId: number, options: { offset: number; lim
         for (const row of postRows) postSnippets.set(row.id, row.snippet);
     }
 
-    const workIds = [...new Set(rows.filter((r) => r.work_id != null).map((r) => r.work_id as number))];
-    const workSnippets = new Map<number, string>();
-    if (workIds.length > 0) {
-        const workRows = worksDb
-            .select({ id: works.id, title: works.title })
-            .from(works)
-            .where(inArray(works.id, workIds))
-            .all();
-        for (const row of workRows) workSnippets.set(row.id, row.title);
-    }
-
     const replyTo = new Map<number, string>();
     const postReplyIds = rows.filter((r) => r.type === "post_reply").map((r) => r.comment_id as number);
     if (postReplyIds.length > 0) {
@@ -125,26 +111,6 @@ export function listNotifications(userId: number, options: { offset: number; lim
             }
         }
     }
-    const workReplyIds = rows.filter((r) => r.type === "work_reply").map((r) => r.comment_id as number);
-    if (workReplyIds.length > 0) {
-        const news = worksDb
-            .select({ id: workComments.id, parent_id: workComments.parent_id })
-            .from(workComments)
-            .where(inArray(workComments.id, workReplyIds))
-            .all();
-        const parentIds = [...new Set(news.map((n) => n.parent_id).filter((p): p is number => p != null))];
-        if (parentIds.length > 0) {
-            const parents = worksDb
-                .select({ id: workComments.id, content: workComments.content })
-                .from(workComments)
-                .where(inArray(workComments.id, parentIds))
-                .all();
-            const parentMap = new Map(parents.map((p) => [p.id, p.content]));
-            for (const n of news) {
-                if (n.parent_id != null) replyTo.set(n.id, parentMap.get(n.parent_id) ?? "");
-            }
-        }
-    }
 
     const postCommentIds = rows
         .filter((r) => r.type === "post_comment" || r.type === "post_reply")
@@ -159,18 +125,6 @@ export function listNotifications(userId: number, options: { offset: number; lim
             .all();
         for (const n of news) commentContents.set(n.id, n.content);
     }
-    const workCommentIds = rows
-        .filter((r) => r.type === "work_comment" || r.type === "work_reply")
-        .map((r) => r.comment_id)
-        .filter((id): id is number => id != null);
-    if (workCommentIds.length > 0) {
-        const news = worksDb
-            .select({ id: workComments.id, content: workComments.content })
-            .from(workComments)
-            .where(inArray(workComments.id, workCommentIds))
-            .all();
-        for (const n of news) commentContents.set(n.id, n.content);
-    }
 
     return rows.map((row) => {
         const replyCommentId = row.comment_id ?? 0;
@@ -181,12 +135,9 @@ export function listNotifications(userId: number, options: { offset: number; lim
             is_read: row.is_read,
             created_at: row.created_at,
             post_id: row.post_id,
-            work_id: row.work_id,
+            work_id: null,
             comment_id: row.comment_id,
-            snippet:
-                row.post_id != null
-                    ? (postSnippets.get(row.post_id) ?? "")
-                    : (workSnippets.get(row.work_id as number) ?? ""),
+            snippet: row.post_id != null ? (postSnippets.get(row.post_id) ?? "") : "",
             reply_to: replyTo.get(replyCommentId) ?? null,
             comment: row.comment_id != null ? (commentContents.get(row.comment_id) ?? "") : "",
         };
@@ -200,8 +151,4 @@ export function deleteNotificationsForPost(postId: number): void {
 export function deleteNotificationsForComment(commentIds: number[]): void {
     if (commentIds.length === 0) return;
     db.delete(notifications).where(inArray(notifications.comment_id, commentIds)).run();
-}
-
-export function deleteNotificationsForWork(workId: number): void {
-    db.delete(notifications).where(eq(notifications.work_id, workId)).run();
 }

@@ -1,8 +1,7 @@
 import { getAuthUser, parsePagination } from "./util.ts";
 import { searchPosts, searchUsers } from "../db";
-import { searchWorks } from "../works";
 
-type SearchType = "posts" | "works" | "users";
+type SearchType = "posts" | "users";
 type SortType = "hot" | "latest";
 
 export const routes: Bun.Serve.Routes<any, any> = {
@@ -15,9 +14,6 @@ export const routes: Bun.Serve.Routes<any, any> = {
         if (!keyword) return new Response("Invalid keyword");
         if (type === "posts") {
             const data = await searchPosts({ offset, limit, sort, keyword });
-            return Response.json(data);
-        } else if (type === "works") {
-            const data = await searchWorks({ offset, limit, sort, keyword });
             return Response.json(data);
         } else {
             const me = await getAuthUser(req);

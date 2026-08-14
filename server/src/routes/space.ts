@@ -9,7 +9,6 @@ import {
     listUserPosts,
     userExists,
 } from "../db";
-import { listWorks } from "../works";
 
 function paramId(req: Request, name: string): number | Response {
     const raw = (req as Request & { params?: Record<string, string> }).params?.[name] ?? "";
@@ -36,7 +35,6 @@ export const routes: Bun.Serve.Routes<any, any> = {
 
             const counts = {
                 posts: rawCounts.posts,
-                works: rawCounts.works,
                 favorites: isSelf || user.is_favorites_public ? rawCounts.favorites : null,
                 following: isSelf || user.is_follows_public ? rawCounts.following : null,
                 followers: isSelf || user.is_follows_public ? rawCounts.followers : null,
@@ -58,17 +56,6 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const viewer = await getAuthUser(req);
             return Response.json(listUserPosts(id, { offset, limit, viewerId: viewer?.id ?? null }));
-        },
-    },
-
-    "/api/users/:id/space/works": {
-        GET: async (req) => {
-            const id = paramId(req, "id");
-            if (isErr(id)) return id;
-            if (!userExists(id)) return jsonError(404, "用户不存在");
-            const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
-            const viewer = await getAuthUser(req);
-            return Response.json(listWorks({ offset, limit, viewerId: viewer?.id ?? null, authorId: id }));
         },
     },
 

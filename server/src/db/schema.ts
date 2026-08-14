@@ -170,7 +170,7 @@ export const notifications = sqliteTable(
         actor_id: integer("actor_id")
             .notNull()
             .references(() => users.id),
-        type: text("type", { enum: ["post_comment", "post_reply", "work_comment", "work_reply"] }).notNull(),
+        type: text("type", { enum: ["post_comment", "post_reply"] }).notNull(),
         post_id: integer("post_id"),
         work_id: integer("work_id"),
         comment_id: integer("comment_id"),

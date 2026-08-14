@@ -6,7 +6,7 @@
 - 所有业务接口路径前缀为 `/api`，静态资源前缀为 `/uploads/`
 - 请求体两种格式：
     - `application/json`：登录、评论、隐私设置等
-    - `multipart/form-data`：注册（含可选头像）、发帖、草稿、作品（含文件上传）
+    - `multipart/form-data`：注册（含可选头像）、发帖、草稿
 - 认证方式：`Authorization: Bearer <JWT>` 请求头
     - JWT 算法 HS256，默认有效期 **7 天**（`JwtPayload`：`sub`、`username`、`email`、`iat`、`exp`）
     - 未携带或非法 Token 时，接口按「未登录」处理；明确需要登录的接口返回 401
@@ -23,8 +23,8 @@
 | ------ | ---------------------------------------------- |
 | 400    | 参数缺失或不合法（含上传限制、不能关注自己等） |
 | 401    | 未登录 / Token 无效 / 用户名或密码错误         |
-| 403    | 无权限（非本人帖/评论/草稿/作品）              |
-| 404    | 资源不存在（帖子、用户、草稿、作品等）         |
+| 403    | 无权限（非本人帖/评论/草稿）            |
+| 404    | 资源不存在（帖子、用户、草稿等）         |
 | 409    | 资源冲突（邮箱/用户名已被注册）                |
 | 500    | 服务端处理失败                                 |
 
@@ -45,14 +45,10 @@
 | ------------- | -------- | ------------------------ | ---------- | -------------------------------------------------------- |
 | 注册头像      | 2MB      | png / jpg / webp / gif   | 1 张       | 缩放至 ≤512px，转 webp（80 质量，gif 原样保留）          |
 | 帖子/草稿图片 | 2MB      | png / jpg / webp / gif   | 最多 9 张  | 转 webp（80 质量，gif 原样保留）                         |
-| 作品文件      | 1MB      | 任意（扩展名白名单校验） | 最多 20 个 | 原样存储                                                 |
-| 作品封面      | 2MB      | png / jpg / webp / gif   | 1 张       | 拉伸至 1280×853（3:2），转 webp（80 质量，gif 原样保留） |
 
 - 文本长度限制：
     - 帖子 / 草稿内容：≤ 20000 字
     - 评论：≤ 5000 字
-    - 作品简介：≤ 5000 字
-    - 作品标题：≤ 100 字符
     - 标签：最多 10 个，单个 ≤ 20 字符（逗号/空格分隔，自动去重、转小写）
 - ID 参数须为正整数，否则返回 400「无效的 ID」
 
@@ -81,7 +77,7 @@
     "username": "chenify",
     "email": "chenify@example.com",
     "avatar": "/uploads/xxxx.webp",
-    "created_at": "2026-08-10 12:00:00"
+    "created_at": "2026-08-10T12:00:00.000Z"
 }
 ```
 
@@ -108,7 +104,7 @@
         "username": "chenify",
         "email": "chenify@example.com",
         "avatar": "/uploads/xxxx.webp",
-        "created_at": "2026-08-10 12:00:00"
+        "created_at": "2026-08-10T12:00:00.000Z"
     }
 }
 ```
@@ -127,11 +123,27 @@
     "username": "chenify",
     "email": "chenify@example.com",
     "avatar": "/uploads/xxxx.webp",
-    "created_at": "2026-08-10 12:00:00"
+    "created_at": "2026-08-10T12:00:00.000Z"
 }
 ```
 
 错误：`401` 未提供有效登录凭证。
+
+#### 修改个人资料
+
+`PATCH /api/user/profile`
+
+需要登录。请求体为 `multipart/form-data`（字段均为可选，但至少提供一个）：
+
+| 字段            | 类型   | 必填 | 说明                    |
+| --------------- | ------ | ---- | ----------------------- |
+| `username`      | string | 否   | 新用户名，2–32 个字符   |
+| `avatar`        | File   | 否   | 新头像，受限同上传一览表 |
+| `remove_avatar` | string | 否   | 传 `1` 表示删除当前头像 |
+
+成功返回 `200`，更新后的 `UserPublic`。更新头像或删除头像时会同时清理服务器上的旧头像文件。
+
+错误：`401` 未登录，`400` 未提供任何修改项/用户名长度不合法/头像不合法，`409` 用户名已被占用。
 
 ### 二、帖子（Posts）
 
@@ -296,7 +308,7 @@
 
 错误：`401` 未登录，`400` 未提供任何设置项。
 
-### 四、草稿（Drafts）
+### 四、帖子草稿（Drafts）
 
 #### 草稿列表
 
@@ -383,7 +395,7 @@
         "username": "chenify",
         "email": "chenify@example.com",
         "avatar": "/uploads/xxxx.webp",
-        "created_at": "2026-08-10 12:00:00",
+        "created_at": "2026-08-10T12:00:00.000Z",
         "is_favorites_public": true,
         "is_follows_public": true
     },
@@ -461,164 +473,76 @@
 
 错误：`404` 用户不存在。
 
-### 六、作品（Works）
+### 六、搜索（Search）
 
-#### 作品列表
+#### 全局搜索
 
-`GET /api/works`
+`GET /api/search`
 
-无需登录（可携带 Token）。查询参数：
+无需登录（可携带 Token；用户搜索时返回个性化 `is_following`）。查询参数：
 
-| 参数        | 类型              | 说明                    |
-| ----------- | ----------------- | ----------------------- |
-| `offset`    | number            | 分页偏移                |
-| `limit`     | number            | 分页数量                |
-| `sort`      | `latest` \| `hot` | 排序方式，默认 `latest` |
-| `author_id` | number            | 按作者过滤              |
+| 参数      | 类型                    | 说明                                       |
+| --------- | ----------------------- | ------------------------------------------ |
+| `keyword` | string                  | 搜索关键词，必填                           |
+| `type`    | `posts` \| `users`      | 搜索对象，默认 `posts`                     |
+| `sort`    | `hot` \| `latest`       | 排序方式，默认 `hot`（`users` 忽略该参数） |
+| `offset`  | number                  | 分页偏移                                   |
+| `limit`   | number                  | 分页数量                                   |
 
-返回 `200`，`WorkSummary[]`。
+按 `type` 返回 `200`：
 
-错误：`404` 指定作者不存在。
+- `posts`：匹配帖子内容，返回 `Post[]`
+- `users`：按粉丝数热度排序返回 `SearchUser[]`
 
-#### 创建作品
+错误：缺少 `keyword` 时返回纯文本 `Invalid keyword`（状态 200，非标准错误格式）。
 
-`POST /api/works`
+### 七、通知（Notifications）
 
-需要登录。请求体为 `multipart/form-data`：
+#### 通知列表
 
-| 字段          | 类型           | 必填 | 说明                          |
-| ------------- | -------------- | ---- | ----------------------------- |
-| `title`       | string         | 是   | 作品标题，≤ 100 字符          |
-| `cover`       | File           | 是   | 作品封面（3:2），必填         |
-| `description` | string         | 否   | 作品简介，≤ 5000 字           |
-| `files`       | File（可多个） | 否   | 作品文件，≤ 20 个，单个 ≤ 1MB |
+`GET /api/notifications`
 
-成功返回 `201`，`WorkDetail`。
+需要登录（仅本人）。查询参数：`offset`、`limit`。返回 `200`，`AppNotification[]`（按时间倒序）。
 
-错误：`401` 未登录，`400` 标题为空/超限、封面缺失或不合法/文件超限。
+错误：`401` 未登录。
 
-#### 作品详情
+#### 未读数量
 
-`GET /api/works/:id`
+`GET /api/notifications/unread-count`
 
-无需登录（可携带 Token）。返回 `200`，`WorkDetail`（含文件列表）。
-
-错误：`404` 作品不存在。
-
-#### 更新作品
-
-`PATCH /api/works/:id`
-
-需要登录，仅作者可改。请求体为 `multipart/form-data`（字段与创建相同，`files` 整体替换，`cover` 可选——未提供封面时保留旧封面）。成功返回 `200`，`WorkDetail`。
-
-错误：`401` 未登录，`403` 无权修改，`404` 作品不存在。
-
-#### 删除作品
-
-`DELETE /api/works/:id`
-
-需要登录，仅作者可删。成功返回 `200`：
+需要登录。返回 `200`：
 
 ```json
-{ "success": true }
+{ "count": 3 }
 ```
 
-错误：`401` 未登录，`403` 无权删除，`404` 作品不存在。
+错误：`401` 未登录。
 
-#### 派生作品（Fork）
+#### 标记已读
 
-`POST /api/works/:id/fork`
-
-需要登录。复制源作品的文件与封面，创建自己的新作品；请求体可携带可选的 `cover` 文件以更换封面（未提供时复制源封面）。成功返回 `201`，`WorkDetail`（`parent_id` 指向源作品）。
-
-错误：`401` 未登录，`404` 源作品不存在。
-
-#### 派生列表
-
-`GET /api/works/:id/forks`
-
-无需登录（可携带 Token）。查询参数：`offset`、`limit`。返回 `200`，`WorkSummary[]`。
-
-错误：`404` 作品不存在。
-
-#### 点赞 / 取消点赞
-
-`POST /api/works/:id/like`、`DELETE /api/works/:id/like`
-
-需要登录。成功返回 `200`：
-
-```json
-{ "liked": true, "likes_count": 12 }
-```
-
-错误：`401` 未登录，`404` 作品不存在。
-
-#### 收藏 / 取消收藏
-
-`POST /api/works/:id/favorite`、`DELETE /api/works/:id/favorite`
-
-需要登录。成功返回 `200`：
-
-```json
-{ "favorited": true, "favorites_count": 5 }
-```
-
-错误：`401` 未登录，`404` 作品不存在。
-
-#### 评论列表
-
-`GET /api/works/:id/comments`
-
-无需登录。查询参数：`offset`、`limit`。分页仅作用于顶层评论（`parent_id` 为空），回复归入所属顶层评论的 `replies` 数组（平铺，按时间正序）。已登录时返回 `is_liked`、`likes_count`。返回 `200`，`WorkComment[]`。
-
-错误：`404` 作品不存在。
-
-#### 发布评论
-
-`POST /api/works/:id/comments`
+`POST /api/notifications/read`
 
 需要登录。请求体为 `application/json`：
 
-| 字段        | 类型   | 必填 | 说明                                |
-| ----------- | ------ | ---- | ----------------------------------- |
-| `content`   | string | 是   | 评论内容，≤ 5000 字                 |
-| `parent_id` | number | 否   | 回复的目标评论 ID（须属于同一作品） |
+| 字段  | 类型     | 必填 | 说明                                     |
+| ----- | -------- | ---- | ---------------------------------------- |
+| `ids` | number[] | 否   | 要标记已读的通知 ID 数组；缺省时标记全部已读 |
 
-成功返回 `201`，`WorkComment`（顶层评论的 `replies` 为 `[]`）。
-
-错误：`401` 未登录，`400` 内容为空/超长，`404` 作品不存在或回复目标不存在。
-
-#### 点赞评论 / 取消点赞
-
-`POST /api/works/comments/:id/like`、`DELETE /api/works/comments/:id/like`
-
-需要登录。`POST` 为点赞（已赞则切换取消），`DELETE` 为取消点赞。成功返回 `200`：
-
-```json
-{ "liked": true, "likes_count": 1 }
-```
-
-错误：`401` 未登录，`404` 评论不存在。
-
-#### 删除评论
-
-`DELETE /api/works/comments/:id`
-
-需要登录，仅评论者本人可删。会级联删除该评论的所有回复及其点赞。成功返回 `200`：
+成功返回 `200`：
 
 ```json
 { "success": true }
 ```
 
-错误：`401` 未登录，`403` 无权删除，`404` 评论不存在。
+错误：`401` 未登录。
 
-### 七、静态资源
+### 八、静态资源
 
 #### 上传文件访问
 
 `GET /uploads/*`
 
-无需登录。按文件路径返回二进制内容（头像、帖子图片、作品文件等）。
+无需登录。按文件路径返回二进制内容（头像、帖子图片等）。
 
 - 文件名必须为单一名称（不允许 `/`、`\`、`..`），否则返回 `404`
 - 未知路径返回 `404`
@@ -677,6 +601,19 @@
 | -------------- | ------- | ------------------ |
 | `is_following` | boolean | 我是否关注了该用户 |
 
+关注/粉丝列表的元素即为此结构。
+
+### SearchUser
+
+继承 `FollowUser`，并追加：
+
+| 字段        | 类型   | 说明   |
+| ----------- | ------ | ------ |
+| `email`     | string | 邮箱   |
+| `followers` | number | 粉丝数 |
+
+用户搜索结果（`type=users`）的元素为此结构。
+
 ### Post
 
 | 字段                  | 类型        | 说明             |
@@ -723,55 +660,20 @@
 | `images`     | string[]               | 图片地址列表        |
 | `tags`       | string[]               | 标签列表            |
 
-### WorkFile
+### AppNotification
 
-| 字段   | 类型   | 说明             |
-| ------ | ------ | ---------------- |
-| `id`   | number | 文件 ID          |
-| `name` | string | 原始文件名       |
-| `path` | string | 文件地址         |
-| `size` | number | 文件大小（字节） |
-
-### WorkSummary
-
-| 字段              | 类型           | 说明            |
-| ----------------- | -------------- | --------------- |
-| `id`              | number         | 作品 ID         |
-| `title`           | string         | 标题            |
-| `description`     | string         | 简介            |
-| `cover`           | string         | 封面地址        |
-| `parent_id`       | number \| null | 派生来源作品 ID |
-| `created_at`      | string         | 创建时间        |
-| `updated_at`      | string         | 更新时间        |
-| `author`          | UserSummary    | 作者信息        |
-| `files_count`     | number         | 文件数          |
-| `comments_count`  | number         | 评论数          |
-| `likes_count`     | number         | 点赞数          |
-| `favorites_count` | number         | 收藏数          |
-| `is_liked`        | boolean        | 我是否已点赞    |
-| `is_favorited`    | boolean        | 我是否已收藏    |
-
-### WorkDetail
-
-继承 `WorkSummary`，并追加：
-
-| 字段    | 类型       | 说明         |
-| ------- | ---------- | ------------ |
-| `files` | WorkFile[] | 作品文件列表 |
-
-### WorkComment
-
-| 字段          | 类型           | 说明                                       |
-| ------------- | -------------- | ------------------------------------------ |
-| `id`          | number         | 评论 ID                                    |
-| `work_id`     | number         | 所属作品 ID                                |
-| `parent_id`   | number \| null | 回复目标评论 ID（null 为顶层评论）         |
-| `content`     | string         | 评论内容                                   |
-| `created_at`  | string         | 评论时间                                   |
-| `author`      | UserSummary    | 评论者信息                                 |
-| `likes_count` | number         | 点赞数                                     |
-| `is_liked`    | boolean        | 我是否已点赞                               |
-| `replies`     | WorkComment[]  | 回复列表（顶层评论包含其下全部后代，平铺） |
+| 字段         | 类型                                        | 说明                     |
+| ------------ | ------------------------------------------- | ------------------------ |
+| `id`         | number                                      | 通知 ID                  |
+| `type`       | `post_comment` \| `post_reply`              | 通知类型                 |
+| `actor`      | UserSummary                                 | 触发者信息               |
+| `is_read`    | boolean                                     | 是否已读                 |
+| `created_at` | string                                      | 通知时间                 |
+| `post_id`    | number \| null                              | 关联帖子 ID              |
+| `comment_id` | number \| null                              | 关联评论 ID              |
+| `snippet`    | string                                      | 关联帖子内容摘要         |
+| `reply_to`   | string \| null                              | 回复通知中被回复评论的内容摘要 |
+| `comment`    | string                                      | 触发评论的内容           |
 
 ## 接口索引
 
@@ -797,6 +699,7 @@
 | DELETE | `/api/users/:id/follow`          | 是         |
 | GET    | `/api/tags`                      | 否         |
 | PATCH  | `/api/user/privacy`              | 是         |
+| PATCH  | `/api/user/profile`              | 是         |
 | GET    | `/api/drafts`                    | 是         |
 | POST   | `/api/drafts`                    | 是         |
 | GET    | `/api/drafts/:id`                | 是（本人） |
@@ -809,20 +712,8 @@
 | GET    | `/api/users/:id/space/favorites` | 否         |
 | GET    | `/api/users/:id/space/following` | 否         |
 | GET    | `/api/users/:id/space/followers` | 否         |
-| GET    | `/api/works`                     | 否         |
-| POST   | `/api/works`                     | 是         |
-| GET    | `/api/works/:id`                 | 否         |
-| PATCH  | `/api/works/:id`                 | 是（作者） |
-| DELETE | `/api/works/:id`                 | 是（作者） |
-| POST   | `/api/works/:id/fork`            | 是         |
-| GET    | `/api/works/:id/forks`           | 否         |
-| POST   | `/api/works/:id/like`            | 是         |
-| DELETE | `/api/works/:id/like`            | 是         |
-| POST   | `/api/works/:id/favorite`        | 是         |
-| DELETE | `/api/works/:id/favorite`        | 是         |
-| GET    | `/api/works/:id/comments`        | 否         |
-| POST   | `/api/works/:id/comments`        | 是         |
-| DELETE | `/api/works/comments/:id`        | 是（本人） |
-| POST   | `/api/works/comments/:id/like`   | 是         |
-| DELETE | `/api/works/comments/:id/like`   | 是         |
+| GET    | `/api/search`                    | 否         |
+| GET    | `/api/notifications`             | 是         |
+| GET    | `/api/notifications/unread-count` | 是        |
+| POST   | `/api/notifications/read`        | 是         |
 | GET    | `/uploads/*`                     | 否         |
