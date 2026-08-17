@@ -4,6 +4,7 @@ import { routes as forumRoutes } from "./src/routes/forum";
 import { routes as spaceRoutes } from "./src/routes/space";
 import { routes as searchRoutes } from "./src/routes/search";
 import { routes as notificationRoutes } from "./src/routes/notifications";
+import { routes as worksRoutes } from "./src/routes/works";
 
 mkdirSync("./uploads", { recursive: true });
 
@@ -15,6 +16,7 @@ Bun.serve({
         ...spaceRoutes,
         ...searchRoutes,
         ...notificationRoutes,
+        ...worksRoutes,
         "/uploads/*": (req) => {
             const path = decodeURIComponent(new URL(req.url).pathname.replace(/^\/uploads\//, ""));
             if (!path || path.includes("..") || path.includes("/") || path.includes("\\")) {

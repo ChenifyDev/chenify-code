@@ -11,6 +11,10 @@
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:studio": "drizzle-kit studio",
+        "works:push": "drizzle-kit push --config drizzle-works.config.ts",
+        "works:generate": "drizzle-kit generate --config drizzle-works.config.ts",
+        "works:migrate": "drizzle-kit migrate --config drizzle-works.config.ts",
+        "works:studio": "drizzle-kit studio --config drizzle-works.config.ts",
         "build": "bun build index.ts --outdir dist --minify --target bun"
     },
     "dependencies": {
