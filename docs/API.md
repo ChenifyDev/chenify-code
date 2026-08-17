@@ -6,7 +6,7 @@
 - 所有业务接口路径前缀为 `/api`，静态资源前缀为 `/uploads/`
 - 请求体两种格式：
     - `application/json`：登录、评论、隐私设置等
-    - `multipart/form-data`：注册（含可选头像）、发帖、草稿
+    - `multipart/form-data`：注册（含可选头像）、发帖、草稿、发布作品（含封面）
 - 认证方式：`Authorization: Bearer <JWT>` 请求头
     - JWT 算法 HS256，默认有效期 **7 天**（`JwtPayload`：`sub`、`username`、`email`、`iat`、`exp`）
     - 未携带或非法 Token 时，接口按「未登录」处理；明确需要登录的接口返回 401
@@ -45,10 +45,13 @@
 | ------------- | -------- | ------------------------ | ---------- | -------------------------------------------------------- |
 | 注册头像      | 2MB      | png / jpg / webp / gif   | 1 张       | 缩放至 ≤512px，转 webp（80 质量，gif 原样保留）          |
 | 帖子/草稿图片 | 2MB      | png / jpg / webp / gif   | 最多 9 张  | 转 webp（80 质量，gif 原样保留）                         |
+| 作品封面      | 2MB      | png / jpg / webp / gif   | 1 张       | 缩放至 1280×853（fit fill），转 webp（80 质量，gif 原样保留） |
 
 - 文本长度限制：
     - 帖子 / 草稿内容：≤ 20000 字
     - 评论：≤ 5000 字
+    - 作品标题：≤ 100 字
+    - 作品简介：≤ 5000 字
     - 标签：最多 10 个，单个 ≤ 20 字符（逗号/空格分隔，自动去重、转小写）
 - ID 参数须为正整数，否则返回 400「无效的 ID」
 
@@ -496,7 +499,67 @@
 
 错误：缺少 `keyword` 时返回纯文本 `Invalid keyword`（状态 200，非标准错误格式）。
 
-### 七、通知（Notifications）
+### 七、作品（Works）
+
+目前开放发布与互动接口（作品列表、详情、删除等暂未开放）。发布作品时作者取自 JWT，不读取请求中的 `user_id`。
+
+#### 发布作品
+
+`POST /api/works`
+
+需要登录。请求体为 `multipart/form-data`：
+
+| 字段          | 类型   | 必填 | 说明                       |
+| ------------- | ------ | ---- | -------------------------- |
+| `title`       | string | 是   | 作品标题，≤ 100 字        |
+| `description` | string | 否   | 作品简介，≤ 5000 字       |
+| `cover`       | File   | 是   | 封面图片，受限同上传一览表 |
+| `git_path`    | string | 否   | Git 仓库路径               |
+
+成功返回 `201`，`Work`。
+
+错误：`401` 未登录，`400` 标题为空/超长、简介超长、封面缺失或格式不支持。
+
+#### 点赞 / 取消点赞
+
+`POST /api/works/:id/like`（点赞）、`DELETE /api/works/:id/like`（取消）
+
+需要登录。成功返回 `200`：
+
+```json
+{ "liked": true, "likes_count": 12 }
+```
+
+错误：`401` 未登录，`404` 作品不存在。
+
+#### 发布评论 / 回复评论
+
+`POST /api/works/:id/comments`
+
+需要登录。请求体为 `application/json`：
+
+| 字段        | 类型   | 必填 | 说明                                |
+| ----------- | ------ | ---- | ----------------------------------- |
+| `content`   | string | 是   | 评论内容，≤ 5000 字                 |
+| `parent_id` | number | 否   | 回复的目标评论 ID（须属于同一作品） |
+
+成功返回 `201`，`WorkComment`（顶层评论的 `replies` 为 `[]`）。
+
+错误：`401` 未登录，`400` 内容为空/超长/回复目标不在该作品下，`404` 作品不存在。
+
+#### 点赞评论 / 取消点赞
+
+`POST /api/works/comments/:id/like`、`DELETE /api/works/comments/:id/like`
+
+需要登录。成功返回 `200`：
+
+```json
+{ "liked": true, "likes_count": 1 }
+```
+
+错误：`401` 未登录，`404` 评论不存在。
+
+### 八、通知（Notifications）
 
 #### 通知列表
 
@@ -536,7 +599,7 @@
 
 错误：`401` 未登录。
 
-### 八、静态资源
+### 九、静态资源
 
 #### 上传文件访问
 
@@ -646,6 +709,35 @@
 | `replies`      | Comment[]      | 回复列表（顶层评论包含其下全部后代，平铺） |
 | `post_snippet` | string         | 帖子内容摘要                               |
 
+### Work
+
+| 字段            | 类型           | 说明             |
+| --------------- | -------------- | ---------------- |
+| `id`            | number         | 作品 ID          |
+| `user_id`       | number         | 作者用户 ID      |
+| `title`         | string \| null | 作品标题         |
+| `description`   | string \| null | 作品简介         |
+| `cover`         | string \| null | 封面图片地址     |
+| `git_path`      | string \| null | Git 仓库路径     |
+| `author`        | UserSummary    | 作者信息         |
+| `likes_count`   | number         | 点赞数           |
+| `comments_count`| number         | 评论数           |
+| `is_liked`      | boolean        | 我是否已点赞     |
+
+### WorkComment
+
+| 字段         | 类型             | 说明                                       |
+| ------------ | ---------------- | ------------------------------------------ |
+| `id`         | number           | 评论 ID                                    |
+| `work_id`    | number           | 所属作品 ID                                |
+| `parent_id`  | number \| null   | 回复目标评论 ID（null 为顶层评论）         |
+| `content`    | string           | 评论内容                                   |
+| `created_at` | string           | 评论时间                                   |
+| `author`     | UserSummary      | 评论者信息                                 |
+| `likes_count`| number           | 点赞数                                     |
+| `is_liked`   | boolean          | 我是否已点赞                               |
+| `replies`    | WorkComment[]    | 回复列表（顶层评论包含其下全部后代，平铺） |
+
 ### Draft
 
 | 字段         | 类型                   | 说明                |
@@ -713,6 +805,12 @@
 | GET    | `/api/users/:id/space/following` | 否         |
 | GET    | `/api/users/:id/space/followers` | 否         |
 | GET    | `/api/search`                    | 否         |
+| POST   | `/api/works`                     | 是         |
+| POST   | `/api/works/:id/like`            | 是         |
+| DELETE | `/api/works/:id/like`            | 是         |
+| POST   | `/api/works/:id/comments`        | 是         |
+| POST   | `/api/works/comments/:id/like`   | 是         |
+| DELETE | `/api/works/comments/:id/like`   | 是         |
 | GET    | `/api/notifications`             | 是         |
 | GET    | `/api/notifications/unread-count` | 是        |
 | POST   | `/api/notifications/read`        | 是         |
