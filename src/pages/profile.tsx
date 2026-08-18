@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Calendar, Loader2, UserCheck, UserPlus } from "lucide-react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Calendar, UserCheck, UserPlus } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import PostCard from "@/components/forum/PostCard.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
@@ -25,15 +25,15 @@ import {
     type WorkSummary,
 } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
-import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import { WorkCard } from "@/components/works/WorkCard.tsx";
+import LoadMore from "@/components/tab/LoadMore.tsx";
+import Empty from "@/components/tab/Empty.tsx";
+import UserRow from "@/components/user/UserRow.tsx";
+import type { TabData } from "@/types/tab.ts";
+import useTab from "@/hooks/useTab.ts";
 
 const LIMIT = 10;
-
-function Empty({ text, className }: { text: string; className?: string }) {
-    return <div className={cn("py-8 text-center text-sm text-muted-foreground", className)}>{text}</div>;
-}
 
 function SkeletonList() {
     return (
@@ -50,126 +50,6 @@ function SkeletonList() {
                     </CardContent>
                 </Card>
             ))}
-        </div>
-    );
-}
-
-interface TabData<T> {
-    items: T[];
-    loading: boolean;
-    loadingMore: boolean;
-    hasMore: boolean;
-    hidden: boolean;
-    error: string | null;
-    initialized: boolean;
-    load: (reset?: boolean) => Promise<void>;
-    updateItems: (updater: (items: T[]) => T[]) => void;
-}
-
-function useTab<T>(
-    fetcher: (offset: number) => Promise<{ items: T[]; hasMore: boolean; hidden: boolean }>,
-): TabData<T> {
-    const [items, setItems] = useState<T[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(false);
-    const [hidden, setHidden] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const offsetRef = useRef(0);
-    const initializedRef = useRef(false);
-
-    const load = useCallback(
-        async (reset = false) => {
-            if (reset && !initializedRef.current) {
-                initializedRef.current = true;
-                setLoading(true);
-            } else if (!reset) {
-                setLoadingMore(true);
-            }
-            setError(null);
-            try {
-                const res = await fetcher(offsetRef.current);
-                setHidden(res.hidden);
-                setHasMore(res.hasMore);
-                setItems((prev) => (reset ? res.items : [...prev, ...res.items]));
-                offsetRef.current += res.items.length;
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "加载失败");
-            } finally {
-                setLoading(false);
-                setLoadingMore(false);
-            }
-        },
-        [fetcher],
-    );
-
-    const updateItems = useCallback((updater: (items: T[]) => T[]) => setItems(updater), []);
-
-    return {
-        items,
-        loading,
-        loadingMore,
-        hasMore,
-        hidden,
-        error,
-        initialized: initializedRef.current,
-        load,
-        updateItems,
-    };
-}
-
-function LoadMore<T>({ tab }: { tab: TabData<T> }) {
-    if (!tab.hasMore) return null;
-    return (
-        <Button variant="outline" className="w-full" disabled={tab.loadingMore} onClick={() => void tab.load()}>
-            {tab.loadingMore && <Loader2 className="animate-spin" />}
-            {tab.loadingMore ? "加载中…" : "加载更多"}
-        </Button>
-    );
-}
-
-function UserRow({ user, onFollowChange }: { user: FollowUser; onFollowChange: (updated: FollowUser) => void }) {
-    const me = useUserStore((s) => s.user);
-    const navigate = useNavigate();
-    const [busy, setBusy] = useState(false);
-    const isSelf = me?.id === user.id;
-
-    const handleFollow = async () => {
-        if (!me) {
-            navigate("/login");
-            return;
-        }
-        setBusy(true);
-        try {
-            const res = await toggleFollow(user.id);
-            onFollowChange({ ...user, is_following: res.following });
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    return (
-        <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted">
-            <Link to={`/users/${user.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                <Avatar>
-                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <span className="truncate text-sm font-medium">{user.username}</span>
-            </Link>
-            {!isSelf && (
-                <Button
-                    size="sm"
-                    variant={user.is_following ? "outline" : "default"}
-                    disabled={busy}
-                    onClick={handleFollow}
-                >
-                    {user.is_following ? <UserCheck /> : <UserPlus />}
-                    {user.is_following ? "已关注" : "关注"}
-                </Button>
-            )}
         </div>
     );
 }
