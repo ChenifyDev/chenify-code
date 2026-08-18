@@ -33,6 +33,13 @@ export interface FollowUser extends UserSummary {
     is_following: boolean;
 }
 
+export interface PointsUser extends UserSummary {
+    email: string;
+    is_following: boolean;
+    points: number;
+    rank?: number;
+}
+
 export interface Post {
     id: number;
     content: string;

@@ -69,6 +69,11 @@ export interface FollowUser extends UserSummary {
     is_following: boolean;
     email: string;
     followers: number;
+    rank?: number;
+}
+
+export interface PointsUser extends FollowUser {
+    points: number;
 }
 
 export interface Draft {
@@ -679,4 +684,30 @@ export function markNotificationsRead(ids?: number[]): Promise<{ success: boolea
         body: JSON.stringify(ids ? { ids } : {}),
         headers: authHeaders(),
     });
+}
+
+export function rankUsersByFollowers({
+    offset,
+    limit,
+}: {
+    offset: number;
+    limit: number;
+}): Promise<{ users: FollowUser[]; my_rank: number; offset: number; limit: number }> {
+    return request<{ users: FollowUser[]; my_rank: number; offset: number; limit: number }>(
+        `/rank/followers${qs({ offset, limit })}`,
+        { headers: authHeaders() },
+    );
+}
+
+export function rankUsersByPostPoints({
+    offset,
+    limit,
+}: {
+    offset: number;
+    limit: number;
+}): Promise<{ users: PointsUser[]; my_rank: number; offset: number; limit: number }> {
+    return request<{ users: PointsUser[]; my_rank: number; offset: number; limit: number }>(
+        `/rank/post/points${qs({ offset, limit })}`,
+        { headers: authHeaders() },
+    );
 }

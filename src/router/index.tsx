@@ -15,6 +15,7 @@ import CodeRunner from "@/pages/code-runner.tsx";
 import Search from "@/pages/search/index.tsx";
 import SettingsPage from "@/pages/settings.tsx";
 import NotificationsPage from "@/pages/notifications.tsx";
+import RankPage from "@/pages/rank.tsx";
 const router = createBrowserRouter([
     {
         path: "/",
@@ -67,6 +68,10 @@ const router = createBrowserRouter([
             {
                 path: "works/:id",
                 element: <Work />,
+            },
+            {
+                path: "rank",
+                element: <RankPage />,
             },
         ],
     },

@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Compass, Settings, Bell, Ellipsis } from "lucide-react";
+import {
+    Code2,
+    FileText,
+    Home,
+    LogOut,
+    SquarePen,
+    Signpost,
+    Compass,
+    Settings,
+    Bell,
+    Ellipsis,
+    Podium,
+} from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
@@ -144,6 +156,16 @@ export default function AppSidebar() {
 
             <SidebarFooter>
                 <SidebarMenu>
+                    <SidebarMenuItem>
+                        <NavLink to="/rank">
+                            {({ isActive }) => (
+                                <SidebarMenuButton isActive={isActive} tooltip="排行榜">
+                                    <Podium />
+                                    <span>排行榜</span>
+                                </SidebarMenuButton>
+                            )}
+                        </NavLink>
+                    </SidebarMenuItem>
                     {user && (
                         <SidebarMenuItem>
                             <NavLink to="/drafts">

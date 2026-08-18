@@ -1,17 +1,26 @@
 import { useUserStore } from "@/stores/useUser.ts";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { type FollowUser, toggleFollow } from "@/lib/api";
+import { type ReactNode, useState } from "react";
+import { toggleFollow } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { UserCheck, UserPlus } from "lucide-react";
 
-export default function UserRow({
+export type RowUser = {
+    id: number;
+    username: string;
+    avatar?: string | null;
+    is_following: boolean;
+};
+
+export default function UserRow<T extends RowUser>({
     user,
     onFollowChange,
+    children,
 }: {
-    user: FollowUser;
-    onFollowChange: (updated: FollowUser) => void;
+    user: T;
+    onFollowChange: (updated: T) => void;
+    children?: ReactNode;
 }) {
     const me = useUserStore((s) => s.user);
     const navigate = useNavigate();
@@ -43,17 +52,20 @@ export default function UserRow({
                 </Avatar>
                 <span className="truncate text-sm font-medium">{user.username}</span>
             </Link>
-            {!isSelf && (
-                <Button
-                    size="sm"
-                    variant={user.is_following ? "outline" : "default"}
-                    disabled={busy}
-                    onClick={handleFollow}
-                >
-                    {user.is_following ? <UserCheck /> : <UserPlus />}
-                    {user.is_following ? "已关注" : "关注"}
-                </Button>
-            )}
+            <div className={"flex gap-3"}>
+                {children}
+                {!isSelf && (
+                    <Button
+                        size="sm"
+                        variant={user.is_following ? "outline" : "default"}
+                        disabled={busy}
+                        onClick={handleFollow}
+                    >
+                        {user.is_following ? <UserCheck /> : <UserPlus />}
+                        {user.is_following ? "已关注" : "关注"}
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }
