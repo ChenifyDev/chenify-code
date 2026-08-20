@@ -1,6 +1,8 @@
-import { db } from "./src/db/client";
+import { getDb } from "./src/db/client";
 import { likes, favorites, posts } from "./src/db/schema";
 import { getStorage } from "./src/storage";
+
+const db = getDb();
 
 const storage = getStorage();
 

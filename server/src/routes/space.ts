@@ -1,5 +1,6 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
+import type { RouteMap } from "../utils";
 
 function paramId(req: Request, name: string): number | Response {
     const raw = (req as Request & { params?: Record<string, string> }).params?.[name] ?? "";
@@ -12,7 +13,7 @@ function isErr(value: number | Response): value is Response {
     return value instanceof Response;
 }
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/users/:id/space": {
         GET: async (req) => {
             const storage = getStorage();

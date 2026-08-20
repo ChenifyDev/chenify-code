@@ -1,7 +1,8 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
+import type { RouteMap } from "../utils";
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/rank/followers": async (req) => {
         const url = new URL(req.url);
         const me = await getAuthUser(req);

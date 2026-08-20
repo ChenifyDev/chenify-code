@@ -1,6 +1,6 @@
 ﻿// 生成调试数据
 import { and, eq, inArray, or, sql } from "drizzle-orm";
-import { db } from "./src/db/client";
+import { getDb } from "./src/db/client";
 import {
     commentLikes,
     comments,
@@ -14,6 +14,8 @@ import {
     tags,
     users,
 } from "./src/db/schema";
+
+const db = getDb();
 
 const PASSWORD = "123456";
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];

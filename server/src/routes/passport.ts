@@ -1,11 +1,11 @@
 import { getStorage, toPublicUser } from "../storage";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
-import { saveAvatar } from "./avatar";
+import { saveAvatar, type RouteMap } from "../utils";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/passport/register": async (req) => {
         const storage = getStorage();
         const form = await req.formData();

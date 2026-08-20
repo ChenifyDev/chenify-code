@@ -1,6 +1,6 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
-import { saveAvatar } from "./avatar";
+import { saveAvatar, type RouteMap } from "../utils";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 const IMAGE_EXTENSIONS: Record<string, string> = {
@@ -95,7 +95,7 @@ async function parseDraftForm(
     return { content, tags, imageFiles };
 }
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/posts": {
         GET: async (req) => {
             const storage = getStorage();

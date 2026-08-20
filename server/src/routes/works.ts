@@ -1,5 +1,6 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError } from "./util";
+import type { RouteMap } from "../utils";
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 5000;
@@ -41,7 +42,7 @@ async function processCover(file: File): Promise<{ path: string } | { error: str
     }
 }
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/works": {
         POST: async (req) => {
             const storage = getStorage();

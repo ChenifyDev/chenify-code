@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { db as appDb } from "../../../db/client";
-import { db as worksDb } from "../../../works/db";
+import { getDb as getAppDb } from "../../../db/client";
+import { getWorksDb } from "../../../works/db";
 import * as appSchema from "../../../db/schema";
 import * as worksSchema from "../../../works/schema";
 import type { CollectionStore } from "../../store";
@@ -41,7 +41,7 @@ function resolve(name: string): { db: any; table: any; hasId: boolean } {
     const inApp = name in appTables;
     const table = inApp ? appTables[name] : worksTables[name];
     if (table == null) throw new Error(`unknown collection: ${name}`);
-    return { db: inApp ? appDb : worksDb, table, hasId: !NO_ID.has(name) };
+    return { db: inApp ? getAppDb() : getWorksDb(), table, hasId: !NO_ID.has(name) };
 }
 
 function pkColumns(name: string): string[] {

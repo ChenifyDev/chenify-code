@@ -1,10 +1,11 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
+import type { RouteMap } from "../utils";
 
 type SearchType = "posts" | "users";
 type SortType = "hot" | "latest";
 
-export const routes: Bun.Serve.Routes<any, any> = {
+export const routes: RouteMap = {
     "/api/search": async (req) => {
         const url = new URL(req.url);
         const keyword = url.searchParams.get("keyword");
