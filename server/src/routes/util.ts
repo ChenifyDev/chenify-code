@@ -1,4 +1,5 @@
-import { findUserById, type UserPublic } from "../db";
+import { getStorage } from "../storage";
+import type { UserPublic } from "../storage";
 import { verifyToken } from "../jwt";
 
 export function jsonError(status: number, message: string): Response {
@@ -16,7 +17,7 @@ export async function getAuthUser(req: Request): Promise<UserPublic | null> {
     if (!token) return null;
     const payload = await verifyToken(token);
     if (!payload) return null;
-    return findUserById(payload.sub);
+    return getStorage().users.findUserById(payload.sub);
 }
 
 export function parsePagination(url: URL, defaultLimit = 20, maxLimit = 50): { offset: number; limit: number } {

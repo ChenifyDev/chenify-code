@@ -1,0 +1,260 @@
+import { C } from "../collections";
+import type { CollectionStore } from "../store";
+import type {
+    StoredComment,
+    StoredFavorite,
+    StoredFollow,
+    StoredLike,
+    StoredPost,
+    StoredPostImage,
+    StoredPostTag,
+    StoredTag,
+    StoredUser,
+} from "../rows";
+import { getOrCreateTag } from "./tags-internal";
+import { deleteComments } from "./comments";
+import { deleteNotificationsForPost } from "./notifications";
+import { buildPosts, heatPost, type PostHydrationContext } from "../mappers";
+import type { Post, PostRow } from "../types";
+import type { PostsRepo } from "../plugin";
+
+async function boardPosts(store: CollectionStore): Promise<PostRow[]> {
+    const [posts, users, comments, likes, favorites] = await Promise.all([
+        store.read<StoredPost>(C.posts),
+        store.read<StoredUser>(C.users),
+        store.read<StoredComment>(C.comments),
+        store.read<StoredLike>(C.likes),
+        store.read<StoredFavorite>(C.favorites),
+    ]);
+    const userMap = new Map(users.map((user) => [user.id, user]));
+    return posts.map((post) => {
+        const author = userMap.get(post.user_id);
+        return {
+            id: post.id,
+            user_id: post.user_id,
+            content: post.content,
+            created_at: post.created_at,
+            username: author?.username ?? "未知用户",
+            avatar: author?.avatar ?? null,
+            comments_count: comments.filter((c) => c.post_id === post.id).length,
+            likes_count: likes.filter((l) => l.post_id === post.id).length,
+            favorites_count: favorites.filter((f) => f.post_id === post.id).length,
+        };
+    });
+}
+
+async function hydratePosts(store: CollectionStore, rows: PostRow[], viewerId: number | null): Promise<Post[]> {
+    if (rows.length === 0) return [];
+    const ids = rows.map((row) => row.id);
+    const authorIds = [...new Set(rows.map((row) => row.user_id))];
+
+    const [images, tags, postTags, allFavorites, allLikes, allFollows] = await Promise.all([
+        store.read<StoredPostImage>(C.postImages),
+        store.read<StoredTag>(C.tags),
+        store.read<StoredPostTag>(C.postTags),
+        store.read<StoredFavorite>(C.favorites),
+        store.read<StoredLike>(C.likes),
+        store.read<StoredFollow>(C.follows),
+    ]);
+
+    const imageMap = new Map<number, string[]>();
+    for (const row of images) {
+        if (!ids.includes(row.post_id)) continue;
+        const arr = imageMap.get(row.post_id) ?? [];
+        arr.push(row.path);
+        imageMap.set(row.post_id, arr);
+    }
+
+    const tagNameMap = new Map(tags.map((tag) => [tag.id, tag.name]));
+    const tagMap = new Map<number, string[]>();
+    for (const row of postTags) {
+        if (!ids.includes(row.post_id)) continue;
+        const arr = tagMap.get(row.post_id) ?? [];
+        const name = tagNameMap.get(row.tag_id);
+        if (name) arr.push(name);
+        tagMap.set(row.post_id, arr);
+    }
+
+    const favorited = new Set<number>();
+    const liked = new Set<number>();
+    if (viewerId != null) {
+        for (const row of allFavorites)
+            if (row.user_id === viewerId && ids.includes(row.post_id)) favorited.add(row.post_id);
+        for (const row of allLikes) if (row.user_id === viewerId && ids.includes(row.post_id)) liked.add(row.post_id);
+    }
+    const followedAuthors = new Set<number>();
+    if (viewerId != null) {
+        for (const row of allFollows)
+            if (row.follower_id === viewerId && authorIds.includes(row.following_id))
+                followedAuthors.add(row.following_id);
+    }
+
+    const ctx: PostHydrationContext = {
+        images: imageMap,
+        tags: tagMap,
+        favoritedIds: favorited,
+        likedIds: liked,
+        followedAuthorIds: followedAuthors,
+    };
+    return buildPosts(rows, ctx);
+}
+
+export async function getPostByIdStandalone(
+    store: CollectionStore,
+    id: number,
+    viewerId: number | null,
+): Promise<Post | null> {
+    const rows = await boardPosts(store);
+    const row = rows.find((r) => r.id === id);
+    if (!row) return null;
+    return (await hydratePosts(store, [row], viewerId))[0] ?? null;
+}
+
+export async function createPostStandalone(
+    store: CollectionStore,
+    userId: number,
+    content: string,
+    imagePaths: string[],
+    postTagsNames: string[],
+): Promise<Post | null> {
+    const post = await store.insert<StoredPost>(C.posts, {
+        user_id: userId,
+        content,
+        created_at: new Date().toISOString(),
+    });
+    for (const path of imagePaths) {
+        await store.insert<StoredPostImage>(C.postImages, { post_id: post.id, path });
+    }
+    for (const tag of postTagsNames) {
+        const tagId = await getOrCreateTag(store, tag);
+        if (tagId == null) continue;
+        const existing = await store.read<StoredPostTag>(C.postTags);
+        if (existing.some((row) => row.post_id === post.id && row.tag_id === tagId)) continue;
+        await store.append<StoredPostTag>(C.postTags, { post_id: post.id, tag_id: tagId });
+    }
+    return getPostByIdStandalone(store, post.id, userId);
+}
+
+async function deletePostRowsOnly(store: CollectionStore, id: number): Promise<void> {
+    const comments = await store.read<StoredComment>(C.comments);
+    const commentIds = comments.filter((row) => row.post_id === id).map((row) => row.id);
+    await Promise.all([
+        store.deleteWhere<StoredPostImage>(C.postImages, (row) => row.post_id === id),
+        store.deleteWhere<StoredPostTag>(C.postTags, (row) => row.post_id === id),
+        store.deleteWhere<StoredFavorite>(C.favorites, (row) => row.post_id === id),
+        store.deleteWhere<StoredLike>(C.likes, (row) => row.post_id === id),
+        deleteNotificationsForPost(store, id),
+    ]);
+    await deleteComments(store, commentIds);
+    await store.deleteWhere<StoredPost>(C.posts, (row) => row.id === id);
+}
+
+export async function deletePostStandalone(store: CollectionStore, id: number): Promise<string[]> {
+    const images = await store.read<StoredPostImage>(C.postImages);
+    const paths = images.filter((row) => row.post_id === id).map((row) => row.path);
+    await deletePostRowsOnly(store, id);
+    return paths;
+}
+
+export async function deletePostRowStandalone(store: CollectionStore, id: number): Promise<void> {
+    await deletePostRowsOnly(store, id);
+}
+
+export function createPostsRepo(store: CollectionStore): PostsRepo {
+    return {
+        async getPostOwner(id) {
+            const post = await store.getById<StoredPost>(C.posts, id);
+            return post?.user_id ?? null;
+        },
+
+        async createPost(userId, content, imagePaths, postTagsNames) {
+            return createPostStandalone(store, userId, content, imagePaths, postTagsNames);
+        },
+
+        async getPostById(id, viewerId) {
+            return getPostByIdStandalone(store, id, viewerId);
+        },
+
+        async listPosts(options) {
+            const { offset, limit, tag, viewerId, sort = "latest" } = options;
+            let rows = await boardPosts(store);
+
+            if (tag != null) {
+                const postsWithTag = new Set<number>();
+                const [tags, postTags] = await Promise.all([
+                    store.read<StoredTag>(C.tags),
+                    store.read<StoredPostTag>(C.postTags),
+                ]);
+                const tagId = tags.find((t) => t.name === tag)?.id;
+                if (tagId != null) {
+                    for (const row of postTags) if (row.tag_id === tagId) postsWithTag.add(row.post_id);
+                }
+                rows = rows.filter((row) => postsWithTag.has(row.id));
+            }
+
+            if (sort === "hot") {
+                rows = [...rows].sort(
+                    (a, b) =>
+                        heatPost(b.likes_count, b.favorites_count, b.comments_count, b.created_at) -
+                            heatPost(a.likes_count, a.favorites_count, a.comments_count, a.created_at) ||
+                        b.created_at.localeCompare(a.created_at) ||
+                        b.id - a.id,
+                );
+            } else {
+                rows = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+            }
+
+            return hydratePosts(store, rows.slice(offset, offset + limit), viewerId);
+        },
+
+        async listUserPosts(userId, options) {
+            const rows = await boardPosts(store);
+            const filtered = rows
+                .filter((row) => row.user_id === userId)
+                .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+            return hydratePosts(
+                store,
+                filtered.slice(options.offset, options.offset + options.limit),
+                options.viewerId,
+            );
+        },
+
+        async listUserFavorites(userId, options) {
+            const [favorites, rows] = await Promise.all([store.read<StoredFavorite>(C.favorites), boardPosts(store)]);
+            const rowMap = new Map(rows.map((row) => [row.id, row]));
+            const favorited = favorites
+                .filter((fav) => fav.user_id === userId && rowMap.has(fav.post_id))
+                .sort((a, b) => b.id - a.id);
+            const page = favorited
+                .slice(options.offset, options.offset + options.limit)
+                .map((fav) => rowMap.get(fav.post_id)!);
+            return hydratePosts(store, page, options.viewerId);
+        },
+
+        async deletePost(id) {
+            return deletePostStandalone(store, id);
+        },
+
+        async deletePostRow(id) {
+            await deletePostRowsOnly(store, id);
+        },
+
+        async searchPosts(options) {
+            const { offset, limit, keyword, sort = "latest" } = options;
+            const kw = keyword.toLowerCase();
+            let rows = (await boardPosts(store)).filter((row) => row.content.toLowerCase().includes(kw));
+            if (sort === "hot") {
+                rows = [...rows].sort(
+                    (a, b) =>
+                        heatPost(b.likes_count, b.favorites_count, b.comments_count, b.created_at) -
+                            heatPost(a.likes_count, a.favorites_count, a.comments_count, a.created_at) ||
+                        b.created_at.localeCompare(a.created_at) ||
+                        b.id - a.id,
+                );
+            } else {
+                rows = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+            }
+            return hydratePosts(store, rows.slice(offset, offset + limit), null);
+        },
+    };
+}

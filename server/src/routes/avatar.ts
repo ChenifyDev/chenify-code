@@ -1,3 +1,5 @@
+import { getStorage } from "../storage";
+
 export const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 export const MAX_AVATAR_DIMENSION = 512;
@@ -35,11 +37,6 @@ export async function saveAvatar(file: File): Promise<{ path: string } | { error
     }
     const base = crypto.randomUUID();
     const processed = await processAvatar(file, AVATAR_EXTENSIONS[file.type]!);
-    await Bun.write(`./uploads/${base}.${processed.ext}`, processed.data);
-    return { path: `/uploads/${base}.${processed.ext}` };
-}
-
-export function avatarFileToRemove(path: string | null): string | null {
-    if (!path) return null;
-    return path.replace(/^\//, "");
+    const path = await getStorage().blobs.put(processed.data, `${base}.${processed.ext}`);
+    return { path };
 }

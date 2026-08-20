@@ -1,4 +1,4 @@
-import { createUser, findUserByEmail, findUserByUsername, findUserByUsernameOrEmail, toPublicUser } from "../db";
+import { getStorage, toPublicUser } from "../storage";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
 import { saveAvatar } from "./avatar";
@@ -7,6 +7,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const routes: Bun.Serve.Routes<any, any> = {
     "/api/passport/register": async (req) => {
+        const storage = getStorage();
         const form = await req.formData();
         const username = form.get("username")?.toString().trim() ?? "";
         const email = form.get("email")?.toString().trim().toLowerCase() ?? "";
@@ -24,10 +25,10 @@ export const routes: Bun.Serve.Routes<any, any> = {
         if (!EMAIL_REGEX.test(email)) {
             return jsonError(400, "邮箱格式不正确");
         }
-        if (findUserByEmail(email)) {
+        if (await storage.users.findUserByEmail(email)) {
             return jsonError(409, "该邮箱已被注册");
         }
-        if (findUserByUsername(username)) {
+        if (await storage.users.findUserByUsername(username)) {
             return jsonError(409, "该用户名已被使用");
         }
 
@@ -44,11 +45,12 @@ export const routes: Bun.Serve.Routes<any, any> = {
             memoryCost: 65536,
             timeCost: 3,
         });
-        const user = createUser(username, email, passwordHash, avatar);
+        const user = await storage.users.createUser(username, email, passwordHash, avatar);
         return Response.json(user, { status: 201 });
     },
 
     "/api/passport/login": async (req) => {
+        const storage = getStorage();
         const body = (await req.json().catch(() => null)) as { login?: string; password?: string } | null;
         const login = body?.login?.trim() ?? "";
         const password = body?.password ?? "";
@@ -57,7 +59,7 @@ export const routes: Bun.Serve.Routes<any, any> = {
             return jsonError(400, "用户名和密码均为必填项");
         }
 
-        const user = findUserByUsernameOrEmail(login);
+        const user = await storage.users.findUserByUsernameOrEmail(login);
         if (!user) {
             return jsonError(401, "用户名或密码错误");
         }

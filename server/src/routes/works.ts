@@ -1,14 +1,4 @@
-import {
-    createWork,
-    createWorkComment,
-    getWorkCommentOwner,
-    getWorkOwner,
-    toggleWorkCommentLike,
-    toggleWorkLike,
-    unlikeWork,
-    unlikeWorkComment,
-    workCommentBelongsToWork,
-} from "../works";
+import { getStorage } from "../storage";
 import { getAuthUser, jsonError } from "./util";
 
 const MAX_TITLE_LENGTH = 100;
@@ -28,6 +18,7 @@ function numericIdError(raw: string): number | Response {
 }
 
 async function processCover(file: File): Promise<{ path: string } | { error: string }> {
+    const blocks = getStorage().blobs;
     if (!ALLOWED_COVER_TYPES.has(file.type)) {
         return { error: "封面仅支持 png、jpg、webp、gif 格式" };
     }
@@ -35,20 +26,16 @@ async function processCover(file: File): Promise<{ path: string } | { error: str
         return { error: "封面大小不能超过 2MB" };
     }
     if (file.type === "image/gif") {
-        const base = crypto.randomUUID();
-        const relPath = `${base}.gif`;
-        await Bun.write(`./uploads/${relPath}`, file);
-        return { path: `/uploads/${relPath}` };
+        const relPath = `${crypto.randomUUID()}.gif`;
+        return { path: await blocks.put(file, relPath) };
     }
     try {
         const bytes = await new Bun.Image(file)
             .resize(COVER_WIDTH, COVER_HEIGHT, { fit: "fill" })
             .webp({ quality: COVER_WEBP_QUALITY })
             .bytes();
-        const base = crypto.randomUUID();
-        const relPath = `${base}.webp`;
-        await Bun.write(`./uploads/${relPath}`, bytes);
-        return { path: `/uploads/${relPath}` };
+        const relPath = `${crypto.randomUUID()}.webp`;
+        return { path: await blocks.put(bytes, relPath) };
     } catch {
         return { error: "封面处理失败，请更换图片后重试" };
     }
@@ -57,6 +44,7 @@ async function processCover(file: File): Promise<{ path: string } | { error: str
 export const routes: Bun.Serve.Routes<any, any> = {
     "/api/works": {
         POST: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
 
@@ -78,7 +66,12 @@ export const routes: Bun.Serve.Routes<any, any> = {
             const coverResult = await processCover(coverFile);
             if ("error" in coverResult) return jsonError(400, coverResult.error);
 
-            const work = createWork(me.id, { title, description, cover: coverResult.path, git_path: gitPath });
+            const work = await storage.works.createWork(me.id, {
+                title,
+                description,
+                cover: coverResult.path,
+                git_path: gitPath,
+            });
             if (!work) return jsonError(500, "发布作品失败");
             return Response.json(work, { status: 201 });
         },
@@ -86,40 +79,43 @@ export const routes: Bun.Serve.Routes<any, any> = {
 
     "/api/works/:id/like": {
         POST: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
-            if (getWorkOwner(parsed) === null) return jsonError(404, "作品不存在");
-            return Response.json(toggleWorkLike(me.id, parsed));
+            if ((await storage.works.getWorkOwner(parsed)) === null) return jsonError(404, "作品不存在");
+            return Response.json(await storage.works.toggleWorkLike(me.id, parsed));
         },
         DELETE: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
-            if (getWorkOwner(parsed) === null) return jsonError(404, "作品不存在");
-            return Response.json(unlikeWork(me.id, parsed));
+            if ((await storage.works.getWorkOwner(parsed)) === null) return jsonError(404, "作品不存在");
+            return Response.json(await storage.works.unlikeWork(me.id, parsed));
         },
     },
 
     "/api/works/:id/comments": {
         POST: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
-            if (getWorkOwner(parsed) === null) return jsonError(404, "作品不存在");
+            if ((await storage.works.getWorkOwner(parsed)) === null) return jsonError(404, "作品不存在");
 
             const body = (await req.json().catch(() => null)) as { content?: string; parent_id?: number | null } | null;
             const content = body?.content?.trim() ?? "";
             if (!content) return jsonError(400, "评论内容不能为空");
             if (content.length > MAX_COMMENT_LENGTH) return jsonError(400, `评论不能超过 ${MAX_COMMENT_LENGTH} 字`);
             const parentId = body?.parent_id ?? null;
-            if (parentId != null && !workCommentBelongsToWork(parentId, parsed))
+            if (parentId != null && !(await storage.worksComments.workCommentBelongsToWork(parentId, parsed)))
                 return jsonError(400, "回复目标不在该作品下");
 
-            const comment = createWorkComment(me.id, parsed, content, parentId);
+            const comment = await storage.worksComments.createWorkComment(me.id, parsed, content, parentId);
             if (!comment) return jsonError(500, "评论失败");
             return Response.json(comment, { status: 201 });
         },
@@ -127,20 +123,22 @@ export const routes: Bun.Serve.Routes<any, any> = {
 
     "/api/works/comments/:id/like": {
         POST: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
-            if (getWorkCommentOwner(parsed) === null) return jsonError(404, "评论不存在");
-            return Response.json(toggleWorkCommentLike(me.id, parsed));
+            if ((await storage.worksComments.getWorkCommentOwner(parsed)) === null) return jsonError(404, "评论不存在");
+            return Response.json(await storage.worksComments.toggleWorkCommentLike(me.id, parsed));
         },
         DELETE: async (req) => {
+            const storage = getStorage();
             const me = await getAuthUser(req);
             if (!me) return jsonError(401, "请先登录");
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
-            if (getWorkCommentOwner(parsed) === null) return jsonError(404, "评论不存在");
-            return Response.json(unlikeWorkComment(me.id, parsed));
+            if ((await storage.worksComments.getWorkCommentOwner(parsed)) === null) return jsonError(404, "评论不存在");
+            return Response.json(await storage.worksComments.unlikeWorkComment(me.id, parsed));
         },
     },
 };

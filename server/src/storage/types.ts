@@ -5,8 +5,8 @@ export interface User {
     password_hash: string;
     avatar: string | null;
     created_at: string;
-    is_favorites_public: number;
-    is_follows_public: number;
+    is_favorites_public: boolean;
+    is_follows_public: boolean;
 }
 
 export interface UserPublic {
@@ -112,3 +112,79 @@ export interface CommentRow {
 }
 
 export type FollowUserRow = UserSummary & { is_following: number };
+
+export type NotificationType = "post_comment" | "post_reply";
+
+export interface NotificationRow {
+    id: number;
+    user_id: number;
+    actor_id: number;
+    type: NotificationType;
+    post_id: number | null;
+    work_id: number | null;
+    comment_id: number | null;
+    is_read: boolean;
+    created_at: string;
+}
+
+export interface AppNotification {
+    id: number;
+    type: NotificationType;
+    actor: UserSummary;
+    is_read: boolean;
+    created_at: string;
+    post_id: number | null;
+    work_id: number | null;
+    comment_id: number | null;
+    snippet: string;
+    reply_to: string | null;
+    comment: string;
+}
+
+export interface WorkRow {
+    id: number;
+    user_id: number;
+    title: string | null;
+    description: string | null;
+    cover: string | null;
+    git_path: string | null;
+}
+
+export interface WorkRowWithCounts extends WorkRow {
+    likes_count: number;
+    comments_count: number;
+}
+
+export interface Work {
+    id: number;
+    user_id: number;
+    title: string | null;
+    description: string | null;
+    cover: string | null;
+    git_path: string | null;
+    author: UserSummary;
+    likes_count: number;
+    comments_count: number;
+    is_liked: boolean;
+}
+
+export interface WorkComment {
+    id: number;
+    work_id: number;
+    parent_id: number | null;
+    content: string;
+    created_at: string;
+    author: UserSummary;
+    likes_count: number;
+    is_liked: boolean;
+    replies: WorkComment[];
+}
+
+export interface WorkCommentFlat {
+    id: number;
+    work_id: number;
+    parent_id: number | null;
+    user_id: number;
+    content: string;
+    created_at: string;
+}

@@ -18,6 +18,7 @@
         "build": "bun build index.ts --outdir dist --minify --target bun"
     },
     "dependencies": {
+        "@vercel/blob": "^2.8.0",
         "drizzle-orm": "^0.45.2"
     },
     "devDependencies": {

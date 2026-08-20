@@ -23,8 +23,8 @@
 | ------ | ---------------------------------------------- |
 | 400    | 参数缺失或不合法（含上传限制、不能关注自己等） |
 | 401    | 未登录 / Token 无效 / 用户名或密码错误         |
-| 403    | 无权限（非本人帖/评论/草稿）            |
-| 404    | 资源不存在（帖子、用户、草稿等）         |
+| 403    | 无权限（非本人帖/评论/草稿）                   |
+| 404    | 资源不存在（帖子、用户、草稿等）               |
 | 409    | 资源冲突（邮箱/用户名已被注册）                |
 | 500    | 服务端处理失败                                 |
 
@@ -41,11 +41,11 @@
 
 ### 上传限制一览
 
-| 资源          | 大小限制 | 格式                     | 数量限制   | 处理                                                     |
-| ------------- | -------- | ------------------------ | ---------- | -------------------------------------------------------- |
-| 注册头像      | 2MB      | png / jpg / webp / gif   | 1 张       | 缩放至 ≤512px，转 webp（80 质量，gif 原样保留）          |
-| 帖子/草稿图片 | 2MB      | png / jpg / webp / gif   | 最多 9 张  | 转 webp（80 质量，gif 原样保留）                         |
-| 作品封面      | 2MB      | png / jpg / webp / gif   | 1 张       | 缩放至 1280×853（fit fill），转 webp（80 质量，gif 原样保留） |
+| 资源          | 大小限制 | 格式                   | 数量限制  | 处理                                                          |
+| ------------- | -------- | ---------------------- | --------- | ------------------------------------------------------------- |
+| 注册头像      | 2MB      | png / jpg / webp / gif | 1 张      | 缩放至 ≤512px，转 webp（80 质量，gif 原样保留）               |
+| 帖子/草稿图片 | 2MB      | png / jpg / webp / gif | 最多 9 张 | 转 webp（80 质量，gif 原样保留）                              |
+| 作品封面      | 2MB      | png / jpg / webp / gif | 1 张      | 缩放至 1280×853（fit fill），转 webp（80 质量，gif 原样保留） |
 
 - 文本长度限制：
     - 帖子 / 草稿内容：≤ 20000 字
@@ -138,11 +138,11 @@
 
 需要登录。请求体为 `multipart/form-data`（字段均为可选，但至少提供一个）：
 
-| 字段            | 类型   | 必填 | 说明                    |
-| --------------- | ------ | ---- | ----------------------- |
-| `username`      | string | 否   | 新用户名，2–32 个字符   |
+| 字段            | 类型   | 必填 | 说明                     |
+| --------------- | ------ | ---- | ------------------------ |
+| `username`      | string | 否   | 新用户名，2–32 个字符    |
 | `avatar`        | File   | 否   | 新头像，受限同上传一览表 |
-| `remove_avatar` | string | 否   | 传 `1` 表示删除当前头像 |
+| `remove_avatar` | string | 否   | 传 `1` 表示删除当前头像  |
 
 成功返回 `200`，更新后的 `UserPublic`。更新头像或删除头像时会同时清理服务器上的旧头像文件。
 
@@ -484,13 +484,13 @@
 
 无需登录（可携带 Token；用户搜索时返回个性化 `is_following`）。查询参数：
 
-| 参数      | 类型                    | 说明                                       |
-| --------- | ----------------------- | ------------------------------------------ |
-| `keyword` | string                  | 搜索关键词，必填                           |
-| `type`    | `posts` \| `users`      | 搜索对象，默认 `posts`                     |
-| `sort`    | `hot` \| `latest`       | 排序方式，默认 `hot`（`users` 忽略该参数） |
-| `offset`  | number                  | 分页偏移                                   |
-| `limit`   | number                  | 分页数量                                   |
+| 参数      | 类型               | 说明                                       |
+| --------- | ------------------ | ------------------------------------------ |
+| `keyword` | string             | 搜索关键词，必填                           |
+| `type`    | `posts` \| `users` | 搜索对象，默认 `posts`                     |
+| `sort`    | `hot` \| `latest`  | 排序方式，默认 `hot`（`users` 忽略该参数） |
+| `offset`  | number             | 分页偏移                                   |
+| `limit`   | number             | 分页数量                                   |
 
 按 `type` 返回 `200`：
 
@@ -511,8 +511,8 @@
 
 | 字段          | 类型   | 必填 | 说明                       |
 | ------------- | ------ | ---- | -------------------------- |
-| `title`       | string | 是   | 作品标题，≤ 100 字        |
-| `description` | string | 否   | 作品简介，≤ 5000 字       |
+| `title`       | string | 是   | 作品标题，≤ 100 字         |
+| `description` | string | 否   | 作品简介，≤ 5000 字        |
 | `cover`       | File   | 是   | 封面图片，受限同上传一览表 |
 | `git_path`    | string | 否   | Git 仓库路径               |
 
@@ -587,8 +587,8 @@
 
 需要登录。请求体为 `application/json`：
 
-| 字段  | 类型     | 必填 | 说明                                     |
-| ----- | -------- | ---- | ---------------------------------------- |
+| 字段  | 类型     | 必填 | 说明                                         |
+| ----- | -------- | ---- | -------------------------------------------- |
 | `ids` | number[] | 否   | 要标记已读的通知 ID 数组；缺省时标记全部已读 |
 
 成功返回 `200`：
@@ -711,32 +711,32 @@
 
 ### Work
 
-| 字段            | 类型           | 说明             |
-| --------------- | -------------- | ---------------- |
-| `id`            | number         | 作品 ID          |
-| `user_id`       | number         | 作者用户 ID      |
-| `title`         | string \| null | 作品标题         |
-| `description`   | string \| null | 作品简介         |
-| `cover`         | string \| null | 封面图片地址     |
-| `git_path`      | string \| null | Git 仓库路径     |
-| `author`        | UserSummary    | 作者信息         |
-| `likes_count`   | number         | 点赞数           |
-| `comments_count`| number         | 评论数           |
-| `is_liked`      | boolean        | 我是否已点赞     |
+| 字段             | 类型           | 说明         |
+| ---------------- | -------------- | ------------ |
+| `id`             | number         | 作品 ID      |
+| `user_id`        | number         | 作者用户 ID  |
+| `title`          | string \| null | 作品标题     |
+| `description`    | string \| null | 作品简介     |
+| `cover`          | string \| null | 封面图片地址 |
+| `git_path`       | string \| null | Git 仓库路径 |
+| `author`         | UserSummary    | 作者信息     |
+| `likes_count`    | number         | 点赞数       |
+| `comments_count` | number         | 评论数       |
+| `is_liked`       | boolean        | 我是否已点赞 |
 
 ### WorkComment
 
-| 字段         | 类型             | 说明                                       |
-| ------------ | ---------------- | ------------------------------------------ |
-| `id`         | number           | 评论 ID                                    |
-| `work_id`    | number           | 所属作品 ID                                |
-| `parent_id`  | number \| null   | 回复目标评论 ID（null 为顶层评论）         |
-| `content`    | string           | 评论内容                                   |
-| `created_at` | string           | 评论时间                                   |
-| `author`     | UserSummary      | 评论者信息                                 |
-| `likes_count`| number           | 点赞数                                     |
-| `is_liked`   | boolean          | 我是否已点赞                               |
-| `replies`    | WorkComment[]    | 回复列表（顶层评论包含其下全部后代，平铺） |
+| 字段          | 类型           | 说明                                       |
+| ------------- | -------------- | ------------------------------------------ |
+| `id`          | number         | 评论 ID                                    |
+| `work_id`     | number         | 所属作品 ID                                |
+| `parent_id`   | number \| null | 回复目标评论 ID（null 为顶层评论）         |
+| `content`     | string         | 评论内容                                   |
+| `created_at`  | string         | 评论时间                                   |
+| `author`      | UserSummary    | 评论者信息                                 |
+| `likes_count` | number         | 点赞数                                     |
+| `is_liked`    | boolean        | 我是否已点赞                               |
+| `replies`     | WorkComment[]  | 回复列表（顶层评论包含其下全部后代，平铺） |
 
 ### Draft
 
@@ -754,64 +754,64 @@
 
 ### AppNotification
 
-| 字段         | 类型                                        | 说明                     |
-| ------------ | ------------------------------------------- | ------------------------ |
-| `id`         | number                                      | 通知 ID                  |
-| `type`       | `post_comment` \| `post_reply`              | 通知类型                 |
-| `actor`      | UserSummary                                 | 触发者信息               |
-| `is_read`    | boolean                                     | 是否已读                 |
-| `created_at` | string                                      | 通知时间                 |
-| `post_id`    | number \| null                              | 关联帖子 ID              |
-| `comment_id` | number \| null                              | 关联评论 ID              |
-| `snippet`    | string                                      | 关联帖子内容摘要         |
-| `reply_to`   | string \| null                              | 回复通知中被回复评论的内容摘要 |
-| `comment`    | string                                      | 触发评论的内容           |
+| 字段         | 类型                           | 说明                           |
+| ------------ | ------------------------------ | ------------------------------ |
+| `id`         | number                         | 通知 ID                        |
+| `type`       | `post_comment` \| `post_reply` | 通知类型                       |
+| `actor`      | UserSummary                    | 触发者信息                     |
+| `is_read`    | boolean                        | 是否已读                       |
+| `created_at` | string                         | 通知时间                       |
+| `post_id`    | number \| null                 | 关联帖子 ID                    |
+| `comment_id` | number \| null                 | 关联评论 ID                    |
+| `snippet`    | string                         | 关联帖子内容摘要               |
+| `reply_to`   | string \| null                 | 回复通知中被回复评论的内容摘要 |
+| `comment`    | string                         | 触发评论的内容                 |
 
 ## 接口索引
 
-| 方法   | 路径                             | 认证       |
-| ------ | -------------------------------- | ---------- |
-| POST   | `/api/passport/register`         | 否         |
-| POST   | `/api/passport/login`            | 否         |
-| GET    | `/api/passport/me`               | 是         |
-| GET    | `/api/posts`                     | 否         |
-| POST   | `/api/posts`                     | 是         |
-| GET    | `/api/posts/:id`                 | 否         |
-| DELETE | `/api/posts/:id`                 | 是（作者） |
-| POST   | `/api/posts/:id/like`            | 是         |
-| DELETE | `/api/posts/:id/like`            | 是         |
-| POST   | `/api/posts/:id/favorite`        | 是         |
-| DELETE | `/api/posts/:id/favorite`        | 是         |
-| GET    | `/api/posts/:id/comments`        | 否         |
-| POST   | `/api/posts/:id/comments`        | 是         |
-| DELETE | `/api/comments/:id`              | 是（本人） |
-| POST   | `/api/comments/:id/like`         | 是         |
-| DELETE | `/api/comments/:id/like`         | 是         |
-| POST   | `/api/users/:id/follow`          | 是         |
-| DELETE | `/api/users/:id/follow`          | 是         |
-| GET    | `/api/tags`                      | 否         |
-| PATCH  | `/api/user/privacy`              | 是         |
-| PATCH  | `/api/user/profile`              | 是         |
-| GET    | `/api/drafts`                    | 是         |
-| POST   | `/api/drafts`                    | 是         |
-| GET    | `/api/drafts/:id`                | 是（本人） |
-| PATCH  | `/api/drafts/:id`                | 是（本人） |
-| DELETE | `/api/drafts/:id`                | 是（本人） |
-| POST   | `/api/drafts/:id/publish`        | 是（本人） |
-| POST   | `/api/drafts/:id/unpublish`      | 是（本人） |
-| GET    | `/api/users/:id/space`           | 否         |
-| GET    | `/api/users/:id/space/posts`     | 否         |
-| GET    | `/api/users/:id/space/favorites` | 否         |
-| GET    | `/api/users/:id/space/following` | 否         |
-| GET    | `/api/users/:id/space/followers` | 否         |
-| GET    | `/api/search`                    | 否         |
-| POST   | `/api/works`                     | 是         |
-| POST   | `/api/works/:id/like`            | 是         |
-| DELETE | `/api/works/:id/like`            | 是         |
-| POST   | `/api/works/:id/comments`        | 是         |
-| POST   | `/api/works/comments/:id/like`   | 是         |
-| DELETE | `/api/works/comments/:id/like`   | 是         |
-| GET    | `/api/notifications`             | 是         |
-| GET    | `/api/notifications/unread-count` | 是        |
-| POST   | `/api/notifications/read`        | 是         |
-| GET    | `/uploads/*`                     | 否         |
+| 方法   | 路径                              | 认证       |
+| ------ | --------------------------------- | ---------- |
+| POST   | `/api/passport/register`          | 否         |
+| POST   | `/api/passport/login`             | 否         |
+| GET    | `/api/passport/me`                | 是         |
+| GET    | `/api/posts`                      | 否         |
+| POST   | `/api/posts`                      | 是         |
+| GET    | `/api/posts/:id`                  | 否         |
+| DELETE | `/api/posts/:id`                  | 是（作者） |
+| POST   | `/api/posts/:id/like`             | 是         |
+| DELETE | `/api/posts/:id/like`             | 是         |
+| POST   | `/api/posts/:id/favorite`         | 是         |
+| DELETE | `/api/posts/:id/favorite`         | 是         |
+| GET    | `/api/posts/:id/comments`         | 否         |
+| POST   | `/api/posts/:id/comments`         | 是         |
+| DELETE | `/api/comments/:id`               | 是（本人） |
+| POST   | `/api/comments/:id/like`          | 是         |
+| DELETE | `/api/comments/:id/like`          | 是         |
+| POST   | `/api/users/:id/follow`           | 是         |
+| DELETE | `/api/users/:id/follow`           | 是         |
+| GET    | `/api/tags`                       | 否         |
+| PATCH  | `/api/user/privacy`               | 是         |
+| PATCH  | `/api/user/profile`               | 是         |
+| GET    | `/api/drafts`                     | 是         |
+| POST   | `/api/drafts`                     | 是         |
+| GET    | `/api/drafts/:id`                 | 是（本人） |
+| PATCH  | `/api/drafts/:id`                 | 是（本人） |
+| DELETE | `/api/drafts/:id`                 | 是（本人） |
+| POST   | `/api/drafts/:id/publish`         | 是（本人） |
+| POST   | `/api/drafts/:id/unpublish`       | 是（本人） |
+| GET    | `/api/users/:id/space`            | 否         |
+| GET    | `/api/users/:id/space/posts`      | 否         |
+| GET    | `/api/users/:id/space/favorites`  | 否         |
+| GET    | `/api/users/:id/space/following`  | 否         |
+| GET    | `/api/users/:id/space/followers`  | 否         |
+| GET    | `/api/search`                     | 否         |
+| POST   | `/api/works`                      | 是         |
+| POST   | `/api/works/:id/like`             | 是         |
+| DELETE | `/api/works/:id/like`             | 是         |
+| POST   | `/api/works/:id/comments`         | 是         |
+| POST   | `/api/works/comments/:id/like`    | 是         |
+| DELETE | `/api/works/comments/:id/like`    | 是         |
+| GET    | `/api/notifications`              | 是         |
+| GET    | `/api/notifications/unread-count` | 是         |
+| POST   | `/api/notifications/read`         | 是         |
+| GET    | `/uploads/*`                      | 否         |
