@@ -98,7 +98,7 @@ export function createWorksRepo(store: CollectionStore): WorksRepo {
             const work = await store.getById<StoredWork>(C.works, id);
             const cover = work?.cover ?? null;
             await store.deleteWhere<StoredWork>(C.works, (row) => row.id === id);
-            return { coverPath: cover != null && cover.startsWith("/uploads/") ? cover : null };
+            return { coverPath: cover };
         },
 
         async toggleWorkLike(userId, workId) {

@@ -16,7 +16,7 @@ import type {
 import type { StoragePlugin } from "./plugin";
 import { createOperations } from "./operations";
 import { sqliteStoragePlugin } from "./driver/sqlite";
-import { vercelBlobStoragePlugin } from "./driver/vercel-blob";
+import { neonStoragePlugin } from "./driver/neon";
 
 export interface Storage {
     readonly name: string;
@@ -43,8 +43,8 @@ export function getStorage(): Storage {
     let plugin: StoragePlugin;
     const driver = process.env.STORAGE_DRIVER ?? "sqlite";
     switch (driver) {
-        case "vercel-blob":
-            plugin = vercelBlobStoragePlugin();
+        case "neon":
+            plugin = neonStoragePlugin();
             break;
         case "sqlite":
         default:

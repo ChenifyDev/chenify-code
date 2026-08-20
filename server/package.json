@@ -15,11 +15,15 @@
         "works:generate": "drizzle-kit generate --config drizzle-works.config.ts",
         "works:migrate": "drizzle-kit migrate --config drizzle-works.config.ts",
         "works:studio": "drizzle-kit studio --config drizzle-works.config.ts",
+        "db:push:neon": "drizzle-kit push --config drizzle-neon.config.ts",
+        "db:generate:neon": "drizzle-kit generate --config drizzle-neon.config.ts",
         "build": "bun build index.ts --outdir dist --minify --target bun"
     },
     "dependencies": {
+        "@neondatabase/serverless": "^1.1.0",
         "@vercel/blob": "^2.8.0",
-        "drizzle-orm": "^0.45.2"
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.13.3"
     },
     "devDependencies": {
         "@types/bun": "latest",
