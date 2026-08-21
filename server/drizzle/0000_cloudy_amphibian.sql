@@ -1,15 +1,29 @@
+CREATE TABLE `comment_likes` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`comment_id` integer NOT NULL,
+	`user_id` integer NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `comment_likes_comment_id_user_id_unique` ON `comment_likes` (`comment_id`,`user_id`);--> statement-breakpoint
+CREATE INDEX `idx_comment_likes_user_id` ON `comment_likes` (`user_id`);--> statement-breakpoint
 CREATE TABLE `comments` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`post_id` integer NOT NULL,
 	`user_id` integer NOT NULL,
+	`parent_id` integer,
 	`content` text NOT NULL,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
 	FOREIGN KEY (`post_id`) REFERENCES `posts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`parent_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE INDEX `idx_comments_post_id` ON `comments` (`post_id`);--> statement-breakpoint
 CREATE INDEX `idx_comments_user_id` ON `comments` (`user_id`);--> statement-breakpoint
+CREATE INDEX `idx_comments_parent_id` ON `comments` (`parent_id`);--> statement-breakpoint
 CREATE TABLE `draft_images` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`draft_id` integer NOT NULL,
@@ -75,6 +89,22 @@ CREATE TABLE `likes` (
 CREATE UNIQUE INDEX `likes_user_id_post_id_unique` ON `likes` (`user_id`,`post_id`);--> statement-breakpoint
 CREATE INDEX `idx_likes_user_id` ON `likes` (`user_id`);--> statement-breakpoint
 CREATE INDEX `idx_likes_post_id` ON `likes` (`post_id`);--> statement-breakpoint
+CREATE TABLE `notifications` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
+	`actor_id` integer NOT NULL,
+	`type` text NOT NULL,
+	`post_id` integer,
+	`work_id` integer,
+	`comment_id` integer,
+	`is_read` integer DEFAULT 0 NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`actor_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `idx_notifications_user` ON `notifications` (`user_id`);--> statement-breakpoint
+CREATE INDEX `idx_notifications_user_read` ON `notifications` (`user_id`,`is_read`);--> statement-breakpoint
 CREATE TABLE `post_images` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`post_id` integer NOT NULL,
@@ -115,8 +145,8 @@ CREATE TABLE `users` (
 	`password_hash` text NOT NULL,
 	`avatar` text,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	`is_favorites_public` integer DEFAULT true NOT NULL,
-	`is_follows_public` integer DEFAULT true NOT NULL
+	`is_favorites_public` integer DEFAULT 1 NOT NULL,
+	`is_follows_public` integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint

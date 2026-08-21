@@ -9,7 +9,7 @@ import {
     type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
-const now = sql.raw("datetime('now')");
+const now = sql.raw("(datetime('now'))");
 
 export const users = sqliteTable("users", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -18,8 +18,8 @@ export const users = sqliteTable("users", {
     password_hash: text("password_hash").notNull(),
     avatar: text("avatar"),
     created_at: text("created_at").notNull().default(now),
-    is_favorites_public: integer("is_favorites_public", { mode: "boolean" }).notNull().default(true),
-    is_follows_public: integer("is_follows_public", { mode: "boolean" }).notNull().default(true),
+    is_favorites_public: integer("is_favorites_public", { mode: "boolean" }).notNull().default(sql.raw("1")),
+    is_follows_public: integer("is_follows_public", { mode: "boolean" }).notNull().default(sql.raw("1")),
 });
 
 export const posts = sqliteTable(
@@ -174,7 +174,7 @@ export const notifications = sqliteTable(
         post_id: integer("post_id"),
         work_id: integer("work_id"),
         comment_id: integer("comment_id"),
-        is_read: integer("is_read", { mode: "boolean" }).notNull().default(false),
+        is_read: integer("is_read", { mode: "boolean" }).notNull().default(sql.raw("0")),
         created_at: text("created_at").notNull().default(now),
     },
     (table) => [
