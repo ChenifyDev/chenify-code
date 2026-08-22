@@ -1,4 +1,5 @@
-import { getStorage, toPublicUser } from "../storage";
+import argon2 from "argon2";
+import { getStorage, toPublicUser } from "@chenify/storage";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
 import { saveAvatar, type RouteMap } from "../utils";
@@ -40,8 +41,8 @@ export const routes = {
             avatar = saved.path;
         }
 
-        const passwordHash = await Bun.password.hash(password, {
-            algorithm: "argon2id",
+        const passwordHash = await argon2.hash(password, {
+            type: argon2.argon2id,
             memoryCost: 65536,
             timeCost: 3,
         });
@@ -63,7 +64,7 @@ export const routes = {
         if (!user) {
             return jsonError(401, "用户名或密码错误");
         }
-        const valid = await Bun.password.verify(password, user.password_hash);
+        const valid = await argon2.verify(password, user.password_hash);
         if (!valid) {
             return jsonError(401, "用户名或密码错误");
         }

@@ -1,6 +1,4 @@
-import { getDb } from "./src/db/client";
-import { likes, favorites, posts } from "./src/db/schema";
-import { getStorage } from "./src/storage";
+import { getDb, likes, favorites, posts, getStorage } from "@chenify/storage";
 
 const db = getDb();
 

@@ -2,7 +2,7 @@
 
 ## 概述
 
-- 服务基于 `Bun.serve`，监听端口 **8080**
+- 服务基于 Hono + `@hono/node-server` 运行在 Node.js 上，默认监听端口 **8080**
 - 所有业务接口路径前缀为 `/api`，静态资源前缀为 `/uploads/`
 - 请求体两种格式：
     - `application/json`：登录、评论、隐私设置等

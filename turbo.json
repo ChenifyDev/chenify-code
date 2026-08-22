@@ -1,0 +1,26 @@
+{
+	"$schema": "https://turborepo.dev/schema.json",
+	"globalDependencies": [".env"],
+	"globalEnv": [
+		"VITE_API_PATH",
+		"STORAGE_DRIVER",
+		"DATABASE_URL",
+		"DATABASE_URL_UNPOOLED",
+		"BLOB_READ_WRITE_TOKEN"
+	],
+	"tasks": {
+		"build": {
+			"outputs": ["dist/**"]
+		},
+		"check-types": {
+			"dependsOn": ["^check-types"]
+		},
+		"dev": {
+			"persistent": true,
+			"cache": false
+		},
+		"test": {
+			"dependsOn": ["^test"]
+		}
+	}
+}

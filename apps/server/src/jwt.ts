@@ -1,3 +1,5 @@
+import type { webcrypto } from "node:crypto";
+
 const encoder = new TextEncoder();
 
 function base64urlEncode(data: ArrayBuffer | Uint8Array): string {
@@ -19,9 +21,9 @@ function base64urlDecode(input: string): Uint8Array<ArrayBuffer> {
 const SECRET = process.env.JWT_SECRET ?? "chenify-dev-secret";
 const ALGORITHM = "HS256";
 
-let cachedKey: CryptoKey | null = null;
+let cachedKey: webcrypto.CryptoKey | null = null;
 
-async function getKey(): Promise<CryptoKey> {
+async function getKey(): Promise<webcrypto.CryptoKey> {
     if (!cachedKey) {
         cachedKey = await crypto.subtle.importKey(
             "raw",

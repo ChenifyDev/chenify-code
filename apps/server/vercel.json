@@ -1,9 +1,0 @@
-{
-    "bunVersion": "1.x",
-    "builds": [
-        {
-            "src": "apps/server/dist/index.js",
-            "use": "@vercel/node"
-        }
-    ]
-}

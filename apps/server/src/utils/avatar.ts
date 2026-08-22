@@ -1,4 +1,5 @@
-import { getStorage } from "../storage";
+import sharp from "sharp";
+import { getStorage } from "@chenify/storage";
 
 export const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
@@ -14,13 +15,13 @@ const AVATAR_EXTENSIONS: Record<string, string> = {
 export async function processAvatar(
     file: File,
     originalExt: string,
-): Promise<{ data: Uint8Array | File; ext: string }> {
+): Promise<{ data: Buffer | File; ext: string }> {
     if (file.type === "image/gif") return { data: file, ext: originalExt };
     try {
-        const bytes = await new Bun.Image(file)
+        const bytes = await sharp(await file.arrayBuffer())
             .resize(MAX_AVATAR_DIMENSION, MAX_AVATAR_DIMENSION, { fit: "inside" })
             .webp({ quality: AVATAR_WEBP_QUALITY })
-            .bytes();
+            .toBuffer();
         if (bytes.length < file.size) return { data: bytes, ext: "webp" };
         return { data: file, ext: originalExt };
     } catch {
