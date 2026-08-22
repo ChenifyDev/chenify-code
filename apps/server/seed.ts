@@ -1,5 +1,5 @@
 ﻿// 生成调试数据
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, count, eq, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "./src/db/client";
 import {
     commentLikes,
@@ -526,31 +526,11 @@ async function main() {
 
     for (const user of seedUsers) {
         const id = idMap.get(user.username)!;
-        const postsCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(posts)
-            .where(eq(posts.user_id, id))
-            .get()!.n;
-        const favoritesCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(favorites)
-            .where(eq(favorites.user_id, id))
-            .get()!.n;
-        const likesCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(likes)
-            .where(eq(likes.user_id, id))
-            .get()!.n;
-        const followingCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(follows)
-            .where(eq(follows.follower_id, id))
-            .get()!.n;
-        const followersCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(follows)
-            .where(eq(follows.following_id, id))
-            .get()!.n;
+        const postsCount = db.select({ n: count() }).from(posts).where(eq(posts.user_id, id)).get()!.n;
+        const favoritesCount = db.select({ n: count() }).from(favorites).where(eq(favorites.user_id, id)).get()!.n;
+        const likesCount = db.select({ n: count() }).from(likes).where(eq(likes.user_id, id)).get()!.n;
+        const followingCount = db.select({ n: count() }).from(follows).where(eq(follows.follower_id, id)).get()!.n;
+        const followersCount = db.select({ n: count() }).from(follows).where(eq(follows.following_id, id)).get()!.n;
         console.log(
             `${user.username}(${user.email}) 密码 ${PASSWORD} — 帖子 ${postsCount} / 收藏 ${favoritesCount} / 点赞 ${likesCount} / 关注 ${followingCount} / 粉丝 ${followersCount}`,
         );
