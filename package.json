@@ -1,25 +1,25 @@
 {
-	"name": "chenify-code",
-	"version": "1.0.0",
-	"private": true,
-	"description": "",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/chen3283891376/chenify-code.git"
-	},
-	"packageManager": "pnpm@11.22.0",
-	"main": "index.js",
-	"scripts": {
-		"build": "turbo run build",
-		"dev": "turbo run dev",
-		"lint": "oxlint",
-		"format": "oxfmt"
-	},
-	"devDependencies": {
-		"oxfmt": "^0.62.0",
-		"oxlint": "^1.77.0"
-	},
-	"dependencies": {
-		"turbo": "^2.10.11"
-	}
+    "name": "chenify-code",
+    "version": "1.0.0",
+    "private": true,
+    "description": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/chen3283891376/chenify-code.git"
+    },
+    "main": "index.js",
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "lint": "oxlint",
+        "format": "oxfmt"
+    },
+    "dependencies": {
+        "turbo": "^2.10.11"
+    },
+    "devDependencies": {
+        "oxfmt": "^0.62.0",
+        "oxlint": "^1.77.0"
+    },
+    "packageManager": "pnpm@11.22.0"
 }

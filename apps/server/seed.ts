@@ -545,9 +545,7 @@ async function main() {
             (SELECT COUNT(*) FROM drafts WHERE status = 'published') AS published,
             (SELECT COUNT(*) FROM drafts WHERE status = 'draft') AS draft`,
     ) as { published: number; draft: number } | undefined;
-    console.log(
-        `草稿：已发布 ${draftRow?.published ?? 0} 条 / 未发布 ${draftRow?.draft ?? 0} 条。`,
-    );
+    console.log(`草稿：已发布 ${draftRow?.published ?? 0} 条 / 未发布 ${draftRow?.draft ?? 0} 条。`);
     console.log("提示：请先停止运行中的 server（npm run dev），再启动以刷新数据。");
 }
 

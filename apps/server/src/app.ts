@@ -15,35 +15,26 @@ const app = new Hono();
 app.notFound(() => new Response("Not Found", { status: 404 }));
 
 registerRoutes(app, {
-	...passportRoutes,
-	...forumRoutes,
-	...spaceRoutes,
-	...searchRoutes,
-	...notificationRoutes,
-	...worksRoutes,
-	...rankRoutes,
+    ...passportRoutes,
+    ...forumRoutes,
+    ...spaceRoutes,
+    ...searchRoutes,
+    ...notificationRoutes,
+    ...worksRoutes,
+    ...rankRoutes,
 });
 
 const storage = getStorage();
 
 if (storage.name === "sqlite") {
-	mkdirSync("./uploads", { recursive: true });
-	app.get("/uploads/*", (c) => {
-		const path = decodeURIComponent(
-			new URL(c.req.url).pathname.replace(/^\/uploads\//, ""),
-		);
-		if (
-			!path ||
-			path.includes("..") ||
-			path.includes("/") ||
-			path.includes("\\")
-		) {
-			return new Response("Not Found", { status: 404 });
-		}
-		return new Response(
-			createReadStream(`./uploads/${path}`, { encoding: "utf-8" }),
-		);
-	});
+    mkdirSync("./uploads", { recursive: true });
+    app.get("/uploads/*", (c) => {
+        const path = decodeURIComponent(new URL(c.req.url).pathname.replace(/^\/uploads\//, ""));
+        if (!path || path.includes("..") || path.includes("/") || path.includes("\\")) {
+            return new Response("Not Found", { status: 404 });
+        }
+        return new Response(createReadStream(`./uploads/${path}`, { encoding: "utf-8" }));
+    });
 }
 
 export default app;

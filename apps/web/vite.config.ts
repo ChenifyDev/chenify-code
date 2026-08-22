@@ -10,23 +10,23 @@ const API_PATH = env.VITE_API_PATH;
 
 // https://vite.dev/config/
 export default defineConfig({
-	envDir: rootDir,
-	plugins: [react(), tailwindcss()],
-	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src"),
-		},
-	},
-	server: {
-		proxy: {
-			"/api": {
-				target: API_PATH,
-				changeOrigin: true,
-			},
-			"/uploads": {
-				target: API_PATH,
-				changeOrigin: true,
-			},
-		},
-	},
+    envDir: rootDir,
+    plugins: [react(), tailwindcss()],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./src"),
+        },
+    },
+    server: {
+        proxy: {
+            "/api": {
+                target: API_PATH,
+                changeOrigin: true,
+            },
+            "/uploads": {
+                target: API_PATH,
+                changeOrigin: true,
+            },
+        },
+    },
 });

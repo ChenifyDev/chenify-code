@@ -6,8 +6,7 @@ const UPLOADS_DIR = "./uploads";
 export function sqliteBlobStore(): BlobStore {
     return {
         async put(data, relPath) {
-            const buffer =
-                data instanceof Blob ? Buffer.from(await data.arrayBuffer()) : Buffer.from(data as any);
+            const buffer = data instanceof Blob ? Buffer.from(await data.arrayBuffer()) : Buffer.from(data as any);
             await writeFile(`${UPLOADS_DIR}/${relPath}`, buffer);
             return `/uploads/${relPath}`;
         },

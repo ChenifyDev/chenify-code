@@ -23,7 +23,9 @@ async function processImage(file: File): Promise<{ data: Buffer | File; ext: str
     if (file.size > MAX_IMAGE_SIZE) return null;
     if (file.type === "image/gif") return { data: file, ext: "gif" };
     try {
-        const bytes = await sharp(await file.arrayBuffer()).webp({ quality: IMAGE_WEBP_QUALITY }).toBuffer();
+        const bytes = await sharp(await file.arrayBuffer())
+            .webp({ quality: IMAGE_WEBP_QUALITY })
+            .toBuffer();
         if (bytes.length < file.size) return { data: bytes, ext: "webp" };
         return { data: file, ext: IMAGE_EXTENSIONS[file.type]! };
     } catch {

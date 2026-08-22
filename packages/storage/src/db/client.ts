@@ -14,9 +14,7 @@ function init(): BetterSQLite3Database<typeof schema> {
     sqlite.pragma("foreign_keys = ON");
     const db = drizzle(sqlite, { schema, logger: false });
     const hasSchema =
-        sqlite
-            .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'")
-            .get() != null;
+        sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'").get() != null;
     if (!hasSchema) {
         const migrationsFolder = join(SRV_DIR, "drizzle");
         migrate(db, { migrationsFolder });
