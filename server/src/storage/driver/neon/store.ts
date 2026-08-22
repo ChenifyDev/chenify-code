@@ -52,9 +52,7 @@ function pkColumns(name: string): string[] {
 }
 
 function pkEqual(table: any, row: any, cols: string[]) {
-    return cols.length === 1
-        ? eq(table[cols[0]!], row[cols[0]!])
-        : and(...cols.map((col) => eq(table[col], row[col])));
+    return cols.length === 1 ? eq(table[cols[0]!], row[cols[0]!]) : and(...cols.map((col) => eq(table[col], row[col])));
 }
 
 function pkKey(row: any, cols: string[]): string {
@@ -74,12 +72,20 @@ export function neonCollectionStore(): CollectionStore {
             const cols = pkColumns(name);
             const wanted = new Set(rows.map((row) => pkKey(row, cols)));
             for (const row of existing) {
-                if (!wanted.has(pkKey(row, cols))) getDb().delete(table).where(pkEqual(table, row, cols)).execute();
+                if (!wanted.has(pkKey(row, cols)))
+                    getDb()
+                        .delete(table)
+                        .where(pkEqual(table, row, cols))
+                        .execute();
             }
             const known = new Set(existing.map((row) => pkKey(row, cols)));
             for (const row of rows) {
                 if (known.has(pkKey(row, cols))) {
-                    getDb().update(table).set(row).where(pkEqual(table, row, cols)).execute();
+                    getDb()
+                        .update(table)
+                        .set(row)
+                        .where(pkEqual(table, row, cols))
+                        .execute();
                 } else {
                     await getDb().insert(table).values(row).execute();
                     known.add(pkKey(row, cols));
@@ -104,7 +110,11 @@ export function neonCollectionStore(): CollectionStore {
             return rows.find((row) => (row as any).id === id) as T | undefined;
         },
 
-        async updateById<T extends { id: number }>(name: string, id: number, patch: Partial<T>): Promise<T | undefined> {
+        async updateById<T extends { id: number }>(
+            name: string,
+            id: number,
+            patch: Partial<T>,
+        ): Promise<T | undefined> {
             const { table, hasId } = resolve(name);
             if (!hasId) return undefined;
             const existing = (await store.getById<any>(name, id)) as any;
@@ -118,7 +128,11 @@ export function neonCollectionStore(): CollectionStore {
             const rows = (await store.read<any>(name)) as any[];
             const cols = pkColumns(name);
             for (const row of rows) {
-                if (predicate(row as T)) await getDb().delete(table).where(pkEqual(table, row, cols)).execute();
+                if (predicate(row as T))
+                    await getDb()
+                        .delete(table)
+                        .where(pkEqual(table, row, cols))
+                        .execute();
             }
         },
 

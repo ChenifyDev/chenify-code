@@ -24,7 +24,9 @@ export function createRankRepo(store: CollectionStore): RankRepo {
                     ...summaryOf(user, user.id),
                     email: user.email,
                     followers: followersOf(user.id),
-                    is_following: viewerId ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id) : false,
+                    is_following: viewerId
+                        ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id)
+                        : false,
                     rank: index + 1,
                 }));
             const page = ranked.slice(options.offset, options.offset + options.limit);
@@ -55,7 +57,9 @@ export function createRankRepo(store: CollectionStore): RankRepo {
                     ...summaryOf(user, user.id),
                     email: user.email,
                     points: pointsOf(user.id),
-                    is_following: viewerId ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id) : false,
+                    is_following: viewerId
+                        ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id)
+                        : false,
                     rank: index + 1,
                 }));
             return ranked.slice(options.offset, options.offset + options.limit) as unknown as PointsUser[];

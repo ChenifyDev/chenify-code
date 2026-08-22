@@ -1,325 +1,289 @@
 {
-  "version": "6",
-  "dialect": "sqlite",
-  "id": "7c111671-f245-47d4-9e88-a34c55f4f8a4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "tables": {
-    "comment_likes": {
-      "name": "comment_likes",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
+    "version": "6",
+    "dialect": "sqlite",
+    "id": "7c111671-f245-47d4-9e88-a34c55f4f8a4",
+    "prevId": "00000000-0000-0000-0000-000000000000",
+    "tables": {
+        "comment_likes": {
+            "name": "comment_likes",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": true
+                },
+                "comment_id": {
+                    "name": "comment_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "(datetime('now'))"
+                }
+            },
+            "indexes": {
+                "comment_likes_comment_id_user_id_unique": {
+                    "name": "comment_likes_comment_id_user_id_unique",
+                    "columns": ["comment_id", "user_id"],
+                    "isUnique": true
+                },
+                "idx_comment_likes_user_id": {
+                    "name": "idx_comment_likes_user_id",
+                    "columns": ["user_id"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {
+                "comment_likes_comment_id_comments_id_fk": {
+                    "name": "comment_likes_comment_id_comments_id_fk",
+                    "tableFrom": "comment_likes",
+                    "tableTo": "comments",
+                    "columnsFrom": ["comment_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
         },
-        "comment_id": {
-          "name": "comment_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+        "comments": {
+            "name": "comments",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": true
+                },
+                "work_id": {
+                    "name": "work_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "parent_id": {
+                    "name": "parent_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "content": {
+                    "name": "content",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "(datetime('now'))"
+                }
+            },
+            "indexes": {
+                "idx_comments_work_id": {
+                    "name": "idx_comments_work_id",
+                    "columns": ["work_id"],
+                    "isUnique": false
+                },
+                "idx_comments_user_id": {
+                    "name": "idx_comments_user_id",
+                    "columns": ["user_id"],
+                    "isUnique": false
+                },
+                "idx_comments_parent_id": {
+                    "name": "idx_comments_parent_id",
+                    "columns": ["parent_id"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {
+                "comments_work_id_works_id_fk": {
+                    "name": "comments_work_id_works_id_fk",
+                    "tableFrom": "comments",
+                    "tableTo": "works",
+                    "columnsFrom": ["work_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "comments_parent_id_comments_id_fk": {
+                    "name": "comments_parent_id_comments_id_fk",
+                    "tableFrom": "comments",
+                    "tableTo": "comments",
+                    "columnsFrom": ["parent_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+        "likes": {
+            "name": "likes",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": true
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "work_id": {
+                    "name": "work_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "(datetime('now'))"
+                }
+            },
+            "indexes": {
+                "likes_user_id_work_id_unique": {
+                    "name": "likes_user_id_work_id_unique",
+                    "columns": ["user_id", "work_id"],
+                    "isUnique": true
+                },
+                "idx_likes_user_id": {
+                    "name": "idx_likes_user_id",
+                    "columns": ["user_id"],
+                    "isUnique": false
+                },
+                "idx_likes_work_id": {
+                    "name": "idx_likes_work_id",
+                    "columns": ["work_id"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {
+                "likes_work_id_works_id_fk": {
+                    "name": "likes_work_id_works_id_fk",
+                    "tableFrom": "likes",
+                    "tableTo": "works",
+                    "columnsFrom": ["work_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(datetime('now'))"
+        "works": {
+            "name": "works",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": true
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "title": {
+                    "name": "title",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "description": {
+                    "name": "description",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "cover": {
+                    "name": "cover",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "git_path": {
+                    "name": "git_path",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {
+                "idx_works_user_id": {
+                    "name": "idx_works_user_id",
+                    "columns": ["user_id"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
         }
-      },
-      "indexes": {
-        "comment_likes_comment_id_user_id_unique": {
-          "name": "comment_likes_comment_id_user_id_unique",
-          "columns": [
-            "comment_id",
-            "user_id"
-          ],
-          "isUnique": true
-        },
-        "idx_comment_likes_user_id": {
-          "name": "idx_comment_likes_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "comment_likes_comment_id_comments_id_fk": {
-          "name": "comment_likes_comment_id_comments_id_fk",
-          "tableFrom": "comment_likes",
-          "tableTo": "comments",
-          "columnsFrom": [
-            "comment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
     },
-    "comments": {
-      "name": "comments",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "work_id": {
-          "name": "work_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(datetime('now'))"
-        }
-      },
-      "indexes": {
-        "idx_comments_work_id": {
-          "name": "idx_comments_work_id",
-          "columns": [
-            "work_id"
-          ],
-          "isUnique": false
-        },
-        "idx_comments_user_id": {
-          "name": "idx_comments_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_comments_parent_id": {
-          "name": "idx_comments_parent_id",
-          "columns": [
-            "parent_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "comments_work_id_works_id_fk": {
-          "name": "comments_work_id_works_id_fk",
-          "tableFrom": "comments",
-          "tableTo": "works",
-          "columnsFrom": [
-            "work_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "comments_parent_id_comments_id_fk": {
-          "name": "comments_parent_id_comments_id_fk",
-          "tableFrom": "comments",
-          "tableTo": "comments",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
+    "views": {},
+    "enums": {},
+    "_meta": {
+        "schemas": {},
+        "tables": {},
+        "columns": {}
     },
-    "likes": {
-      "name": "likes",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "work_id": {
-          "name": "work_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(datetime('now'))"
-        }
-      },
-      "indexes": {
-        "likes_user_id_work_id_unique": {
-          "name": "likes_user_id_work_id_unique",
-          "columns": [
-            "user_id",
-            "work_id"
-          ],
-          "isUnique": true
-        },
-        "idx_likes_user_id": {
-          "name": "idx_likes_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_likes_work_id": {
-          "name": "idx_likes_work_id",
-          "columns": [
-            "work_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "likes_work_id_works_id_fk": {
-          "name": "likes_work_id_works_id_fk",
-          "tableFrom": "likes",
-          "tableTo": "works",
-          "columnsFrom": [
-            "work_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "works": {
-      "name": "works",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cover": {
-          "name": "cover",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "git_path": {
-          "name": "git_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_works_user_id": {
-          "name": "idx_works_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
+    "internal": {
+        "indexes": {}
     }
-  },
-  "views": {},
-  "enums": {},
-  "_meta": {
-    "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "indexes": {}
-  }
 }
