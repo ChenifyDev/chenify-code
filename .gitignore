@@ -57,3 +57,5 @@ coverage/
 
 *.sqlite
 *.db
+.vercel/
+.env*
