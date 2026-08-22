@@ -42,7 +42,7 @@ async function processCover(file: File): Promise<{ path: string } | { error: str
     }
 }
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/works": {
         POST: async (req) => {
             const storage = getStorage();
@@ -142,4 +142,4 @@ export const routes: RouteMap = {
             return Response.json(await storage.worksComments.unlikeWorkComment(me.id, parsed));
         },
     },
-};
+} satisfies RouteMap;

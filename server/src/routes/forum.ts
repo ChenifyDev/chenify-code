@@ -95,7 +95,7 @@ async function parseDraftForm(
     return { content, tags, imageFiles };
 }
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/posts": {
         GET: async (req) => {
             const storage = getStorage();
@@ -519,4 +519,4 @@ export const routes: RouteMap = {
             return Response.json(updated);
         },
     },
-};
+} satisfies RouteMap;

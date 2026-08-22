@@ -2,7 +2,7 @@ import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
 import type { RouteMap } from "../utils";
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/notifications": {
         GET: async (req) => {
             const storage = getStorage();
@@ -33,4 +33,4 @@ export const routes: RouteMap = {
             return Response.json({ success: true });
         },
     },
-};
+} satisfies RouteMap;

@@ -5,7 +5,7 @@ import type { RouteMap } from "../utils";
 type SearchType = "posts" | "users";
 type SortType = "hot" | "latest";
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/search": async (req) => {
         const url = new URL(req.url);
         const keyword = url.searchParams.get("keyword");
@@ -23,4 +23,4 @@ export const routes: RouteMap = {
             return Response.json(data);
         }
     },
-};
+} satisfies RouteMap;

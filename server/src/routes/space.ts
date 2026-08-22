@@ -13,7 +13,7 @@ function isErr(value: number | Response): value is Response {
     return value instanceof Response;
 }
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/users/:id/space": {
         GET: async (req) => {
             const storage = getStorage();
@@ -117,4 +117,4 @@ export const routes: RouteMap = {
             });
         },
     },
-};
+} satisfies RouteMap;

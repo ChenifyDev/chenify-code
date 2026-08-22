@@ -5,7 +5,7 @@ import { saveAvatar, type RouteMap } from "../utils";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const routes: RouteMap = {
+export const routes = {
     "/api/passport/register": async (req) => {
         const storage = getStorage();
         const form = await req.formData();
@@ -79,4 +79,4 @@ export const routes: RouteMap = {
         }
         return Response.json(user);
     },
-};
+} satisfies RouteMap;
