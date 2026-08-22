@@ -1,40 +1,46 @@
 import { C } from "../collections";
-import type { CollectionStore } from "../store";
+import { deleteContentBlob, loadContentBlob, saveContentBlob } from "../content";
+import type { BlobStore, CollectionStore } from "../store";
 import type { StoredComment, StoredCommentLike, StoredPost, StoredUser } from "../rows";
 import { deleteNotificationsForComment } from "./notifications";
 import { buildCommentTree, snippet, toCommentNode, type CommentNode } from "../mappers";
 import type { UserSummary } from "../types";
 import type { CommentsRepo } from "../plugin";
 
-export async function deleteComments(store: CollectionStore, ids: number[]) {
+export async function deleteComments(store: CollectionStore, blobStore: BlobStore, ids: number[]) {
     if (ids.length === 0) return;
     await Promise.all([
         store.deleteWhere<StoredCommentLike>(C.commentLikes, (row) => ids.includes(row.comment_id)),
         deleteNotificationsForComment(store, ids),
     ]);
-    await deleteCommentRowsLeafFirst(store, ids);
+    await deleteCommentRowsLeafFirst(store, blobStore, ids);
 }
 
-async function deleteCommentRowsLeafFirst(store: CollectionStore, ids: number[]) {
-    const remaining = new Set(ids);
-    while (remaining.size > 0) {
-        const rows = await store.read<StoredComment>(C.comments);
-        const parents = new Set(rows.filter((row) => remaining.has(row.parent_id ?? -1)).map((row) => row.parent_id));
-        const leaves = [...remaining].filter((id) => !parents.has(id));
-        if (leaves.length === 0) break;
-        await Promise.all(leaves.map((id) => store.removeById(C.comments, id)));
-        for (const id of leaves) remaining.delete(id);
-    }
-    await store.deleteWhere<StoredComment>(C.comments, (row) => ids.includes(row.id));
+async function deleteCommentRowsLeafFirst(store: CollectionStore, blobStore: BlobStore, ids: number[]) {
+const rows = await store.read<StoredComment>(C.comments);
+for (const row of rows.filter((r) => ids.includes(r.id))) {
+    await deleteContentBlob(blobStore, row.content);
+}
+const remaining = new Set(ids);
+while (remaining.size > 0) {
+    const allRows = await store.read<StoredComment>(C.comments);
+    const parents = new Set(allRows.filter((row) => remaining.has(row.parent_id ?? -1)).map((row) => row.parent_id));
+    const leaves = [...remaining].filter((id) => !parents.has(id));
+    if (leaves.length === 0) break;
+    await Promise.all(leaves.map((id) => store.removeById(C.comments, id)));
+    for (const id of leaves) remaining.delete(id);
+}
+await store.deleteWhere<StoredComment>(C.comments, (row) => ids.includes(row.id));
 }
 
-export function createCommentsRepo(store: CollectionStore): CommentsRepo {
+export function createCommentsRepo(store: CollectionStore, blobStore: BlobStore): CommentsRepo {
     return {
         async createComment(userId, postId, content, parentId) {
+            const contentRef = await saveContentBlob(blobStore, content);
             const created = await store.insert<StoredComment>(C.comments, {
                 post_id: postId,
                 user_id: userId,
-                content,
+                content: contentRef,
                 parent_id: parentId ?? null,
                 created_at: new Date().toISOString(),
             });
@@ -48,12 +54,12 @@ export function createCommentsRepo(store: CollectionStore): CommentsRepo {
                 id: created.id,
                 post_id: postId,
                 parent_id: created.parent_id,
-                content: created.content,
+                content: await loadContentBlob(blobStore, created.content),
                 created_at: created.created_at,
                 user_id: userId,
                 username: author?.username ?? "未知用户",
                 avatar: author?.avatar ?? null,
-                post_snippet: post ? snippet(post.content) : "",
+                post_snippet: post ? snippet(await loadContentBlob(blobStore, post.content)) : "",
                 author: author
                     ? { id: author.id, username: author.username, avatar: author.avatar, created_at: author.created_at }
                     : { id: userId, username: "未知用户", avatar: null, created_at: "" },
@@ -91,26 +97,28 @@ export function createCommentsRepo(store: CollectionStore): CommentsRepo {
                         likedIds.add(like.comment_id);
             }
 
-            const base: CommentNode[] = commentsOfPost.map((row) => {
-                const author = userMap.get(row.user_id);
-                const authorInfo: UserSummary = author
-                    ? { id: author.id, username: author.username, avatar: author.avatar, created_at: author.created_at }
-                    : { id: row.user_id, username: "未知用户", avatar: null, created_at: "" };
-                return {
-                    id: row.id,
-                    post_id: row.post_id,
-                    parent_id: row.parent_id,
-                    content: row.content,
-                    created_at: row.created_at,
-                    user_id: row.user_id,
-                    username: author?.username ?? "未知用户",
-                    avatar: author?.avatar ?? null,
-                    post_snippet: post ? snippet(post.content) : "",
-                    author: authorInfo,
-                    likes_count: likeCounts.get(row.id) ?? 0,
-                    is_liked: likedIds.has(row.id),
-                };
-            });
+            const base: CommentNode[] = await Promise.all(
+                commentsOfPost.map(async (row) => {
+                    const author = userMap.get(row.user_id);
+                    const authorInfo: UserSummary = author
+                        ? { id: author.id, username: author.username, avatar: author.avatar, created_at: author.created_at }
+                        : { id: row.user_id, username: "未知用户", avatar: null, created_at: "" };
+                    return {
+                        id: row.id,
+                        post_id: row.post_id,
+                        parent_id: row.parent_id,
+                        content: await loadContentBlob(blobStore, row.content),
+                        created_at: row.created_at,
+                        user_id: row.user_id,
+                        username: author?.username ?? "未知用户",
+                        avatar: author?.avatar ?? null,
+                        post_snippet: post ? snippet(await loadContentBlob(blobStore, post.content)) : "",
+                        author: authorInfo,
+                        likes_count: likeCounts.get(row.id) ?? 0,
+                        is_liked: likedIds.has(row.id),
+                    };
+                }),
+            );
 
             return buildCommentTree(base, options);
         },
@@ -167,7 +175,7 @@ export function createCommentsRepo(store: CollectionStore): CommentsRepo {
                     }
                 }
             }
-            await deleteComments(store, descendantIds);
+            await deleteComments(store, blobStore, descendantIds);
             return true;
         },
     };

@@ -1,4 +1,4 @@
-import type { CollectionStore } from "../store";
+import type { BlobStore, CollectionStore } from "../store";
 import type {
     CommentsRepo,
     DraftsRepo,
@@ -41,15 +41,15 @@ export interface Operations {
     worksComments: WorksCommentsRepo;
 }
 
-export function createOperations(store: CollectionStore): Operations {
+export function createOperations(store: CollectionStore, blobs: BlobStore): Operations {
     return {
         users: createUsersRepo(store),
-        posts: createPostsRepo(store),
-        comments: createCommentsRepo(store),
+        posts: createPostsRepo(store, blobs),
+        comments: createCommentsRepo(store, blobs),
         likes: createLikesRepo(store),
         favorites: createFavoritesRepo(store),
         follows: createFollowsRepo(store),
-        drafts: createDraftsRepo(store),
+        drafts: createDraftsRepo(store, blobs),
         tags: createTagsRepo(store),
         notifications: createNotificationsRepo(store),
         rank: createRankRepo(store),

@@ -13,6 +13,12 @@ export function vercelBlobStore(): BlobStore {
             });
             return result.url;
         },
+        async read(urlOrPath) {
+            if (!/^https?:\/\//.test(urlOrPath)) return null;
+            const response = await fetch(urlOrPath);
+            if (!response.ok) return null;
+            return await response.text();
+        },
         async delete(urlOrPath) {
             if (!/^https?:\/\//.test(urlOrPath)) return;
             await del(urlOrPath).catch(() => {});

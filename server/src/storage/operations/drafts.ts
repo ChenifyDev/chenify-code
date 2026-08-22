@@ -1,5 +1,6 @@
 import { C } from "../collections";
-import type { CollectionStore } from "../store";
+import { deleteContentBlob, loadContentBlob, saveContentBlob } from "../content";
+import type { BlobStore, CollectionStore } from "../store";
 import type { StoredDraft, StoredDraftImage, StoredDraftTag, StoredTag } from "../rows";
 import { deleteTag, getOrCreateTag, isTagReferenced } from "./tags-internal";
 import {
@@ -27,17 +28,18 @@ async function getDraftTags(store: CollectionStore, id: number): Promise<string[
         .filter((name): name is string => name != null);
 }
 
-async function toDraft(store: CollectionStore, row: StoredDraft): Promise<Draft> {
+async function toDraft(store: CollectionStore, blobStore: BlobStore, row: StoredDraft): Promise<Draft> {
     const [images, tags] = await Promise.all([getDraftImages(store, row.id), getDraftTags(store, row.id)]);
-    return assembleDraft(row, images, tags);
+    return assembleDraft({ ...row, content: await loadContentBlob(blobStore, row.content) }, images, tags);
 }
 
-export function createDraftsRepo(store: CollectionStore): DraftsRepo {
+export function createDraftsRepo(store: CollectionStore, blobStore: BlobStore): DraftsRepo {
     return {
         async createDraft(userId, content, imagePaths, tagNames) {
+            const contentRef = await saveContentBlob(blobStore, content);
             const draft = await store.insert<StoredDraft>(C.drafts, {
                 user_id: userId,
-                content,
+                content: contentRef,
                 status: "draft",
                 post_id: null,
                 created_at: new Date().toISOString(),
@@ -53,7 +55,7 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
                 if (existing.some((row) => row.draft_id === draft.id && row.tag_id === tagId)) continue;
                 await store.append<StoredDraftTag>(C.draftTags, { draft_id: draft.id, tag_id: tagId });
             }
-            return toDraft(store, draft);
+            return toDraft(store, blobStore, draft);
         },
 
         async listDrafts(userId, options) {
@@ -62,18 +64,18 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
                 .filter((row) => row.user_id === userId && (options.status == null || row.status === options.status))
                 .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id)
                 .slice(options.offset, options.offset + options.limit);
-            return Promise.all(filtered.map((row) => toDraft(store, row)));
+            return Promise.all(filtered.map((row) => toDraft(store, blobStore, row)));
         },
 
         async getDraftById(id) {
             const row = await store.getById<StoredDraft>(C.drafts, id);
-            return row ? toDraft(store, row) : null;
+            return row ? toDraft(store, blobStore, row) : null;
         },
 
         async getDraftByPostId(postId) {
             const rows = await store.read<StoredDraft>(C.drafts);
             const row = rows.find((r) => r.post_id === postId);
-            return row ? toDraft(store, row) : null;
+            return row ? toDraft(store, blobStore, row) : null;
         },
 
         async getDraftOwner(id) {
@@ -84,13 +86,17 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
         async updateDraft(id, content, imagePaths, tagNames) {
             const draftBefore = await store.getById<StoredDraft>(C.drafts, id);
             const publishedPostId = draftBefore?.status === "published" ? draftBefore.post_id : null;
+            const nextContent = await saveContentBlob(blobStore, content);
+            if (draftBefore != null && draftBefore.content !== nextContent) {
+                await deleteContentBlob(blobStore, draftBefore.content);
+            }
 
             const removedImages = await getDraftImages(store, id);
             const existingTagRows = await store.read<StoredDraftTag>(C.draftTags);
             const removedTagIds = existingTagRows.filter((row) => row.draft_id === id).map((row) => row.tag_id);
 
             await Promise.all([
-                store.updateById<StoredDraft>(C.drafts, id, { content, updated_at: new Date().toISOString() }),
+                store.updateById<StoredDraft>(C.drafts, id, { content: nextContent, updated_at: new Date().toISOString() }),
                 store.deleteWhere<StoredDraftImage>(C.draftImages, (row) => row.draft_id === id),
                 store.deleteWhere<StoredDraftTag>(C.draftTags, (row) => row.draft_id === id),
             ]);
@@ -113,26 +119,29 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
             }
 
             if (publishedPostId != null) {
-                await updatePostStandalone(store, publishedPostId, content, imagePaths, tagNames);
+                await updatePostStandalone(store, blobStore, publishedPostId, content, imagePaths, tagNames);
             }
 
             const keepImages = new Set(imagePaths);
             const goneImages = removedImages.filter((path) => !keepImages.has(path));
 
             const row = await store.getById<StoredDraft>(C.drafts, id);
-            return { draft: row ? await toDraft(store, row) : null, removedImages: goneImages };
+            return { draft: row ? await toDraft(store, blobStore, row) : null, removedImages: goneImages };
         },
 
         async deleteDraft(id) {
             const images = await getDraftImages(store, id);
             const row = await store.getById<StoredDraft>(C.drafts, id);
+            if (row) {
+                await deleteContentBlob(blobStore, row.content);
+            }
             await Promise.all([
                 store.deleteWhere<StoredDraftImage>(C.draftImages, (r) => r.draft_id === id),
                 store.deleteWhere<StoredDraftTag>(C.draftTags, (r) => r.draft_id === id),
                 store.deleteWhere<StoredDraft>(C.drafts, (r) => r.id === id),
             ]);
             if (row?.post_id != null) {
-                images.push(...(await deletePostStandalone(store, row.post_id)));
+                images.push(...(await deletePostStandalone(store, blobStore, row.post_id)));
             }
             return images;
         },
@@ -141,9 +150,9 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
             const draft = await this.getDraftById(id);
             if (!draft) return null;
             if (draft.status === "published" && draft.post_id != null) {
-                return { draft, post: (await getPostByIdStandalone(store, draft.post_id, draft.user_id))! };
+                return { draft, post: (await getPostByIdStandalone(store, blobStore, draft.post_id, draft.user_id))! };
             }
-            const post = await createPostStandalone(store, draft.user_id, draft.content, draft.images, draft.tags);
+            const post = await createPostStandalone(store, blobStore, draft.user_id, draft.content, draft.images, draft.tags);
             if (!post) return null;
             await store.updateById<StoredDraft>(C.drafts, id, {
                 status: "published",
@@ -163,7 +172,7 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
                 updated_at: new Date().toISOString(),
             });
             if (wasPublished) {
-                await deletePostRowStandalone(store, draft.post_id!);
+                await deletePostRowStandalone(store, blobStore, draft.post_id!);
             }
             return this.getDraftById(id);
         },

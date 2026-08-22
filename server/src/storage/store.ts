@@ -12,5 +12,6 @@ export interface CollectionStore {
 
 export interface BlobStore {
     put(data: Uint8Array | Blob | File, relPath: string): Promise<string>;
+    read(urlOrPath: string): Promise<string | null>;
     delete(urlOrPath: string): Promise<void>;
 }

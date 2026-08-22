@@ -55,7 +55,7 @@ export function getStorage(): Storage {
         name: plugin.name,
         store: plugin.store,
         blobs: plugin.blobs,
-        ...createOperations(plugin.store),
+        ...createOperations(plugin.store, plugin.blobs),
     };
     return storage;
 }

@@ -1,5 +1,6 @@
 import { C } from "../collections";
-import type { CollectionStore } from "../store";
+import { deleteContentBlob, loadContentBlob, saveContentBlob } from "../content";
+import type { BlobStore, CollectionStore } from "../store";
 import type {
     StoredComment,
     StoredFavorite,
@@ -18,7 +19,7 @@ import { buildPosts, heatPost, type PostHydrationContext } from "../mappers";
 import type { Post, PostRow } from "../types";
 import type { PostsRepo } from "../plugin";
 
-async function boardPosts(store: CollectionStore): Promise<PostRow[]> {
+async function boardPosts(store: CollectionStore, blobStore: BlobStore): Promise<PostRow[]> {
     const [posts, users, comments, likes, favorites] = await Promise.all([
         store.read<StoredPost>(C.posts),
         store.read<StoredUser>(C.users),
@@ -27,20 +28,22 @@ async function boardPosts(store: CollectionStore): Promise<PostRow[]> {
         store.read<StoredFavorite>(C.favorites),
     ]);
     const userMap = new Map(users.map((user) => [user.id, user]));
-    return posts.map((post) => {
-        const author = userMap.get(post.user_id);
-        return {
-            id: post.id,
-            user_id: post.user_id,
-            content: post.content,
-            created_at: post.created_at,
-            username: author?.username ?? "未知用户",
-            avatar: author?.avatar ?? null,
-            comments_count: comments.filter((c) => c.post_id === post.id).length,
-            likes_count: likes.filter((l) => l.post_id === post.id).length,
-            favorites_count: favorites.filter((f) => f.post_id === post.id).length,
-        };
-    });
+    return Promise.all(
+        posts.map(async (post) => {
+            const author = userMap.get(post.user_id);
+            return {
+                id: post.id,
+                user_id: post.user_id,
+                content: await loadContentBlob(blobStore, post.content),
+                created_at: post.created_at,
+                username: author?.username ?? "未知用户",
+                avatar: author?.avatar ?? null,
+                comments_count: comments.filter((c) => c.post_id === post.id).length,
+                likes_count: likes.filter((l) => l.post_id === post.id).length,
+                favorites_count: favorites.filter((f) => f.post_id === post.id).length,
+            };
+        }),
+    );
 }
 
 async function hydratePosts(store: CollectionStore, rows: PostRow[], viewerId: number | null): Promise<Post[]> {
@@ -101,10 +104,11 @@ async function hydratePosts(store: CollectionStore, rows: PostRow[], viewerId: n
 
 export async function getPostByIdStandalone(
     store: CollectionStore,
+    blobStore: BlobStore,
     id: number,
     viewerId: number | null,
 ): Promise<Post | null> {
-    const rows = await boardPosts(store);
+    const rows = await boardPosts(store, blobStore);
     const row = rows.find((r) => r.id === id);
     if (!row) return null;
     return (await hydratePosts(store, [row], viewerId))[0] ?? null;
@@ -112,14 +116,16 @@ export async function getPostByIdStandalone(
 
 export async function createPostStandalone(
     store: CollectionStore,
+    blobStore: BlobStore,
     userId: number,
     content: string,
     imagePaths: string[],
     postTagsNames: string[],
 ): Promise<Post | null> {
+    const contentRef = await saveContentBlob(blobStore, content);
     const post = await store.insert<StoredPost>(C.posts, {
         user_id: userId,
-        content,
+        content: contentRef,
         created_at: new Date().toISOString(),
     });
     for (const path of imagePaths) {
@@ -132,11 +138,12 @@ export async function createPostStandalone(
         if (existing.some((row) => row.post_id === post.id && row.tag_id === tagId)) continue;
         await store.append<StoredPostTag>(C.postTags, { post_id: post.id, tag_id: tagId });
     }
-    return getPostByIdStandalone(store, post.id, userId);
+    return getPostByIdStandalone(store, blobStore, post.id, userId);
 }
 
 export async function updatePostStandalone(
     store: CollectionStore,
+    blobStore: BlobStore,
     postId: number,
     content: string,
     imagePaths: string[],
@@ -144,12 +151,14 @@ export async function updatePostStandalone(
 ): Promise<Post | null> {
     const post = await store.getById<StoredPost>(C.posts, postId);
     if (!post) return null;
+    const contentRef = await saveContentBlob(blobStore, content);
+    await deleteContentBlob(blobStore, post.content);
 
     const existingTagRows = await store.read<StoredPostTag>(C.postTags);
     const removedTagIds = existingTagRows.filter((row) => row.post_id === postId).map((row) => row.tag_id);
 
     await Promise.all([
-        store.updateById<StoredPost>(C.posts, postId, { content }),
+        store.updateById<StoredPost>(C.posts, postId, { content: contentRef }),
         store.deleteWhere<StoredPostImage>(C.postImages, (row) => row.post_id === postId),
         store.deleteWhere<StoredPostTag>(C.postTags, (row) => row.post_id === postId),
     ]);
@@ -171,11 +180,15 @@ export async function updatePostStandalone(
         if (!keepTags.has(tagId) && !(await isTagReferenced(store, tagId))) await deleteTag(store, tagId);
     }
 
-    return getPostByIdStandalone(store, postId, post.user_id);
+    return getPostByIdStandalone(store, blobStore, postId, post.user_id);
 }
 
-async function deletePostRowsOnly(store: CollectionStore, id: number): Promise<void> {
-    const comments = await store.read<StoredComment>(C.comments);
+async function deletePostRowsOnly(store: CollectionStore, blobStore: BlobStore, id: number): Promise<void> {
+    const [comments, posts] = await Promise.all([store.read<StoredComment>(C.comments), store.read<StoredPost>(C.posts)]);
+    const post = posts.find((row) => row.id === id);
+    if (post) {
+        await deleteContentBlob(blobStore, post.content);
+    }
     const commentIds = comments.filter((row) => row.post_id === id).map((row) => row.id);
     await Promise.all([
         store.deleteWhere<StoredPostImage>(C.postImages, (row) => row.post_id === id),
@@ -184,22 +197,22 @@ async function deletePostRowsOnly(store: CollectionStore, id: number): Promise<v
         store.deleteWhere<StoredLike>(C.likes, (row) => row.post_id === id),
         deleteNotificationsForPost(store, id),
     ]);
-    await deleteComments(store, commentIds);
+    await deleteComments(store, blobStore, commentIds);
     await store.deleteWhere<StoredPost>(C.posts, (row) => row.id === id);
 }
 
-export async function deletePostStandalone(store: CollectionStore, id: number): Promise<string[]> {
+export async function deletePostStandalone(store: CollectionStore, blobStore: BlobStore, id: number): Promise<string[]> {
     const images = await store.read<StoredPostImage>(C.postImages);
     const paths = images.filter((row) => row.post_id === id).map((row) => row.path);
-    await deletePostRowsOnly(store, id);
+    await deletePostRowsOnly(store, blobStore, id);
     return paths;
 }
 
-export async function deletePostRowStandalone(store: CollectionStore, id: number): Promise<void> {
-    await deletePostRowsOnly(store, id);
+export async function deletePostRowStandalone(store: CollectionStore, blobStore: BlobStore, id: number): Promise<void> {
+    await deletePostRowsOnly(store, blobStore, id);
 }
 
-export function createPostsRepo(store: CollectionStore): PostsRepo {
+export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): PostsRepo {
     return {
         async getPostOwner(id) {
             const post = await store.getById<StoredPost>(C.posts, id);
@@ -207,16 +220,16 @@ export function createPostsRepo(store: CollectionStore): PostsRepo {
         },
 
         async createPost(userId, content, imagePaths, postTagsNames) {
-            return createPostStandalone(store, userId, content, imagePaths, postTagsNames);
+            return createPostStandalone(store, blobStore, userId, content, imagePaths, postTagsNames);
         },
 
         async getPostById(id, viewerId) {
-            return getPostByIdStandalone(store, id, viewerId);
+            return getPostByIdStandalone(store, blobStore, id, viewerId);
         },
 
         async listPosts(options) {
             const { offset, limit, tag, viewerId, sort = "latest" } = options;
-            let rows = await boardPosts(store);
+            let rows = await boardPosts(store, blobStore);
 
             if (tag != null) {
                 const postsWithTag = new Set<number>();
@@ -247,7 +260,7 @@ export function createPostsRepo(store: CollectionStore): PostsRepo {
         },
 
         async listUserPosts(userId, options) {
-            const rows = await boardPosts(store);
+            const rows = await boardPosts(store, blobStore);
             const filtered = rows
                 .filter((row) => row.user_id === userId)
                 .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
@@ -259,7 +272,7 @@ export function createPostsRepo(store: CollectionStore): PostsRepo {
         },
 
         async listUserFavorites(userId, options) {
-            const [favorites, rows] = await Promise.all([store.read<StoredFavorite>(C.favorites), boardPosts(store)]);
+            const [favorites, rows] = await Promise.all([store.read<StoredFavorite>(C.favorites), boardPosts(store, blobStore)]);
             const rowMap = new Map(rows.map((row) => [row.id, row]));
             const favorited = favorites
                 .filter((fav) => fav.user_id === userId && rowMap.has(fav.post_id))
@@ -271,17 +284,17 @@ export function createPostsRepo(store: CollectionStore): PostsRepo {
         },
 
         async deletePost(id) {
-            return deletePostStandalone(store, id);
+            return deletePostStandalone(store, blobStore, id);
         },
 
         async deletePostRow(id) {
-            await deletePostRowsOnly(store, id);
+            await deletePostRowsOnly(store, blobStore, id);
         },
 
         async searchPosts(options) {
             const { offset, limit, keyword, sort = "latest" } = options;
             const kw = keyword.toLowerCase();
-            let rows = (await boardPosts(store)).filter((row) => row.content.toLowerCase().includes(kw));
+            let rows = (await boardPosts(store, blobStore)).filter((row) => row.content.toLowerCase().includes(kw));
             if (sort === "hot") {
                 rows = [...rows].sort(
                     (a, b) =>
