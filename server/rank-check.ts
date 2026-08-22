@@ -6,7 +6,7 @@ const db = getDb();
 
 const storage = getStorage();
 
-const rank = await storage.rank.rankUsersByPoints(1, { offset: 0, limit: 10 });
+const rank = await storage.rank.rankUsersByPoints({ offset: 0, limit: 10 });
 console.log("points rank:");
 for (const r of rank) console.log(`  #${r.rank} ${r.username} points=${r.points} following=${r.is_following}`);
 console.log("getPointsRank(1):", await storage.rank.getPointsRank(1));
