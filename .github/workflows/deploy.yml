@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
       - name: build
         run: pnpm build
       - uses: amondnet/vercel-action@v20
@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --config.minimumReleaseAge=0
       - name: build
         run: pnpm build
       - uses: amondnet/vercel-action@v20
