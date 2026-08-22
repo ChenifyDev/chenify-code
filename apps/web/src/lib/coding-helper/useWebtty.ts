@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { discoverPorts } from "./ports";
 import { decodeS2C, encodeC2S, type S2CMessage } from "./protocol";
@@ -29,7 +29,10 @@ export function useWebtty({ onMessage }: UseWebttyOptions): Webtty {
     const wsRef = useRef<WebSocket | null>(null);
     const closingRef = useRef(false);
     const onMessageRef = useRef(onMessage);
-    onMessageRef.current = onMessage;
+
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    }, [onMessage]);
 
     const connect = useCallback((port?: number) => {
         return new Promise<void>((resolve, reject) => {
