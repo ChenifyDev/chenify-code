@@ -1,54 +1,57 @@
-name: deploy
+name: Deploy to Vercel Production
 
 on:
-    push:
-        branches: [master]
-    pull_request:
-        types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - master
 
 jobs:
-    preview:
-        if: github.event_name == 'pull_request'
-        runs-on: ubuntu-latest
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TELEMETRY_DISABLED: 1
-        steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 11.22.0
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            - name: build
-              run: pnpm build
-            - name: Vercel Preview Deploy
-              run: npx vercel@latest deploy
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout repository
+        run: |
+          git init
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git fetch --depth 1 origin "${{ github.sha }}"
+          git checkout "${{ github.sha }}"
 
-    production:
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        runs-on: ubuntu-latest
+      - name: Setup Node.js 22
+        run: |
+          source ~/.nvm/nvm.sh
+          nvm install 22
+          nvm use 22
+          node -v
+          npm -v
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.22.0 --activate
+          pnpm -v
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pull Vercel environment
+        run: pnpm exec vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TELEMETRY_DISABLED: 1
-        steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 11.22.0
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            - name: build
-              run: pnpm build
-            - name: Vercel Production Deploy
-              run: npx vercel@latest deploy --prod
+
+      - name: Build
+        run: pnpm exec vercel build --prod
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy
+        run: pnpm exec vercel deploy --prebuilt --prod
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
