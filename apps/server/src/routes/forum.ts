@@ -1,4 +1,5 @@
-import { getStorage } from "../storage";
+import sharp from "sharp";
+import { getStorage } from "@chenify/storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
 import { saveAvatar, type RouteMap } from "../utils";
 
@@ -17,12 +18,14 @@ const MAX_CONTENT_LENGTH = 20000;
 const MAX_COMMENT_LENGTH = 5000;
 const IMAGE_WEBP_QUALITY = 80;
 
-async function processImage(file: File): Promise<{ data: Uint8Array | File; ext: string } | null> {
+async function processImage(file: File): Promise<{ data: Buffer | File; ext: string } | null> {
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) return null;
     if (file.size > MAX_IMAGE_SIZE) return null;
     if (file.type === "image/gif") return { data: file, ext: "gif" };
     try {
-        const bytes = await new Bun.Image(file).webp({ quality: IMAGE_WEBP_QUALITY }).bytes();
+        const bytes = await sharp(await file.arrayBuffer())
+            .webp({ quality: IMAGE_WEBP_QUALITY })
+            .toBuffer();
         if (bytes.length < file.size) return { data: bytes, ext: "webp" };
         return { data: file, ext: IMAGE_EXTENSIONS[file.type]! };
     } catch {

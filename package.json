@@ -7,23 +7,20 @@
         "type": "git",
         "url": "https://github.com/chen3283891376/chenify-code.git"
     },
-    "workspaces": [
-        "apps/*",
-        "packages/*"
-    ],
     "main": "index.js",
     "scripts": {
-        "dev:web": "bun run --filter web dev",
-        "build:web": "bun run --filter web build",
-        "preview:web": "bun run --filter web preview",
-        "dev:server": "bun run --filter server dev",
-        "seed": "bun run --filter server seed",
-        "build:server": "bun run --filter server build",
+        "build": "turbo run build",
+        "dev": "turbo run dev",
         "lint": "oxlint",
         "format": "oxfmt"
     },
+    "dependencies": {
+        "turbo": "^2.10.11"
+    },
     "devDependencies": {
         "oxfmt": "^0.62.0",
-        "oxlint": "^1.77.0"
-    }
+        "oxlint": "^1.77.0",
+        "vercel": "^59.4.0"
+    },
+    "packageManager": "pnpm@11.22.0"
 }

@@ -1,4 +1,5 @@
-import { getStorage } from "../storage";
+import sharp from "sharp";
+import { getStorage } from "@chenify/storage";
 import { getAuthUser, jsonError } from "./util";
 import type { RouteMap } from "../utils";
 
@@ -31,10 +32,10 @@ async function processCover(file: File): Promise<{ path: string } | { error: str
         return { path: await blocks.put(file, relPath) };
     }
     try {
-        const bytes = await new Bun.Image(file)
+        const bytes = await sharp(await file.arrayBuffer())
             .resize(COVER_WIDTH, COVER_HEIGHT, { fit: "fill" })
             .webp({ quality: COVER_WEBP_QUALITY })
-            .bytes();
+            .toBuffer();
         const relPath = `${crypto.randomUUID()}.webp`;
         return { path: await blocks.put(bytes, relPath) };
     } catch {

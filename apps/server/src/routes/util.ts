@@ -1,5 +1,5 @@
-import { getStorage } from "../storage";
-import type { UserPublic } from "../storage";
+import { getStorage } from "@chenify/storage";
+import type { UserPublic } from "@chenify/storage";
 import { verifyToken } from "../jwt";
 
 export function jsonError(status: number, message: string): Response {

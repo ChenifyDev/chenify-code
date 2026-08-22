@@ -1,7 +1,8 @@
-﻿// 生成调试数据
+// 生成调试数据
+import argon2 from "argon2";
 import { and, count, eq, inArray, or, sql } from "drizzle-orm";
-import { getDb } from "./src/db/client";
 import {
+    getDb,
     commentLikes,
     comments,
     draftTags,
@@ -13,7 +14,7 @@ import {
     posts,
     tags,
     users,
-} from "./src/db/schema";
+} from "@chenify/storage";
 
 const db = getDb();
 
@@ -383,8 +384,8 @@ async function main() {
         console.log(`已删除 ${userIds.length} 个示例账号（含其帖子/评论/收藏/关注/草稿）`);
     }
 
-    const passwordHash = await Bun.password.hash(PASSWORD, {
-        algorithm: "argon2id",
+    const passwordHash = await argon2.hash(PASSWORD, {
+        type: argon2.argon2id,
         memoryCost: 65536,
         timeCost: 3,
     });
@@ -538,14 +539,14 @@ async function main() {
 
     console.log(`共插入帖子 ${postIds.size} 条，评论 ${seedComments.length} 条。`);
 
-    const [publishedCount, draftCount] = db.get(
+    const draftRow = db.get(
         sql`
         SELECT
             (SELECT COUNT(*) FROM drafts WHERE status = 'published') AS published,
             (SELECT COUNT(*) FROM drafts WHERE status = 'draft') AS draft`,
-    ) as [number, number];
-    console.log(`草稿：已发布 ${publishedCount} 条 / 未发布 ${draftCount} 条。`);
-    console.log("提示：请先停止运行中的 server（bun index.ts），再启动以刷新数据。");
+    ) as { published: number; draft: number } | undefined;
+    console.log(`草稿：已发布 ${draftRow?.published ?? 0} 条 / 未发布 ${draftRow?.draft ?? 0} 条。`);
+    console.log("提示：请先停止运行中的 server（npm run dev），再启动以刷新数据。");
 }
 
 main().catch((err) => {

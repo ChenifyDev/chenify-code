@@ -1,4 +1,4 @@
-import { getStorage } from "../storage";
+import { getStorage } from "@chenify/storage";
 import { getAuthUser, parsePagination } from "./util";
 import type { RouteMap } from "../utils";
 
