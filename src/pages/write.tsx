@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ImagePlus, Loader2, Save, Send, X } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
 
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
@@ -31,58 +31,68 @@ export default function Write() {
     const [searchParams, _] = useSearchParams();
     const currentId = searchParams.get("id");
 
-    useEffect(() => {
-        let ignore = true;
-        const func = async () => {
-            if (currentId) {
-                const data = await getDraft(Number(currentId));
-                setContent(data.content);
-                setTagInput(data.tags.join(" "));
-                setStatus(data.status);
-                const imageUrls = data.images;
-                const imageFiles: File[] = [];
-                for (let url of imageUrls) {
-                    const file = await urlToFile(url);
-                    if (!file) continue;
-                    imageFiles.push(file);
-                }
-                setImageFiles(imageFiles);
-            }
-        };
-        if (ignore) func().then();
-        return () => {
-            ignore = false;
-        };
-    }, [currentId]);
-
-    const [content, setContent] = useState("");
-    const [tagInput, setTagInput] = useState("");
+    const [content, setContent] = useState(localStorage.getItem("tmp_content") || "");
+    const [tagInput, setTagInput] = useState(localStorage.getItem("tmp_tag") || "");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<Draft["status"]>("draft");
     const [saving, setSaving] = useState(false);
     const [publishing, setPublishing] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [dirty, setDirty] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const saveDraftRef = useRef<() => Promise<void>>(async () => {});
+    const isHandlingBlock = useRef(false);
 
-    if (!me) {
-        navigate("/login");
-        return null;
-    }
+    // 加载已有草稿
+    useEffect(() => {
+        let ignore = false;
+        const func = async () => {
+            if (!currentId) return;
+            const data = await getDraft(Number(currentId));
+            setContent(data.content);
+            setTagInput(data.tags.join(" "));
+            setStatus(data.status);
+            const imageUrls = data.images;
+            const imgs: File[] = [];
+            for (const url of imageUrls) {
+                const file = await urlToFile(url);
+                if (!file) continue;
+                imgs.push(file);
+            }
+            setImageFiles(imgs);
+            setDirty(false); // 加载完毕，标记无未保存修改
+        };
+        if (!ignore) func().then();
+        return () => {
+            ignore = true;
+        };
+    }, [currentId]);
+
+    // 防抖自动保存到 localStorage
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            localStorage.setItem("tmp_content", content);
+            localStorage.setItem("tmp_tag", tagInput);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [content, tagInput]);
+
+    // 浏览器刷新/关闭标签页警告
+    useEffect(() => {
+        const handler = (e: BeforeUnloadEvent) => {
+            if (!dirty) return;
+            e.preventDefault();
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => {
+            window.removeEventListener("beforeunload", handler);
+        };
+    }, [dirty]);
 
     const tags = splitTags(tagInput);
 
-    const handlePickImages = (files: FileList | null) => {
-        if (!files) return;
-        const next = [...imageFiles, ...Array.from(files)].slice(0, MAX_IMAGES);
-        setImageFiles(next);
-    };
-
-    const removeImage = (index: number) => {
-        setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    };
-
-    const handleSaveDraft = async () => {
+    const handleSaveDraft = useCallback(async () => {
         setSaving(true);
         setMessage(null);
         setError(null);
@@ -91,12 +101,67 @@ export default function Write() {
                 ? await updateDraft(Number(currentId), content, imageFiles, tags)
                 : await createDraft(content, imageFiles, tags);
             setStatus(draft.status);
+            setDirty(false);
             setMessage(draft.status === "published" ? "帖子已更新" : `草稿已保存（#${draft.id}）`);
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
         } finally {
             setSaving(false);
         }
+    }, [tags, content, imageFiles, currentId]);
+
+    useEffect(() => {
+        saveDraftRef.current = handleSaveDraft;
+    }, [handleSaveDraft]);
+
+    const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+        return dirty && currentLocation.pathname !== nextLocation.pathname;
+    });
+
+    // 拦截SPA路由跳转
+    useEffect(() => {
+        if (blocker.state !== "blocked") {
+            isHandlingBlock.current = false;
+            return;
+        }
+        if (isHandlingBlock.current) return;
+        isHandlingBlock.current = true;
+
+        const ok = confirm("内容尚未保存，是否保存草稿后离开？");
+        if (ok) {
+            void saveDraftRef.current?.().then(() => {
+                blocker.proceed?.();
+            });
+        } else {
+            blocker.proceed?.();
+        }
+    }, [blocker]);
+
+    if (!me) {
+        navigate("/login");
+        return null;
+    }
+
+    const handleContentChange = (v: string) => {
+        setContent(v);
+        setDirty(true);
+    };
+
+    const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTagInput(e.target.value);
+        setDirty(true);
+    };
+
+    const handlePickImages = (files: FileList | null) => {
+        if (!files) return;
+        const next = [...imageFiles, ...Array.from(files)].slice(0, MAX_IMAGES);
+        setImageFiles(next);
+        setDirty(true);
+    };
+
+    const removeImage = (index: number) => {
+        setImageFiles((prev) => prev.filter((_, i) => i !== index));
+        setDirty(true);
     };
 
     const handlePublish = async () => {
@@ -108,6 +173,7 @@ export default function Write() {
             if (currentId) {
                 const draft = await updateDraft(Number(currentId), content, imageFiles, tags);
                 setStatus(draft.status);
+                setDirty(false);
                 if (draft.status === "published" && draft.post_id != null) {
                     navigate(`/posts/${draft.post_id}`);
                     return;
@@ -117,6 +183,7 @@ export default function Write() {
             } else {
                 const draft = await createDraft(content, imageFiles, tags);
                 const post = await publishDraft(draft.id);
+                setDirty(false);
                 navigate(`/posts/${post.id}`);
             }
         } catch (err) {
@@ -166,16 +233,12 @@ export default function Write() {
                     {message && <p className="text-sm text-primary">{message}</p>}
                     {error && <p className="text-sm text-destructive">{error}</p>}
 
-                    <EditorField value={content} onChange={setContent} />
+                    <EditorField value={content} onChange={handleContentChange} />
 
                     <div className="grid gap-3 border-t pt-4">
                         <div className="grid gap-1.5">
                             <span className="text-xs font-medium text-muted-foreground">标签（用逗号或空格分隔）</span>
-                            <Input
-                                value={tagInput}
-                                onChange={(e) => setTagInput(e.target.value)}
-                                placeholder="例如 react, bun, 前端"
-                            />
+                            <Input value={tagInput} onChange={handleTagInputChange} />
                             {tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
                                     {tags.map((tag) => (
