@@ -184,7 +184,10 @@ export async function updatePostStandalone(
 }
 
 async function deletePostRowsOnly(store: CollectionStore, blobStore: BlobStore, id: number): Promise<void> {
-    const [comments, posts] = await Promise.all([store.read<StoredComment>(C.comments), store.read<StoredPost>(C.posts)]);
+    const [comments, posts] = await Promise.all([
+        store.read<StoredComment>(C.comments),
+        store.read<StoredPost>(C.posts),
+    ]);
     const post = posts.find((row) => row.id === id);
     if (post) {
         await deleteContentBlob(blobStore, post.content);
@@ -201,7 +204,11 @@ async function deletePostRowsOnly(store: CollectionStore, blobStore: BlobStore, 
     await store.deleteWhere<StoredPost>(C.posts, (row) => row.id === id);
 }
 
-export async function deletePostStandalone(store: CollectionStore, blobStore: BlobStore, id: number): Promise<string[]> {
+export async function deletePostStandalone(
+    store: CollectionStore,
+    blobStore: BlobStore,
+    id: number,
+): Promise<string[]> {
     const images = await store.read<StoredPostImage>(C.postImages);
     const paths = images.filter((row) => row.post_id === id).map((row) => row.path);
     await deletePostRowsOnly(store, blobStore, id);
@@ -272,7 +279,10 @@ export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): P
         },
 
         async listUserFavorites(userId, options) {
-            const [favorites, rows] = await Promise.all([store.read<StoredFavorite>(C.favorites), boardPosts(store, blobStore)]);
+            const [favorites, rows] = await Promise.all([
+                store.read<StoredFavorite>(C.favorites),
+                boardPosts(store, blobStore),
+            ]);
             const rowMap = new Map(rows.map((row) => [row.id, row]));
             const favorited = favorites
                 .filter((fav) => fav.user_id === userId && rowMap.has(fav.post_id))
