@@ -14,6 +14,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TELEMETRY_DISABLED: 1
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
@@ -27,7 +28,7 @@ jobs:
             - name: build
               run: pnpm build
             - name: Vercel Preview Deploy
-              run: npx vercel@latest deploy --token "$VERCEL_TOKEN" --org "$VERCEL_ORG_ID" --project "$VERCEL_PROJECT_ID"
+              run: npx vercel@latest deploy
 
     production:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -36,6 +37,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TELEMETRY_DISABLED: 1
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
@@ -49,4 +51,4 @@ jobs:
             - name: build
               run: pnpm build
             - name: Vercel Production Deploy
-              run: npx vercel@latest deploy --prod --token "$VERCEL_TOKEN" --org "$VERCEL_ORG_ID" --project "$VERCEL_PROJECT_ID"
+              run: npx vercel@latest deploy --prod
