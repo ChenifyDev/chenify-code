@@ -24,8 +24,8 @@ jobs:
               run: pnpm build
             - name: Vercel Preview Deploy
               run: |
-                pnpm add -g vercel
-                vercel deploy \
+                pnpm add vercel
+                npx vercel deploy \
                   --token "${{ secrets.VERCEL_TOKEN }}" \
                   --org "${{ secrets.VERCEL_ORG_ID }}" \
                   --project "${{ secrets.VERCEL_PROJECT_ID }}"
@@ -47,8 +47,8 @@ jobs:
               run: pnpm build
             - name: Vercel Production Deploy
               run: |
-                pnpm add -g vercel
-                vercel deploy --prod \
+                pnpm add vercel
+                npx vercel deploy --prod \
                   --token "${{ secrets.VERCEL_TOKEN }}" \
                   --org "${{ secrets.VERCEL_ORG_ID }}" \
                   --project "${{ secrets.VERCEL_PROJECT_ID }}"
