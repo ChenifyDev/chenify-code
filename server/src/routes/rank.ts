@@ -1,5 +1,5 @@
 import { getStorage } from "../storage";
-import { getAuthUser, jsonError, parsePagination } from "./util";
+import { getAuthUser, parsePagination } from "./util";
 import type { RouteMap } from "../utils";
 
 export const routes: RouteMap = {
@@ -7,18 +7,16 @@ export const routes: RouteMap = {
         const url = new URL(req.url);
         const me = await getAuthUser(req);
         const { offset, limit } = parsePagination(url);
-        if (!me) return jsonError(401, "Unauthorized");
         const storage = getStorage();
-        const users = await storage.rank.rankUsersByFollowers(me.id, { offset, limit });
-        return Response.json({ users, my_rank: await storage.rank.getFollowerRank(me.id), offset, limit });
+        const users = await storage.rank.rankUsersByFollowers({ offset, limit }, me?.id);
+        return Response.json({ users, my_rank: me ? await storage.rank.getFollowerRank(me.id) : null, offset, limit });
     },
     "/api/rank/post/points": async (req) => {
         const url = new URL(req.url);
         const me = await getAuthUser(req);
         const { offset, limit } = parsePagination(url);
-        if (!me) return jsonError(401, "Unauthorized");
         const storage = getStorage();
-        const users = await storage.rank.rankUsersByPoints(me.id, { offset, limit });
-        return Response.json({ users, my_rank: await storage.rank.getPointsRank(me.id), offset, limit });
+        const users = await storage.rank.rankUsersByPoints({ offset, limit }, me?.id);
+        return Response.json({ users, my_rank: me ? await storage.rank.getPointsRank(me.id) : null, offset, limit });
     },
 };

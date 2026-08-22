@@ -5,7 +5,7 @@
     "module": "index.ts",
     "scripts": {
         "start": "bun index.ts",
-        "dev": "bun index.ts --debug",
+        "dev": "bun index.ts --watch",
         "seed": "bun seed.ts",
         "db:push": "drizzle-kit push",
         "db:generate": "drizzle-kit generate",

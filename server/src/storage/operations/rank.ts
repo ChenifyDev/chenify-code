@@ -12,7 +12,7 @@ function summaryOf(user: StoredUser | undefined, fallbackId: number): UserSummar
 
 export function createRankRepo(store: CollectionStore): RankRepo {
     return {
-        async rankUsersByFollowers(viewerId, options) {
+        async rankUsersByFollowers(options, viewerId) {
             const [users, follows] = await Promise.all([
                 store.read<StoredUser>(C.users),
                 store.read<StoredFollow>(C.follows),
@@ -24,7 +24,7 @@ export function createRankRepo(store: CollectionStore): RankRepo {
                     ...summaryOf(user, user.id),
                     email: user.email,
                     followers: followersOf(user.id),
-                    is_following: follows.some((f) => f.follower_id === viewerId && f.following_id === user.id),
+                    is_following: viewerId ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id) : false,
                     rank: index + 1,
                 }));
             const page = ranked.slice(options.offset, options.offset + options.limit);
@@ -35,7 +35,7 @@ export function createRankRepo(store: CollectionStore): RankRepo {
             })) as FollowUser[];
         },
 
-        async rankUsersByPoints(viewerId, options) {
+        async rankUsersByPoints(options, viewerId) {
             const [users, posts, likes, favorites, follows] = await Promise.all([
                 store.read<StoredUser>(C.users),
                 store.read<StoredPost>(C.posts),
@@ -55,7 +55,7 @@ export function createRankRepo(store: CollectionStore): RankRepo {
                     ...summaryOf(user, user.id),
                     email: user.email,
                     points: pointsOf(user.id),
-                    is_following: follows.some((f) => f.follower_id === viewerId && f.following_id === user.id),
+                    is_following: viewerId ? follows.some((f) => f.follower_id === viewerId && f.following_id === user.id) : false,
                     rank: index + 1,
                 }));
             return ranked.slice(options.offset, options.offset + options.limit) as unknown as PointsUser[];

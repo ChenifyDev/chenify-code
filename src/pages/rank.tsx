@@ -61,8 +61,16 @@ type PodiumUser = { id: number; username: string; avatar?: string | null; value:
 
 function Podium({ top, label }: { top: PodiumUser[]; label: string }) {
     const slots = PODIUM_SLOTS.map((slot, i) => ({ slot, user: top[i] })).filter((s) => s.user);
+    const count = slots.length;
+
+    const gridClass = (() => {
+        if (count === 1) return "grid-cols-1 justify-items-center";
+        if (count === 2) return "grid-cols-2";
+        return "grid-cols-3";
+    })();
+
     return (
-        <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-6">
+        <div className={`mb-8 grid ${gridClass} gap-2 sm:gap-6`}>
             {slots.map(({ slot, user }) => (
                 <div key={slot.medal} className={`flex flex-col items-center ${slot.order}`}>
                     <div className={`mb-1 sm:mb-3 flex items-center justify-center ${slot.medalWrap}`}>
@@ -239,7 +247,7 @@ function RankTabs() {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="followers" className="pt-4">
-                <FollowersTab tab={followers} title="粉丝" />
+                <FollowersTab tab={followers} title="用户" />
                 {myRank != null && (
                     <Card className="mt-4">
                         <CardContent className="flex items-center justify-center gap-2 py-4">
@@ -250,7 +258,7 @@ function RankTabs() {
                 )}
             </TabsContent>
             <TabsContent value="points" className="pt-4">
-                <PostPointsTab tab={points} title="帖子积分" />
+                <PostPointsTab tab={points} title="用户" />
                 {myPointsRank != null && (
                     <Card className="mt-4">
                         <CardContent className="flex items-center justify-center gap-2 py-4">

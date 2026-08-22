@@ -139,8 +139,8 @@ export interface NotificationsRepo {
 }
 
 export interface RankRepo {
-    rankUsersByFollowers(viewerId: number, options: { offset: number; limit: number }): Promise<FollowUser[]>;
-    rankUsersByPoints(viewerId: number, options: { offset: number; limit: number }): Promise<PointsUser[]>;
+    rankUsersByFollowers(options: { offset: number; limit: number }, viewerId?: number): Promise<FollowUser[]>;
+    rankUsersByPoints(options: { offset: number; limit: number }, viewerId?: number): Promise<PointsUser[]>;
     getFollowerRank(userId: number): Promise<number>;
     getPointsRank(userId: number): Promise<number>;
 }
