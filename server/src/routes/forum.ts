@@ -161,6 +161,22 @@ export const routes: RouteMap = {
         },
     },
 
+    "/api/posts/:id/draft": {
+        GET: async (req) => {
+            const storage = getStorage();
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = await storage.posts.getPostOwner(parsed);
+            if (ownerId === null) return jsonError(404, "帖子不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权查看该帖子");
+            const draft = await storage.drafts.getDraftByPostId(parsed);
+            if (!draft) return jsonError(404, "草稿不存在");
+            return Response.json({ id: draft.id, status: draft.status, post_id: draft.post_id });
+        },
+    },
+
     "/api/posts/:id/like": {
         POST: async (req) => {
             const storage = getStorage();
@@ -434,8 +450,6 @@ export const routes: RouteMap = {
             const ownerId = await storage.drafts.getDraftOwner(parsed);
             if (ownerId === null) return jsonError(404, "草稿不存在");
             if (ownerId !== me.id) return jsonError(403, "无权修改该草稿");
-            const existing = await storage.drafts.getDraftById(parsed);
-            if (existing?.status === "published") return jsonError(400, "已发布的草稿请先取消发布再编辑");
 
             const formData = await parseDraftForm(req);
             if ("error" in formData) return formData.error;

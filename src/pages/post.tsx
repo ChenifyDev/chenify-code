@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Check, Copy, Heart, MessageCircle, Trash2, UserCheck, UserPlus } from "lucide-react";
+import { Bookmark, Check, Copy, Heart, MessageCircle, Pencil, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -13,6 +13,7 @@ import {
     deleteComment,
     deletePost,
     getPost,
+    getPostDraft,
     listComments,
     toggleCommentLike,
     toggleFavorite,
@@ -80,15 +81,26 @@ export default function PostDetail() {
     const [followBusy, setFollowBusy] = useState(false);
     const [reactBusy, setReactBusy] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [draftId, setDraftId] = useState<number | null>(null);
 
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
         setError(null);
         setPost(null);
+        setDraftId(null);
         getPost(id)
-            .then((data) => {
-                if (!cancelled) setPost(data);
+            .then(async (data) => {
+                if (cancelled) return;
+                setPost(data);
+                if (me?.id === data.author.id) {
+                    try {
+                        const draft = await getPostDraft(id);
+                        if (!cancelled) setDraftId(draft.id);
+                    } catch {
+                        /* ignore */
+                    }
+                }
             })
             .catch((err) => {
                 if (!cancelled) setError(err instanceof Error ? err.message : "加载失败");
@@ -99,7 +111,7 @@ export default function PostDetail() {
         return () => {
             cancelled = true;
         };
-    }, [id]);
+    }, [id, me?.id]);
 
     const loadComments = useCallback(
         async (reset = false) => {
@@ -289,10 +301,27 @@ export default function PostDetail() {
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                             {isAuthor ? (
-                                <Button variant="destructive" size="sm" disabled={deleting} onClick={handleDeletePost}>
-                                    <Trash2 />
-                                    {deleting ? "删除中…" : "删除帖子"}
-                                </Button>
+                                <div className="flex shrink-0 items-center gap-2">
+                                    {draftId != null && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => navigate(`/write?id=${draftId}`)}
+                                        >
+                                            <Pencil />
+                                            编辑
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        disabled={deleting}
+                                        onClick={handleDeletePost}
+                                    >
+                                        <Trash2 />
+                                        {deleting ? "删除中…" : "删除帖子"}
+                                    </Button>
+                                </div>
                             ) : (
                                 <Button
                                     size="sm"

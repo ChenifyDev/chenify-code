@@ -107,6 +107,7 @@ export interface DraftsRepo {
         options: { offset: number; limit: number; status?: "draft" | "published" },
     ): Promise<Draft[]>;
     getDraftById(id: number): Promise<Draft | null>;
+    getDraftByPostId(postId: number): Promise<Draft | null>;
     getDraftOwner(id: number): Promise<number | null>;
     updateDraft(
         id: number,

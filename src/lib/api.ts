@@ -238,6 +238,14 @@ export function getPost(id: number): Promise<Post> {
     return request<Post>(`/posts/${id}`, { headers: authHeaders() });
 }
 
+export function getPostDraft(
+    id: number,
+): Promise<{ id: number; status: "draft" | "published"; post_id: number | null }> {
+    return request<{ id: number; status: "draft" | "published"; post_id: number | null }>(`/posts/${id}/draft`, {
+        headers: authHeaders(),
+    });
+}
+
 export function createPost(content: string, images: File[], tags: string[]): Promise<Post> {
     const form = new FormData();
     form.set("content", content);

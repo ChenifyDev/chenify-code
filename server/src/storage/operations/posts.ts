@@ -11,7 +11,7 @@ import type {
     StoredTag,
     StoredUser,
 } from "../rows";
-import { getOrCreateTag } from "./tags-internal";
+import { deleteTag, getOrCreateTag, isTagReferenced } from "./tags-internal";
 import { deleteComments } from "./comments";
 import { deleteNotificationsForPost } from "./notifications";
 import { buildPosts, heatPost, type PostHydrationContext } from "../mappers";
@@ -133,6 +133,45 @@ export async function createPostStandalone(
         await store.append<StoredPostTag>(C.postTags, { post_id: post.id, tag_id: tagId });
     }
     return getPostByIdStandalone(store, post.id, userId);
+}
+
+export async function updatePostStandalone(
+    store: CollectionStore,
+    postId: number,
+    content: string,
+    imagePaths: string[],
+    postTagsNames: string[],
+): Promise<Post | null> {
+    const post = await store.getById<StoredPost>(C.posts, postId);
+    if (!post) return null;
+
+    const existingTagRows = await store.read<StoredPostTag>(C.postTags);
+    const removedTagIds = existingTagRows.filter((row) => row.post_id === postId).map((row) => row.tag_id);
+
+    await Promise.all([
+        store.updateById<StoredPost>(C.posts, postId, { content }),
+        store.deleteWhere<StoredPostImage>(C.postImages, (row) => row.post_id === postId),
+        store.deleteWhere<StoredPostTag>(C.postTags, (row) => row.post_id === postId),
+    ]);
+
+    const keepTags = new Set(removedTagIds);
+    for (const path of imagePaths) {
+        await store.insert<StoredPostImage>(C.postImages, { post_id: postId, path });
+    }
+    for (const tag of postTagsNames) {
+        const tagId = await getOrCreateTag(store, tag);
+        if (tagId == null) continue;
+        keepTags.add(tagId);
+        const rows = await store.read<StoredPostTag>(C.postTags);
+        if (rows.some((row) => row.post_id === postId && row.tag_id === tagId)) continue;
+        await store.append<StoredPostTag>(C.postTags, { post_id: postId, tag_id: tagId });
+    }
+
+    for (const tagId of removedTagIds) {
+        if (!keepTags.has(tagId) && !(await isTagReferenced(store, tagId))) await deleteTag(store, tagId);
+    }
+
+    return getPostByIdStandalone(store, postId, post.user_id);
 }
 
 async function deletePostRowsOnly(store: CollectionStore, id: number): Promise<void> {

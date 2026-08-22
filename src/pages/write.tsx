@@ -38,6 +38,7 @@ export default function Write() {
                 const data = await getDraft(Number(currentId));
                 setContent(data.content);
                 setTagInput(data.tags.join(" "));
+                setStatus(data.status);
                 const imageUrls = data.images;
                 const imageFiles: File[] = [];
                 for (let url of imageUrls) {
@@ -57,6 +58,7 @@ export default function Write() {
     const [content, setContent] = useState("");
     const [tagInput, setTagInput] = useState("");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [status, setStatus] = useState<Draft["status"]>("draft");
     const [saving, setSaving] = useState(false);
     const [publishing, setPublishing] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -88,7 +90,8 @@ export default function Write() {
             const draft: Draft = currentId
                 ? await updateDraft(Number(currentId), content, imageFiles, tags)
                 : await createDraft(content, imageFiles, tags);
-            setMessage(`草稿已保存（#${draft.id}）`);
+            setStatus(draft.status);
+            setMessage(draft.status === "published" ? "帖子已更新" : `草稿已保存（#${draft.id}）`);
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
         } finally {
@@ -102,15 +105,20 @@ export default function Write() {
         setMessage(null);
         setError(null);
         try {
-            const post = await (async () => {
-                if (currentId) {
-                    await updateDraft(Number(currentId), content, imageFiles, tags);
-                    return publishDraft(Number(currentId));
+            if (currentId) {
+                const draft = await updateDraft(Number(currentId), content, imageFiles, tags);
+                setStatus(draft.status);
+                if (draft.status === "published" && draft.post_id != null) {
+                    navigate(`/posts/${draft.post_id}`);
+                    return;
                 }
+                const post = await publishDraft(Number(currentId));
+                navigate(`/posts/${post.id}`);
+            } else {
                 const draft = await createDraft(content, imageFiles, tags);
-                return publishDraft(draft.id);
-            })();
-            navigate(`/posts/${post.id}`);
+                const post = await publishDraft(draft.id);
+                navigate(`/posts/${post.id}`);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "发布失败");
         } finally {
@@ -150,7 +158,7 @@ export default function Write() {
                                 onClick={() => void handlePublish()}
                             >
                                 {publishing ? <Loader2 className="animate-spin" /> : <Send />}
-                                {publishing ? "发布中…" : "发布"}
+                                {publishing ? "保存中…" : status === "published" ? "保存并更新" : "发布"}
                             </Button>
                         </div>
                     </div>

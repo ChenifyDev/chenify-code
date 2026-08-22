@@ -2,7 +2,13 @@ import { C } from "../collections";
 import type { CollectionStore } from "../store";
 import type { StoredDraft, StoredDraftImage, StoredDraftTag, StoredTag } from "../rows";
 import { deleteTag, getOrCreateTag, isTagReferenced } from "./tags-internal";
-import { createPostStandalone, deletePostRowStandalone, deletePostStandalone, getPostByIdStandalone } from "./posts";
+import {
+    createPostStandalone,
+    deletePostRowStandalone,
+    deletePostStandalone,
+    getPostByIdStandalone,
+    updatePostStandalone,
+} from "./posts";
 import { assembleDraft } from "../mappers";
 import type { Draft } from "../types";
 import type { DraftsRepo } from "../plugin";
@@ -64,12 +70,21 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
             return row ? toDraft(store, row) : null;
         },
 
+        async getDraftByPostId(postId) {
+            const rows = await store.read<StoredDraft>(C.drafts);
+            const row = rows.find((r) => r.post_id === postId);
+            return row ? toDraft(store, row) : null;
+        },
+
         async getDraftOwner(id) {
             const row = await store.getById<StoredDraft>(C.drafts, id);
             return row?.user_id ?? null;
         },
 
         async updateDraft(id, content, imagePaths, tagNames) {
+            const draftBefore = await store.getById<StoredDraft>(C.drafts, id);
+            const publishedPostId = draftBefore?.status === "published" ? draftBefore.post_id : null;
+
             const removedImages = await getDraftImages(store, id);
             const existingTagRows = await store.read<StoredDraftTag>(C.draftTags);
             const removedTagIds = existingTagRows.filter((row) => row.draft_id === id).map((row) => row.tag_id);
@@ -95,6 +110,10 @@ export function createDraftsRepo(store: CollectionStore): DraftsRepo {
 
             for (const tagId of removedTagIds) {
                 if (!keepTags.has(tagId) && !(await isTagReferenced(store, tagId))) await deleteTag(store, tagId);
+            }
+
+            if (publishedPostId != null) {
+                await updatePostStandalone(store, publishedPostId, content, imagePaths, tagNames);
             }
 
             const keepImages = new Set(imagePaths);
