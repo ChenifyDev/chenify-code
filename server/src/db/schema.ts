@@ -229,6 +229,53 @@ export const draftTags = sqliteTable(
     ],
 );
 
+// --- OAuth2 ---
+
+export const oauthClients = sqliteTable("oauth_clients", {
+    id: text("id").primaryKey(),
+    secret: text("secret"),
+    name: text("name").notNull(),
+    redirect_uris: text("redirect_uris").notNull(),
+    scopes: text("scopes").notNull().default("openid profile email"),
+    created_at: text("created_at").notNull().default(now),
+});
+
+export const oauthAuthCodes = sqliteTable(
+    "oauth_auth_codes",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        code: text("code").notNull().unique(),
+        user_id: integer("user_id").notNull().references(() => users.id),
+        client_id: text("client_id").notNull().references(() => oauthClients.id),
+        redirect_uri: text("redirect_uri").notNull(),
+        code_challenge: text("code_challenge").notNull(),
+        scope: text("scope").notNull().default(""),
+        expires_at: text("expires_at").notNull(),
+        used: integer("used", { mode: "boolean" }).notNull().default(false),
+    },
+    (table) => [
+        index("idx_oauth_auth_codes_code").on(table.code),
+        index("idx_oauth_auth_codes_client").on(table.client_id),
+    ],
+);
+
+export const oauthRefreshTokens = sqliteTable(
+    "oauth_refresh_tokens",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        token_hash: text("token_hash").notNull().unique(),
+        user_id: integer("user_id").notNull().references(() => users.id),
+        client_id: text("client_id").notNull().references(() => oauthClients.id),
+        scope: text("scope").notNull().default(""),
+        expires_at: text("expires_at").notNull(),
+        revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+    },
+    (table) => [
+        index("idx_oauth_refresh_tokens_hash").on(table.token_hash),
+        index("idx_oauth_refresh_tokens_user").on(table.user_id),
+    ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
     posts: many(posts),
     favorites: many(favorites),
@@ -269,3 +316,6 @@ export type TagRow = typeof tags.$inferSelect;
 export type PostImageRow = typeof postImages.$inferSelect;
 export type FavoriteRow = typeof favorites.$inferSelect;
 export type CommentLikeRow = typeof commentLikes.$inferSelect;
+export type OAuthClientRow = typeof oauthClients.$inferSelect;
+export type OAuthAuthCodeRow = typeof oauthAuthCodes.$inferSelect;
+export type OAuthRefreshTokenRow = typeof oauthRefreshTokens.$inferSelect;
