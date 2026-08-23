@@ -20,6 +20,9 @@ const appTables: Record<string, unknown> = {
     drafts: appSchema.drafts,
     draft_images: appSchema.draftImages,
     draft_tags: appSchema.draftTags,
+    oauth_clients: appSchema.oauthClients,
+    oauth_auth_codes: appSchema.oauthAuthCodes,
+    oauth_refresh_tokens: appSchema.oauthRefreshTokens,
 };
 
 const worksTables: Record<string, unknown> = {

@@ -17,7 +17,7 @@ export async function getAuthUser(req: Request): Promise<UserPublic | null> {
     if (!token) return null;
     const payload = await verifyToken(token);
     if (!payload) return null;
-    return getStorage().users.findUserById(payload.sub);
+    return getStorage().users.findUserById(Number(payload.sub));
 }
 
 export function parsePagination(url: URL, defaultLimit = 20, maxLimit = 50): { offset: number; limit: number } {

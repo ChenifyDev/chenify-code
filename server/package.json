@@ -23,7 +23,8 @@
         "@neondatabase/serverless": "^1.1.0",
         "@vercel/blob": "^2.8.0",
         "drizzle-orm": "^0.45.2",
-        "hono": "^4.13.3"
+        "hono": "^4.13.3",
+        "jose": "^6.2.9"
     },
     "devDependencies": {
         "@types/bun": "latest",
