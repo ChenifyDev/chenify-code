@@ -21,12 +21,9 @@ import {
     type FollowUser,
     type Post,
     type SpaceSkeleton,
-    getSpaceWorks,
-    type WorkSummary,
 } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import { WorkCard } from "@/components/works/WorkCard.tsx";
 import LoadMore from "@/components/tab/LoadMore.tsx";
 import Empty from "@/components/tab/Empty.tsx";
 import UserRow from "@/components/user/UserRow.tsx";
@@ -67,25 +64,6 @@ function PostsTab({ tab }: { tab: TabData<Post> }) {
         <div className="grid gap-3">
             {tab.items.map((post) => (
                 <PostCard key={post.id} post={post} />
-            ))}
-            <LoadMore tab={tab} />
-        </div>
-    );
-}
-
-function WorksTab({ tab }: { tab: TabData<WorkSummary> }) {
-    const { load, initialized } = tab;
-    useEffect(() => {
-        if (!initialized) void load(true);
-    }, [load, initialized]);
-
-    if (tab.loading) return <SkeletonList />;
-    if (tab.error) return <Empty text={tab.error} />;
-    if (tab.items.length === 0) return <Empty text="还没有帖子" />;
-    return (
-        <div className={"m-4 columns-3 sm:columns-2 md:columns-4 lg:columns-4 gap-4 space-y-2"}>
-            {tab.items.map((work) => (
-                <WorkCard key={work.id} work={work} />
             ))}
             <LoadMore tab={tab} />
         </div>
@@ -177,16 +155,6 @@ function ProfileTabs({ userId }: { userId: number }) {
         ),
     );
 
-    const works = useTab(
-        useCallback(
-            async (offset) => {
-                const list = await getSpaceWorks(userId, offset, LIMIT);
-                return { items: list, hasMore: list.length === LIMIT, hidden: false };
-            },
-            [userId],
-        ),
-    );
-
     const favorites = useTab(
         useCallback(
             async (offset) => {
@@ -238,9 +206,6 @@ function ProfileTabs({ userId }: { userId: number }) {
             </TabsList>
             <TabsContent value="posts" className="pt-4">
                 <PostsTab tab={posts} />
-            </TabsContent>
-            <TabsContent value={"works"} className="pt-4">
-                <WorksTab tab={works} />
             </TabsContent>
             <TabsContent value="favorites" className="pt-4">
                 <FavoritesTab tab={favorites} />
@@ -397,7 +362,6 @@ export default function Profile() {
                     <Separator className="mt-4" />
                     <div className="flex items-center justify-around pt-2">
                         <Stat label="帖子" value={counts.posts} />
-                        <Stat label={"作品"} value={counts.works} />
                         <Stat label="收藏" value={counts.favorites} />
                         <Stat label="关注" value={counts.following} />
                         <Stat label="粉丝" value={counts.followers} />

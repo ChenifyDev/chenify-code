@@ -8,10 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.t
 
 import PostsTab from "@/pages/search/PostsTab.tsx";
 import UsersTab from "@/pages/search/UsersTab.tsx";
-import WorksTab from "@/pages/search/WorksTab.tsx";
 import { Empty } from "@/pages/search/common.tsx";
 
-type SearchType = "posts" | "works" | "users";
+type SearchType = "posts" | "users";
 
 export default function SearchPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -57,7 +56,6 @@ export default function SearchPage() {
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <TabsList>
                             <TabsTrigger value="posts">帖子</TabsTrigger>
-                            <TabsTrigger value="works">作品</TabsTrigger>
                             <TabsTrigger value="users">用户</TabsTrigger>
                         </TabsList>
                         {type !== "users" && (
@@ -83,9 +81,6 @@ export default function SearchPage() {
                     </div>
                     <TabsContent value="posts" className="pt-4">
                         <PostsTab key={tabKey} keyword={keyword} sort={sort} />
-                    </TabsContent>
-                    <TabsContent value="works" className="pt-4">
-                        <WorksTab key={tabKey} keyword={keyword} sort={sort} />
                     </TabsContent>
                     <TabsContent value="users" className="pt-4">
                         <UsersTab key={tabKey} keyword={keyword} />

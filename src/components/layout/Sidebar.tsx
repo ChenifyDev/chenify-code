@@ -1,17 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-    Code2,
-    FileText,
-    Home,
-    LogOut,
-    SquarePen,
-    Signpost,
-    Compass,
-    Settings,
-    Bell,
-    Ellipsis,
-    Podium,
-} from "lucide-react";
+import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Settings, Bell, Ellipsis, Podium } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
@@ -135,16 +123,6 @@ export default function AppSidebar() {
                                         <SidebarMenuButton isActive={isActive} tooltip="帖子">
                                             <Signpost />
                                             <span>帖子</span>
-                                        </SidebarMenuButton>
-                                    )}
-                                </NavLink>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <NavLink to="/explore-works">
-                                    {({ isActive }) => (
-                                        <SidebarMenuButton isActive={isActive} tooltip="作品">
-                                            <Compass />
-                                            <span>作品</span>
                                         </SidebarMenuButton>
                                     )}
                                 </NavLink>

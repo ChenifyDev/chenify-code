@@ -7,11 +7,8 @@ import ExplorePosts from "@/pages/explore/posts.tsx";
 import Drafts from "@/pages/drafts.tsx";
 import Login from "@/pages/login.tsx";
 import Post from "@/pages/post.tsx";
-import Work from "@/pages/work.tsx";
 import Profile from "@/pages/profile.tsx";
 import Write from "@/pages/write.tsx";
-import ExploreWorks from "@/pages/explore/works.tsx";
-import CodeRunner from "@/pages/code-runner.tsx";
 import Search from "@/pages/search/index.tsx";
 import SettingsPage from "@/pages/settings.tsx";
 import NotificationsPage from "@/pages/notifications.tsx";
@@ -32,10 +29,6 @@ const router = createBrowserRouter([
             {
                 path: "explore-posts",
                 element: <ExplorePosts />,
-            },
-            {
-                path: "explore-works",
-                element: <ExploreWorks />,
             },
             {
                 path: "search",
@@ -66,18 +59,10 @@ const router = createBrowserRouter([
                 element: <Post />,
             },
             {
-                path: "works/:id",
-                element: <Work />,
-            },
-            {
                 path: "rank",
                 element: <RankPage />,
             },
         ],
-    },
-    {
-        path: "/code-runner",
-        element: <CodeRunner />,
     },
     {
         path: "*",
