@@ -4,7 +4,7 @@ command = "bun run build"
 
 [[redirects]]
 from = "/api/*"
-to = "https://codeapi.chenify.top/:splat"
+to = "https://codeapi.chenify.top/api/:splat"
 status = 200
 force = true
 headers = { "Host" = "codeapi.chenify.top", "Access-Control-Allow-Origin" = "*", "Access-Control-Allow-Methods" = "GET, POST, PUT, DELETE, OPTIONS", "Access-Control-Allow-Headers" = "Content-Type, Authorization" }
