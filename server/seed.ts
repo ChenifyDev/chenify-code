@@ -1,21 +1,23 @@
 ﻿// 生成调试数据
-import { and, eq, inArray, or, sql } from "drizzle-orm";
-import { getDb } from "./src/db/client";
-import {
-    commentLikes,
-    comments,
-    draftTags,
-    drafts,
-    favorites,
-    follows,
-    likes,
-    postTags,
-    posts,
-    tags,
-    users,
-} from "./src/db/schema";
+import { getStorage } from "./src/storage";
+import { C } from "./src/storage/collections";
+import { deleteContentBlob, loadContentBlob, saveContentBlob } from "./src/storage/content";
+import { getOrCreateTag } from "./src/storage/operations/tags-internal";
+import type {
+    StoredComment,
+    StoredCommentLike,
+    StoredDraft,
+    StoredDraftTag,
+    StoredFavorite,
+    StoredFollow,
+    StoredLike,
+    StoredPost,
+    StoredPostTag,
+    StoredUser,
+} from "./src/storage/rows";
 
-const db = getDb();
+const storage = getStorage();
+const { store, blobs } = storage;
 
 const PASSWORD = "123456";
 const SAMPLE_USERNAMES = ["alice", "bob", "carol", "dave", "erin"];
@@ -339,109 +341,153 @@ const seedComments: {
     },
 ];
 
-function insertOrGetId(username: string, email: string, passwordHash: string): number | null {
-    const existing = db.select({ id: users.id }).from(users).where(eq(users.username, username)).get();
+async function insertOrGetUser(username: string, email: string, passwordHash: string): Promise<number | null> {
+    const users = await store.read<StoredUser>(C.users);
+    const existing = users.find((user) => user.username === username);
     if (existing) return existing.id;
-    const row = db.insert(users).values({ username, email, password_hash: passwordHash }).returning().get();
-    return row?.id ?? null;
+    const created = await storage.users.createUser(username, email, passwordHash, null);
+    return created.id;
 }
 
-function attachTags(ownerId: number, tagNames: string[], table: "post" | "draft"): void {
+async function findExistingPost(userId: number, content: string): Promise<number | undefined> {
+    const posts = (await store.read<StoredPost>(C.posts)).filter((row) => row.user_id === userId);
+    for (const post of posts) {
+        if ((await loadContentBlob(blobs, post.content)) === content) return post.id;
+    }
+    return undefined;
+}
+
+async function findExistingDraft(userId: number, content: string): Promise<number | undefined> {
+    const drafts = (await store.read<StoredDraft>(C.drafts)).filter((row) => row.user_id === userId);
+    for (const draft of drafts) {
+        if ((await loadContentBlob(blobs, draft.content)) === content) return draft.id;
+    }
+    return undefined;
+}
+
+async function findExistingComment(postId: number, userId: number, content: string): Promise<number | undefined> {
+    const comments = (await store.read<StoredComment>(C.comments)).filter(
+        (row) => row.post_id === postId && row.user_id === userId,
+    );
+    for (const comment of comments) {
+        if ((await loadContentBlob(blobs, comment.content)) === content) return comment.id;
+    }
+    return undefined;
+}
+
+async function attachPostTags(postId: number, tagNames: string[]): Promise<void> {
     for (const name of tagNames) {
-        db.insert(tags).values({ name }).onConflictDoNothing().run();
-        const tag = db.select({ id: tags.id }).from(tags).where(eq(tags.name, name)).get();
-        if (tag) {
-            if (table === "post") {
-                db.insert(postTags).values({ post_id: ownerId, tag_id: tag.id }).onConflictDoNothing().run();
-            } else {
-                db.insert(draftTags).values({ draft_id: ownerId, tag_id: tag.id }).onConflictDoNothing().run();
-            }
-        }
+        const tagId = await getOrCreateTag(store, name);
+        if (tagId == null) continue;
+        const existing = await store.read<StoredPostTag>(C.postTags);
+        if (existing.some((row) => row.post_id === postId && row.tag_id === tagId)) continue;
+        await store.append<StoredPostTag>(C.postTags, { post_id: postId, tag_id: tagId });
+    }
+}
+
+async function attachDraftTags(draftId: number, tagNames: string[]): Promise<void> {
+    for (const name of tagNames) {
+        const tagId = await getOrCreateTag(store, name);
+        if (tagId == null) continue;
+        const existing = await store.read<StoredDraftTag>(C.draftTags);
+        if (existing.some((row) => row.draft_id === draftId && row.tag_id === tagId)) continue;
+        await store.append<StoredDraftTag>(C.draftTags, { draft_id: draftId, tag_id: tagId });
     }
 }
 
 async function main() {
-    if (reset) {
-        const userIds = db
-            .select({ id: users.id })
-            .from(users)
-            .where(inArray(users.username, SAMPLE_USERNAMES))
-            .all()
-            .map((row) => row.id);
-        for (const id of userIds) {
-            db.delete(drafts).where(eq(drafts.user_id, id)).run();
-            db.delete(commentLikes).where(eq(commentLikes.user_id, id)).run();
-            db.delete(comments).where(eq(comments.user_id, id)).run();
-            db.delete(favorites).where(eq(favorites.user_id, id)).run();
-            db.delete(likes).where(eq(likes.user_id, id)).run();
-            db.delete(follows)
-                .where(or(eq(follows.follower_id, id), eq(follows.following_id, id)))
-                .run();
-            db.delete(posts).where(eq(posts.user_id, id)).run();
-            db.delete(users).where(eq(users.id, id)).run();
-        }
-        console.log(`已删除 ${userIds.length} 个示例账号（含其帖子/评论/收藏/关注/草稿）`);
-    }
-
     const passwordHash = await Bun.password.hash(PASSWORD, {
         algorithm: "argon2id",
         memoryCost: 65536,
         timeCost: 3,
     });
 
+    if (reset) {
+        const allUsers = await store.read<StoredUser>(C.users);
+        const userIds = allUsers
+            .filter((user) => SAMPLE_USERNAMES.includes(user.username))
+            .map((user) => user.id);
+        const userIdSet = new Set(userIds);
+
+        if (userIdSet.size > 0) {
+            const [allComments, allPosts, allDrafts] = await Promise.all([
+                store.read<StoredComment>(C.comments),
+                store.read<StoredPost>(C.posts),
+                store.read<StoredDraft>(C.drafts),
+            ]);
+
+            const commentsByUser = allComments.filter((row) => userIdSet.has(row.user_id));
+            const postsByUser = allPosts.filter((row) => userIdSet.has(row.user_id));
+            const draftsByUser = allDrafts.filter((row) => userIdSet.has(row.user_id));
+
+            await Promise.all([
+                ...draftsByUser.map((row) => deleteContentBlob(blobs, row.content)),
+                ...postsByUser.map((row) => deleteContentBlob(blobs, row.content)),
+                ...commentsByUser.map((row) => deleteContentBlob(blobs, row.content)),
+            ]);
+
+            const commentIdsByUser = new Set(commentsByUser.map((row) => row.id));
+
+            await store.deleteWhere<StoredDraft>(C.drafts, (row) => userIdSet.has(row.user_id));
+            await store.deleteWhere<StoredCommentLike>(C.commentLikes, (row) => commentIdsByUser.has(row.comment_id));
+            await store.deleteWhere<StoredComment>(C.comments, (row) => userIdSet.has(row.user_id));
+            await store.deleteWhere<StoredFavorite>(C.favorites, (row) => userIdSet.has(row.user_id));
+            await store.deleteWhere<StoredLike>(C.likes, (row) => userIdSet.has(row.user_id));
+            await store.deleteWhere<StoredFollow>(C.follows, (row) => userIdSet.has(row.follower_id) || userIdSet.has(row.following_id));
+            await store.deleteWhere<StoredPostTag>(C.postTags, (row) => postsByUser.some((post) => post.id === row.post_id));
+            await store.deleteWhere<StoredDraftTag>(C.draftTags, (row) => draftsByUser.some((draft) => draft.id === row.draft_id));
+            await store.deleteWhere<StoredPost>(C.posts, (row) => userIdSet.has(row.user_id));
+            await store.deleteWhere<StoredUser>(C.users, (row) => userIdSet.has(row.id));
+        }
+
+        console.log(`已删除 ${userIdSet.size} 个示例账号（含其帖子/评论/收藏/关注/草稿）`);
+    }
+
     const idMap = new Map<string, number>();
     for (const user of seedUsers) {
-        const id = insertOrGetId(user.username, user.email, passwordHash);
+        const id = await insertOrGetUser(user.username, user.email, passwordHash);
         if (!id) throw new Error(`创建用户失败: ${user.username}`);
         idMap.set(user.username, id);
     }
 
     const postIds = new Map<string, number>();
     for (const user of seedUsers) {
-        user.posts.forEach((post, index) => {
-            const existing = db
-                .select({ id: posts.id })
-                .from(posts)
-                .where(and(eq(posts.user_id, idMap.get(user.username)!), eq(posts.content, post.content)))
-                .get();
+        const userId = idMap.get(user.username)!;
+
+        for (const [index, post] of user.posts.entries()) {
+            const existingId = await findExistingPost(userId, post.content);
             let postId: number;
-            if (existing) {
-                postId = existing.id;
+            if (existingId != null) {
+                postId = existingId;
             } else {
-                const inserted = db
-                    .insert(posts)
-                    .values({ user_id: idMap.get(user.username)!, content: post.content, created_at: post.created_at })
-                    .returning()
-                    .get();
+                const contentRef = await saveContentBlob(blobs, post.content);
+                const inserted = await store.insert<StoredPost>(C.posts, {
+                    user_id: userId,
+                    content: contentRef,
+                    created_at: post.created_at,
+                });
                 postId = inserted.id;
-                attachTags(postId, post.tags, "post");
+                await attachPostTags(postId, post.tags);
             }
             postIds.set(`${user.username}:${index}`, postId);
-        });
+        }
 
         for (const draft of user.drafts) {
-            const userId = idMap.get(user.username)!;
-            const existing = db
-                .select({ id: drafts.id })
-                .from(drafts)
-                .where(and(eq(drafts.user_id, userId), eq(drafts.content, draft.content)))
-                .get();
-            if (existing) continue;
+            const existingId = await findExistingDraft(userId, draft.content);
+            if (existingId != null) continue;
+
             const postId =
                 draft.status === "published" && draft.post_key ? (postIds.get(draft.post_key) ?? null) : null;
-            const inserted = db
-                .insert(drafts)
-                .values({
-                    user_id: userId,
-                    content: draft.content,
-                    status: draft.status,
-                    post_id: postId,
-                    created_at: draft.created_at,
-                    updated_at: draft.updated_at,
-                })
-                .returning()
-                .get();
-            attachTags(inserted.id, draft.tags, "draft");
+            const contentRef = await saveContentBlob(blobs, draft.content);
+            const inserted = await store.insert<StoredDraft>(C.drafts, {
+                user_id: userId,
+                content: contentRef,
+                status: draft.status,
+                post_id: postId,
+                created_at: draft.created_at,
+                updated_at: draft.updated_at,
+            });
+            await attachDraftTags(inserted.id, draft.tags);
         }
     }
 
@@ -450,22 +496,31 @@ async function main() {
         for (const target of user.follows) {
             const targetId = idMap.get(target);
             if (targetId !== undefined) {
-                db.insert(follows)
-                    .values({ follower_id: followerId, following_id: targetId })
-                    .onConflictDoNothing()
-                    .run();
+                await store.append<StoredFollow>(C.follows, {
+                    follower_id: followerId,
+                    following_id: targetId,
+                    created_at: new Date().toISOString(),
+                });
             }
         }
         for (const key of user.favorites) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
-                db.insert(favorites).values({ user_id: followerId, post_id: postId }).onConflictDoNothing().run();
+                await store.append<StoredFavorite>(C.favorites, {
+                    user_id: followerId,
+                    post_id: postId,
+                    created_at: new Date().toISOString(),
+                });
             }
         }
         for (const key of user.likes) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
-                db.insert(likes).values({ user_id: followerId, post_id: postId }).onConflictDoNothing().run();
+                await store.append<StoredLike>(C.likes, {
+                    user_id: followerId,
+                    post_id: postId,
+                    created_at: new Date().toISOString(),
+                });
             }
         }
     }
@@ -474,83 +529,62 @@ async function main() {
         const postId = postIds.get(comment.post_key);
         const authorId = idMap.get(comment.author);
         if (postId === undefined || authorId === undefined) continue;
-        const existing = db
-            .select({ id: comments.id })
-            .from(comments)
-            .where(
-                and(
-                    eq(comments.post_id, postId),
-                    eq(comments.user_id, authorId),
-                    eq(comments.content, comment.content),
-                ),
-            )
-            .get();
+
+        const existingId = await findExistingComment(postId, authorId, comment.content);
         let commentId: number;
-        if (existing) {
-            commentId = existing.id;
+        if (existingId != null) {
+            commentId = existingId;
         } else {
             let parentId: number | null = null;
             if (comment.parent_content) {
-                const parent = db
-                    .select({ id: comments.id })
-                    .from(comments)
-                    .where(and(eq(comments.post_id, postId), eq(comments.content, comment.parent_content)))
-                    .get();
-                parentId = parent?.id ?? null;
+                const comments = await store.read<StoredComment>(C.comments);
+                for (const row of comments) {
+                    if (row.post_id === postId && (await loadContentBlob(blobs, row.content)) === comment.parent_content) {
+                        parentId = row.id;
+                        break;
+                    }
+                }
             }
-            const res = db
-                .insert(comments)
-                .values({
-                    post_id: postId,
-                    user_id: authorId,
-                    content: comment.content,
-                    created_at: comment.created_at,
-                    parent_id: parentId ?? undefined,
-                })
-                .returning({ id: comments.id })
-                .get();
-            commentId = res?.id ?? 0;
+            const contentRef = await saveContentBlob(blobs, comment.content);
+            const inserted = await store.insert<StoredComment>(C.comments, {
+                post_id: postId,
+                user_id: authorId,
+                content: contentRef,
+                created_at: comment.created_at,
+                parent_id: parentId,
+            });
+            commentId = inserted.id;
         }
+
         if (comment.liked_by) {
             for (const liker of comment.liked_by) {
                 const likerId = idMap.get(liker);
-                if (likerId !== undefined && commentId) {
-                    db.insert(commentLikes)
-                        .values({ comment_id: commentId, user_id: likerId, created_at: comment.created_at })
-                        .onConflictDoNothing()
-                        .run();
+                if (likerId !== undefined) {
+                    await store.append<StoredCommentLike>(C.commentLikes, {
+                        comment_id: commentId,
+                        user_id: likerId,
+                        created_at: comment.created_at,
+                    });
                 }
             }
         }
     }
 
+    const [allPosts, allFavorites, allLikes, allFollows, allDrafts] = await Promise.all([
+        store.read<StoredPost>(C.posts),
+        store.read<StoredFavorite>(C.favorites),
+        store.read<StoredLike>(C.likes),
+        store.read<StoredFollow>(C.follows),
+        store.read<StoredDraft>(C.drafts),
+    ]);
+
     for (const user of seedUsers) {
         const id = idMap.get(user.username)!;
-        const postsCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(posts)
-            .where(eq(posts.user_id, id))
-            .get()!.n;
-        const favoritesCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(favorites)
-            .where(eq(favorites.user_id, id))
-            .get()!.n;
-        const likesCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(likes)
-            .where(eq(likes.user_id, id))
-            .get()!.n;
-        const followingCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(follows)
-            .where(eq(follows.follower_id, id))
-            .get()!.n;
-        const followersCount = db
-            .select({ n: sql<number>`count(*)` })
-            .from(follows)
-            .where(eq(follows.following_id, id))
-            .get()!.n;
+        const postsCount = allPosts.filter((row) => row.user_id === id).length;
+        const favoritesCount = allFavorites.filter((row) => row.user_id === id).length;
+        const likesCount = allLikes.filter((row) => row.user_id === id).length;
+        const followingCount = allFollows.filter((row) => row.follower_id === id).length;
+        const followersCount = allFollows.filter((row) => row.following_id === id).length;
         console.log(
             `${user.username}(${user.email}) 密码 ${PASSWORD} — 帖子 ${postsCount} / 收藏 ${favoritesCount} / 点赞 ${likesCount} / 关注 ${followingCount} / 粉丝 ${followersCount}`,
         );
@@ -558,12 +592,8 @@ async function main() {
 
     console.log(`共插入帖子 ${postIds.size} 条，评论 ${seedComments.length} 条。`);
 
-    const [publishedCount, draftCount] = db.get(
-        sql`
-        SELECT
-            (SELECT COUNT(*) FROM drafts WHERE status = 'published') AS published,
-            (SELECT COUNT(*) FROM drafts WHERE status = 'draft') AS draft`,
-    ) as [number, number];
+    const publishedCount = allDrafts.filter((row) => row.status === "published").length;
+    const draftCount = allDrafts.filter((row) => row.status === "draft").length;
     console.log(`草稿：已发布 ${publishedCount} 条 / 未发布 ${draftCount} 条。`);
     console.log("提示：请先停止运行中的 server（bun index.ts），再启动以刷新数据。");
 }
