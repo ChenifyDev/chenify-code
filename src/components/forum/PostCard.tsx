@@ -1,21 +1,27 @@
 import { useMemo, useState } from "react";
 import { Bookmark, Heart, MessageCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import type { Post } from "@/lib/api.ts";
+import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
 import { cn } from "@/lib/utils.ts";
+import { useUserStore } from "@/stores/useUser";
 
 const PREVIEW_MAX_LENGTH = 100;
 
 export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
     const [expanded, setExpanded] = useState(false);
-    const { excerpt, isTruncated } = useMemo(() => truncateMarkdown(post.content, PREVIEW_MAX_LENGTH), [post.content]);
+    const [postState, setPost] = useState<Post>(post);
+    const [reactBusy, setReactBusy] = useState(false);
+    const { excerpt, isTruncated } = useMemo(
+        () => truncateMarkdown(postState.content, PREVIEW_MAX_LENGTH),
+        [postState.content],
+    );
 
     const toggleExpanded = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -23,30 +29,70 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
         setExpanded((prev) => !prev);
     };
 
+    const me = useUserStore();
+    const navigate = useNavigate();
+    const requireLogin = (): boolean => {
+        if (!me) {
+            navigate("/login");
+            return false;
+        }
+        return true;
+    };
+
+    const handleLike = async () => {
+        if (!postState) return;
+        if (!requireLogin()) return;
+        setReactBusy(true);
+        try {
+            const res = postState.is_liked ? await unLike(postState.id) : await toggleLike(postState.id);
+            setPost((prev) => (prev ? { ...prev, is_liked: res.liked, likes_count: res.likes_count } : prev));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setReactBusy(false);
+        }
+    };
+
+    const handleFavorite = async () => {
+        if (!postState) return;
+        if (!requireLogin()) return;
+        setReactBusy(true);
+        try {
+            const res = postState.is_favorited ? await unFavorite(postState.id) : await toggleFavorite(postState.id);
+            setPost((prev) =>
+                prev ? { ...prev, is_favorited: res.favorited, favorites_count: res.favorites_count } : prev,
+            );
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setReactBusy(false);
+        }
+    };
+
     return (
         <Card size="sm">
             <CardContent className="grid gap-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Link
-                        to={`/users/${post.author.id}`}
+                        to={`/users/${postState.author.id}`}
                         className="flex min-w-0 items-center gap-2 hover:text-foreground"
                     >
                         <Avatar size="sm">
-                            {post.author.avatar ? (
-                                <AvatarImage src={post.author.avatar} alt={post.author.username} />
+                            {postState.author.avatar ? (
+                                <AvatarImage src={postState.author.avatar} alt={postState.author.username} />
                             ) : null}
-                            <AvatarFallback>{post.author.username.slice(0, 2)}</AvatarFallback>
+                            <AvatarFallback>{postState.author.username.slice(0, 2)}</AvatarFallback>
                         </Avatar>
-                        <span className="truncate font-medium">{post.author.username}</span>
+                        <span className="truncate font-medium">{postState.author.username}</span>
                     </Link>
                     <span>·</span>
-                    <span className="shrink-0">{formatDate(post.created_at)}</span>
+                    <span className="shrink-0">{formatDate(postState.created_at)}</span>
                 </div>
 
                 <div className="min-w-0 flex flex-col gap-2">
-                    <Link to={`/posts/${post.id}`} className="group block min-w-0">
+                    <Link to={`/posts/${postState.id}`} className="group block min-w-0">
                         <Markdown
-                            content={expanded ? post.content : excerpt}
+                            content={expanded ? postState.content : excerpt}
                             className={cn("group-hover:opacity-80", compact && "line-clamp-6")}
                         />
                     </Link>
@@ -57,9 +103,9 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                     )}
                 </div>
 
-                {post.images.length > 0 && (
+                {postState.images.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                        {post.images.map((src, i) => (
+                        {postState.images.map((src, i) => (
                             <img
                                 key={i}
                                 src={src}
@@ -70,9 +116,9 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                     </div>
                 )}
 
-                {post.tags.length > 0 && (
+                {postState.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                        {post.tags.map((tag) => (
+                        {postState.tags.map((tag) => (
                             <span key={tag} className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                 #{tag}
                             </span>
@@ -80,19 +126,31 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                     </div>
                 )}
 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Button
+                        variant="ghost"
+                        size={"xs"}
+                        onClick={handleLike}
+                        disabled={reactBusy}
+                        className={cn("inline-flex items-center gap-1", postState.is_liked && "text-primary")}
+                    >
+                        <Heart className={cn("size-3.5", postState.is_liked && "fill-current")} />
+                        {postState.likes_count}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size={"xs"}
+                        onClick={handleFavorite}
+                        disabled={reactBusy}
+                        className={cn("inline-flex items-center gap-1", postState.is_favorited && "text-primary")}
+                    >
+                        <Bookmark className={cn("size-3.5", postState.is_favorited && "fill-current")} />
+                        {postState.favorites_count}
+                    </Button>
+                    <Button variant="ghost" size={"xs"} disabled className="inline-flex items-center gap-1">
                         <MessageCircle className="size-3.5" />
-                        {post.comments_count}
-                    </span>
-                    <span className={cn("inline-flex items-center gap-1", post.is_liked && "text-primary")}>
-                        <Heart className={cn("size-3.5", post.is_liked && "fill-current")} />
-                        {post.likes_count}
-                    </span>
-                    <span className={cn("inline-flex items-center gap-1", post.is_favorited && "text-primary")}>
-                        <Bookmark className={cn("size-3.5", post.is_favorited && "fill-current")} />
-                        {post.favorites_count}
-                    </span>
+                        {postState.comments_count}
+                    </Button>
                 </div>
             </CardContent>
         </Card>
