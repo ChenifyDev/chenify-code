@@ -2,6 +2,7 @@ import { getStorage, toPublicUser } from "../storage";
 import { signToken } from "../jwt";
 import { jsonError, getAuthUser } from "./util";
 import { saveAvatar, type RouteMap } from "../utils";
+import { serializeSessionCookie, serializeClearSessionCookie } from "../utils/cookie";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -69,7 +70,14 @@ export const routes = {
         }
 
         const token = await signToken({ sub: user.id, username: user.username, email: user.email });
-        return Response.json({ token, user: toPublicUser(user) });
+        return Response.json(
+            { token, user: toPublicUser(user) },
+            { headers: { "Set-Cookie": serializeSessionCookie(token, req) } },
+        );
+    },
+
+    "/api/passport/logout": async () => {
+        return Response.json({ success: true }, { headers: { "Set-Cookie": serializeClearSessionCookie() } });
     },
 
     "/api/passport/me": async (req) => {

@@ -1,6 +1,7 @@
 import { getStorage } from "../storage";
 import type { UserPublic } from "../storage";
 import { verifyToken } from "../jwt";
+import { getSessionTokenFromRequest } from "../utils/cookie";
 
 export function jsonError(status: number, message: string): Response {
     return Response.json({ message }, { status });
@@ -12,8 +13,12 @@ export function extractBearer(req: Request): string | null {
     return auth.slice(7);
 }
 
+export function extractAuthToken(req: Request): string | null {
+    return extractBearer(req) ?? getSessionTokenFromRequest(req);
+}
+
 export async function getAuthUser(req: Request): Promise<UserPublic | null> {
-    const token = extractBearer(req);
+    const token = extractAuthToken(req);
     if (!token) return null;
     const payload = await verifyToken(token);
     if (!payload) return null;

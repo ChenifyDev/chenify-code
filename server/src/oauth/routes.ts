@@ -1,5 +1,5 @@
 import { getStorage } from "../storage";
-import { extractBearer, getAuthUser } from "../routes/util";
+import { extractBearer, extractAuthToken } from "../routes/util";
 import { verifyToken } from "../jwt";
 import { findClient, createClient, listClients, deleteClient } from "./clients";
 import {
@@ -14,16 +14,15 @@ import {
 } from "./tokens";
 import type { RouteMap } from "../utils/shared";
 
-const jsonError = (status: number, message: string) =>
-    Response.json({ error: message }, { status });
+const jsonError = (status: number, message: string) => Response.json({ error: message }, { status });
 
 async function getAuthUserId(req: Request): Promise<number | null> {
-    const token = extractBearer(req);
+    const token = extractAuthToken(req);
     if (!token) return null;
     // Accept both OAuth access tokens and regular login tokens
     const oauthPayload = await verifyAccessToken(token);
     if (oauthPayload?.sub) return oauthPayload.sub;
-    // Fallback: try regular login token verification
+    // Fallback: try regular login token verification (also covers session cookie)
     const payload = await verifyToken(token);
     return (payload?.sub as number) ?? null;
 }
@@ -110,7 +109,10 @@ async function handleAuthorize(req: Request): Promise<Response> {
 
     const userId = await getAuthUserId(req);
     if (!userId) {
-        const loginUrl = `/login?return_to=${encodeURIComponent(req.url)}`;
+        const loginBase = process.env.OAUTH_LOGIN_URL ?? "/login";
+        const returnTo = encodeURIComponent(req.url);
+        const separator = loginBase.includes("?") ? "&" : "?";
+        const loginUrl = `${loginBase}${separator}return_to=${returnTo}`;
         return Response.redirect(loginUrl, 302);
     }
 
@@ -347,7 +349,7 @@ async function handleUserInfo(req: Request): Promise<Response> {
 
 // POST /oauth/clients
 async function handleCreateClient(req: Request): Promise<Response> {
-    const body = await req.json().catch(() => null) as {
+    const body = (await req.json().catch(() => null)) as {
         name?: string;
         redirect_uris?: string[];
         scopes?: string;

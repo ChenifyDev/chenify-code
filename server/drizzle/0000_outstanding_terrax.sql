@@ -105,6 +105,47 @@ CREATE TABLE `notifications` (
 --> statement-breakpoint
 CREATE INDEX `idx_notifications_user` ON `notifications` (`user_id`);--> statement-breakpoint
 CREATE INDEX `idx_notifications_user_read` ON `notifications` (`user_id`,`is_read`);--> statement-breakpoint
+CREATE TABLE `oauth_auth_codes` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`code` text NOT NULL,
+	`user_id` integer NOT NULL,
+	`client_id` text NOT NULL,
+	`redirect_uri` text NOT NULL,
+	`code_challenge` text NOT NULL,
+	`scope` text DEFAULT '' NOT NULL,
+	`expires_at` text NOT NULL,
+	`used` integer DEFAULT false NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`client_id`) REFERENCES `oauth_clients`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `oauth_auth_codes_code_unique` ON `oauth_auth_codes` (`code`);--> statement-breakpoint
+CREATE INDEX `idx_oauth_auth_codes_code` ON `oauth_auth_codes` (`code`);--> statement-breakpoint
+CREATE INDEX `idx_oauth_auth_codes_client` ON `oauth_auth_codes` (`client_id`);--> statement-breakpoint
+CREATE TABLE `oauth_clients` (
+	`id` text PRIMARY KEY NOT NULL,
+	`secret` text,
+	`name` text NOT NULL,
+	`redirect_uris` text NOT NULL,
+	`scopes` text DEFAULT 'openid profile email' NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `oauth_refresh_tokens` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`token_hash` text NOT NULL,
+	`user_id` integer NOT NULL,
+	`client_id` text NOT NULL,
+	`scope` text DEFAULT '' NOT NULL,
+	`expires_at` text NOT NULL,
+	`revoked` integer DEFAULT false NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`client_id`) REFERENCES `oauth_clients`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `oauth_refresh_tokens_token_hash_unique` ON `oauth_refresh_tokens` (`token_hash`);--> statement-breakpoint
+CREATE INDEX `idx_oauth_refresh_tokens_hash` ON `oauth_refresh_tokens` (`token_hash`);--> statement-breakpoint
+CREATE INDEX `idx_oauth_refresh_tokens_user` ON `oauth_refresh_tokens` (`user_id`);--> statement-breakpoint
 CREATE TABLE `post_images` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`post_id` integer NOT NULL,

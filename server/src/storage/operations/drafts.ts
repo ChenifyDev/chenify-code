@@ -96,7 +96,10 @@ export function createDraftsRepo(store: CollectionStore, blobStore: BlobStore): 
             const removedTagIds = existingTagRows.filter((row) => row.draft_id === id).map((row) => row.tag_id);
 
             await Promise.all([
-                store.updateById<StoredDraft>(C.drafts, id, { content: nextContent, updated_at: new Date().toISOString() }),
+                store.updateById<StoredDraft>(C.drafts, id, {
+                    content: nextContent,
+                    updated_at: new Date().toISOString(),
+                }),
                 store.deleteWhere<StoredDraftImage>(C.draftImages, (row) => row.draft_id === id),
                 store.deleteWhere<StoredDraftTag>(C.draftTags, (row) => row.draft_id === id),
             ]);
@@ -152,7 +155,14 @@ export function createDraftsRepo(store: CollectionStore, blobStore: BlobStore): 
             if (draft.status === "published" && draft.post_id != null) {
                 return { draft, post: (await getPostByIdStandalone(store, blobStore, draft.post_id, draft.user_id))! };
             }
-            const post = await createPostStandalone(store, blobStore, draft.user_id, draft.content, draft.images, draft.tags);
+            const post = await createPostStandalone(
+                store,
+                blobStore,
+                draft.user_id,
+                draft.content,
+                draft.images,
+                draft.tags,
+            );
             if (!post) return null;
             await store.updateById<StoredDraft>(C.drafts, id, {
                 status: "published",

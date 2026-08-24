@@ -166,6 +166,10 @@ export function getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
 }
 
+function getApiBase(): string {
+    return (import.meta.env.VITE_API_PATH as string | undefined) ?? "";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const isJson = typeof init?.body === "string";
     const res = await fetch(`/api${path}`, {
@@ -184,11 +188,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return data as T;
 }
 
+async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
+    const isJson = typeof init?.body === "string";
+    const base = getApiBase();
+    const res = await fetch(`${base}/api${path}`, {
+        ...init,
+        credentials: "include",
+        headers: {
+            ...(isJson ? { "Content-Type": "application/json" } : {}),
+            ...init?.headers,
+        },
+    });
+
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+
+    if (!res.ok) {
+        throw new Error(data?.message ?? `请求失败（${res.status}）`);
+    }
+    return data as T;
+}
+
 export function login(login: string, password: string): Promise<LoginResponse> {
-    return request<LoginResponse>("/passport/login", {
+    return authRequest<LoginResponse>("/passport/login", {
         method: "POST",
         body: JSON.stringify({ login, password }),
     });
+}
+
+export function logout(): Promise<{ success: boolean }> {
+    return authRequest<{ success: boolean }>("/passport/logout", { method: "POST" });
 }
 
 export function register(username: string, email: string, password: string, avatar?: File | null): Promise<UserPublic> {

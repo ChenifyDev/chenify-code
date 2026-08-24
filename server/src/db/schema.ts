@@ -245,8 +245,12 @@ export const oauthAuthCodes = sqliteTable(
     {
         id: integer("id").primaryKey({ autoIncrement: true }),
         code: text("code").notNull().unique(),
-        user_id: integer("user_id").notNull().references(() => users.id),
-        client_id: text("client_id").notNull().references(() => oauthClients.id),
+        user_id: integer("user_id")
+            .notNull()
+            .references(() => users.id),
+        client_id: text("client_id")
+            .notNull()
+            .references(() => oauthClients.id),
         redirect_uri: text("redirect_uri").notNull(),
         code_challenge: text("code_challenge").notNull(),
         scope: text("scope").notNull().default(""),
@@ -264,8 +268,12 @@ export const oauthRefreshTokens = sqliteTable(
     {
         id: integer("id").primaryKey({ autoIncrement: true }),
         token_hash: text("token_hash").notNull().unique(),
-        user_id: integer("user_id").notNull().references(() => users.id),
-        client_id: text("client_id").notNull().references(() => oauthClients.id),
+        user_id: integer("user_id")
+            .notNull()
+            .references(() => users.id),
+        client_id: text("client_id")
+            .notNull()
+            .references(() => oauthClients.id),
         scope: text("scope").notNull().default(""),
         expires_at: text("expires_at").notNull(),
         revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),

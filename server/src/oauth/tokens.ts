@@ -12,11 +12,7 @@ export interface AccessTokenPayload {
     token_type: "access_token";
 }
 
-export async function signAccessToken(
-    userId: number,
-    clientId: string,
-    scope: string,
-): Promise<string> {
+export async function signAccessToken(userId: number, clientId: string, scope: string): Promise<string> {
     // sub stays numeric: consumed internally by getAuthUserId
     const payload = {
         sub: userId,
@@ -31,9 +27,7 @@ export async function signAccessToken(
         .sign(SECRET);
 }
 
-export async function verifyAccessToken(
-    token: string,
-): Promise<AccessTokenPayload | null> {
+export async function verifyAccessToken(token: string): Promise<AccessTokenPayload | null> {
     try {
         const { payload } = await jwtVerify(token, SECRET);
         if (payload.token_type !== "access_token") return null;
@@ -44,11 +38,7 @@ export async function verifyAccessToken(
 }
 
 // OIDC id_token; goth requires aud=client_id and iss matching the discovery issuer
-export async function signIdToken(
-    userId: number,
-    clientId: string,
-    issuer: string,
-): Promise<string> {
+export async function signIdToken(userId: number, clientId: string, issuer: string): Promise<string> {
     return new SignJWT({
         iss: issuer,
         sub: String(userId),

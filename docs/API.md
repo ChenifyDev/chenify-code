@@ -132,6 +132,16 @@
 
 错误：`401` 未提供有效登录凭证。
 
+#### 退出登录
+
+`POST /api/passport/logout`
+
+需要登录。清除服务端会话 Cookie，并返回：
+
+```json
+{ "success": true }
+```
+
 #### 修改个人资料
 
 `PATCH /api/user/profile`
@@ -148,7 +158,41 @@
 
 错误：`401` 未登录，`400` 未提供任何修改项/用户名长度不合法/头像不合法，`409` 用户名已被占用。
 
-### 二、帖子（Posts）
+### 二、OAuth 2.0 / OpenID Connect（Provider）
+
+Chenify 同时是一个 OAuth 2.0 / OIDC 提供方，第三方应用可以通过 Chenify 账号授权登录。
+
+服务发现：
+
+`GET /.well-known/openid-configuration`
+
+授权端点：
+
+`GET /oauth/authorize?response_type=code&client_id=<client_id>&redirect_uri=<redirect_uri>&scope=<scope>&state=<state>&code_challenge=<challenge>&code_challenge_method=S256`
+
+- 用户未登录时，会重定向到前端登录页（由 `OAUTH_LOGIN_URL` 配置），并携带 `return_to` 参数。
+- 登录完成后，前端会回跳到该授权端点；服务端校验通过后会生成授权码，并 302 跳转到 `redirect_uri`。
+- 授权端点同时接受 `Authorization: Bearer <JWT>` 请求头和名为 `chenify_session` 的 HttpOnly Cookie。
+
+Token 端点：
+
+`POST /oauth/token`
+
+支持 `authorization_code` 和 `refresh_token` 两种 grant type。
+
+用户信息端点：
+
+`GET /oauth/userinfo`
+
+需要携带有效的 OAuth access token。
+
+客户端管理端点：
+
+- `POST /oauth/clients`：创建客户端
+- `GET /oauth/clients`：列出客户端
+- `DELETE /oauth/clients/:id`：删除客户端
+
+### 三、帖子（Posts）
 
 #### 帖子列表
 
@@ -769,49 +813,57 @@
 
 ## 接口索引
 
-| 方法   | 路径                              | 认证       |
-| ------ | --------------------------------- | ---------- |
-| POST   | `/api/passport/register`          | 否         |
-| POST   | `/api/passport/login`             | 否         |
-| GET    | `/api/passport/me`                | 是         |
-| GET    | `/api/posts`                      | 否         |
-| POST   | `/api/posts`                      | 是         |
-| GET    | `/api/posts/:id`                  | 否         |
-| DELETE | `/api/posts/:id`                  | 是（作者） |
-| POST   | `/api/posts/:id/like`             | 是         |
-| DELETE | `/api/posts/:id/like`             | 是         |
-| POST   | `/api/posts/:id/favorite`         | 是         |
-| DELETE | `/api/posts/:id/favorite`         | 是         |
-| GET    | `/api/posts/:id/comments`         | 否         |
-| POST   | `/api/posts/:id/comments`         | 是         |
-| DELETE | `/api/comments/:id`               | 是（本人） |
-| POST   | `/api/comments/:id/like`          | 是         |
-| DELETE | `/api/comments/:id/like`          | 是         |
-| POST   | `/api/users/:id/follow`           | 是         |
-| DELETE | `/api/users/:id/follow`           | 是         |
-| GET    | `/api/tags`                       | 否         |
-| PATCH  | `/api/user/privacy`               | 是         |
-| PATCH  | `/api/user/profile`               | 是         |
-| GET    | `/api/drafts`                     | 是         |
-| POST   | `/api/drafts`                     | 是         |
-| GET    | `/api/drafts/:id`                 | 是（本人） |
-| PATCH  | `/api/drafts/:id`                 | 是（本人） |
-| DELETE | `/api/drafts/:id`                 | 是（本人） |
-| POST   | `/api/drafts/:id/publish`         | 是（本人） |
-| POST   | `/api/drafts/:id/unpublish`       | 是（本人） |
-| GET    | `/api/users/:id/space`            | 否         |
-| GET    | `/api/users/:id/space/posts`      | 否         |
-| GET    | `/api/users/:id/space/favorites`  | 否         |
-| GET    | `/api/users/:id/space/following`  | 否         |
-| GET    | `/api/users/:id/space/followers`  | 否         |
-| GET    | `/api/search`                     | 否         |
-| POST   | `/api/works`                      | 是         |
-| POST   | `/api/works/:id/like`             | 是         |
-| DELETE | `/api/works/:id/like`             | 是         |
-| POST   | `/api/works/:id/comments`         | 是         |
-| POST   | `/api/works/comments/:id/like`    | 是         |
-| DELETE | `/api/works/comments/:id/like`    | 是         |
-| GET    | `/api/notifications`              | 是         |
-| GET    | `/api/notifications/unread-count` | 是         |
-| POST   | `/api/notifications/read`         | 是         |
-| GET    | `/uploads/*`                      | 否         |
+| 方法   | 路径                                | 认证         |
+| ------ | ----------------------------------- | ------------ |
+| POST   | `/api/passport/register`            | 否           |
+| POST   | `/api/passport/login`               | 否           |
+| POST   | `/api/passport/logout`              | 是           |
+| GET    | `/api/passport/me`                  | 是           |
+| GET    | `/.well-known/openid-configuration` | 否           |
+| GET    | `/oauth/authorize`                  | 否（需会话） |
+| POST   | `/oauth/token`                      | 否           |
+| GET    | `/oauth/userinfo`                   | 是           |
+| POST   | `/oauth/clients`                    | 否           |
+| GET    | `/oauth/clients`                    | 否           |
+| DELETE | `/oauth/clients/:id`                | 否           |
+| GET    | `/api/posts`                        | 否           |
+| POST   | `/api/posts`                        | 是           |
+| GET    | `/api/posts/:id`                    | 否           |
+| DELETE | `/api/posts/:id`                    | 是（作者）   |
+| POST   | `/api/posts/:id/like`               | 是           |
+| DELETE | `/api/posts/:id/like`               | 是           |
+| POST   | `/api/posts/:id/favorite`           | 是           |
+| DELETE | `/api/posts/:id/favorite`           | 是           |
+| GET    | `/api/posts/:id/comments`           | 否           |
+| POST   | `/api/posts/:id/comments`           | 是           |
+| DELETE | `/api/comments/:id`                 | 是（本人）   |
+| POST   | `/api/comments/:id/like`            | 是           |
+| DELETE | `/api/comments/:id/like`            | 是           |
+| POST   | `/api/users/:id/follow`             | 是           |
+| DELETE | `/api/users/:id/follow`             | 是           |
+| GET    | `/api/tags`                         | 否           |
+| PATCH  | `/api/user/privacy`                 | 是           |
+| PATCH  | `/api/user/profile`                 | 是           |
+| GET    | `/api/drafts`                       | 是           |
+| POST   | `/api/drafts`                       | 是           |
+| GET    | `/api/drafts/:id`                   | 是（本人）   |
+| PATCH  | `/api/drafts/:id`                   | 是（本人）   |
+| DELETE | `/api/drafts/:id`                   | 是（本人）   |
+| POST   | `/api/drafts/:id/publish`           | 是（本人）   |
+| POST   | `/api/drafts/:id/unpublish`         | 是（本人）   |
+| GET    | `/api/users/:id/space`              | 否           |
+| GET    | `/api/users/:id/space/posts`        | 否           |
+| GET    | `/api/users/:id/space/favorites`    | 否           |
+| GET    | `/api/users/:id/space/following`    | 否           |
+| GET    | `/api/users/:id/space/followers`    | 否           |
+| GET    | `/api/search`                       | 否           |
+| POST   | `/api/works`                        | 是           |
+| POST   | `/api/works/:id/like`               | 是           |
+| DELETE | `/api/works/:id/like`               | 是           |
+| POST   | `/api/works/:id/comments`           | 是           |
+| POST   | `/api/works/comments/:id/like`      | 是           |
+| DELETE | `/api/works/comments/:id/like`      | 是           |
+| GET    | `/api/notifications`                | 是           |
+| GET    | `/api/notifications/unread-count`   | 是           |
+| POST   | `/api/notifications/read`           | 是           |
+| GET    | `/uploads/*`                        | 否           |

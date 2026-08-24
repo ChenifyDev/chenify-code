@@ -1,36 +1,36 @@
 # Chenify 后端配置
 server:
-  port: 8080
+    port: 8080
 
 database:
-  # sqlite 数据库文件路径（相对本文件所在目录）
-  path: ./app.db
+    # sqlite 数据库文件路径（相对本文件所在目录）
+    path: ./app.db
 
 jwt:
-  # 与旧后端保持一致，前端已签发的 token 可以直接沿用
-  secret: chenify-dev-secret
-  expires_days: 7
+    # 与旧后端保持一致，前端已签发的 token 可以直接沿用
+    secret: chenify-dev-secret
+    expires_days: 7
 
 storage:
-  # 资源文件存放方式：s3（S3API / MinIO）
-  type: s3
-  s3:
-    # MinIO 或任意 S3 兼容服务的端点
-    endpoint: 127.0.0.1:9000
-    # 是否使用路径风格寻址（MinIO/自建服务必须为 true）
-    use_path_style: true
-    access_key: chenify
-    secret_key: chenify-secret
-    region: us-east-1
-    # 图片/头像等公共资源的桶
-    bucket: chenify-assets
-    # 编程作品桶前缀，实际桶名为 <work_bucket_prefix>-<作品uuid>
-    work_bucket_prefix: chenify-work
+    # 资源文件存放方式：s3（S3API / MinIO）
+    type: s3
+    s3:
+        # MinIO 或任意 S3 兼容服务的端点
+        endpoint: 127.0.0.1:9000
+        # 是否使用路径风格寻址（MinIO/自建服务必须为 true）
+        use_path_style: true
+        access_key: chenify
+        secret_key: chenify-secret
+        region: us-east-1
+        # 图片/头像等公共资源的桶
+        bucket: chenify-assets
+        # 编程作品桶前缀，实际桶名为 <work_bucket_prefix>-<作品uuid>
+        work_bucket_prefix: chenify-work
 
 limits:
-  # 图片单张最大字节（默认 2MB）
-  max_image_size: 2097152
-  # 单帖最多图片数
-  max_images_per_post: 9
-  # 作品文件单个最大字节（默认 100MB）
-  max_work_file_size: 104857600
+    # 图片单张最大字节（默认 2MB）
+    max_image_size: 2097152
+    # 单帖最多图片数
+    max_images_per_post: 9
+    # 作品文件单个最大字节（默认 100MB）
+    max_work_file_size: 104857600

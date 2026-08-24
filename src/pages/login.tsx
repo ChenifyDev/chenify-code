@@ -1,4 +1,4 @@
-import React, { type ChangeEventHandler, type SubmitEventHandler, useCallback, useState } from "react";
+import React, { type ChangeEventHandler, type SubmitEventHandler, useCallback, useMemo, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button.tsx";
@@ -9,9 +9,30 @@ import { Label } from "@/components/ui/label.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { login, register, setToken, type UserPublic } from "@/lib/api.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type Status = { type: "error" | "success"; text: string } | null;
+
+function getSafeReturnTo(raw: string | null): string | null {
+    if (!raw) return null;
+    try {
+        const url = new URL(raw, window.location.href);
+        const apiBase = (import.meta.env.VITE_API_PATH as string | undefined) ?? "";
+        const allowedOrigins = new Set<string>([window.location.origin]);
+        if (apiBase) {
+            try {
+                allowedOrigins.add(new URL(apiBase).origin);
+            } catch {
+                // ignore invalid VITE_API_PATH
+            }
+        }
+        if (!allowedOrigins.has(url.origin)) return null;
+        if (url.pathname !== "/oauth/authorize") return null;
+        return url.toString();
+    } catch {
+        return null;
+    }
+}
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
     return (
@@ -35,7 +56,7 @@ function StatusMessage({ status }: { status: Status }) {
     );
 }
 
-function LoginForm({ onSuccess }: { onSuccess: (user: UserPublic) => void }) {
+function LoginForm({ returnTo, onSuccess }: { returnTo: string | null; onSuccess: (user: UserPublic) => void }) {
     const [loginName, setLoginName] = useState("");
     const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(true);
@@ -59,7 +80,11 @@ function LoginForm({ onSuccess }: { onSuccess: (user: UserPublic) => void }) {
             setToken(token, remember);
             setStatus({ type: "success", text: `欢迎回来，${user.username}` });
             onSuccess(user);
-            navigate("/");
+            if (returnTo) {
+                window.location.href = returnTo;
+            } else {
+                navigate("/");
+            }
         } catch (err) {
             setStatus({ type: "error", text: err instanceof Error ? err.message : "登录失败" });
         } finally {
@@ -276,6 +301,8 @@ export default function Login() {
     const [tab, setTab] = useState<string>("login");
     const [defaultUsername, setDefaultUsername] = useState("");
     const { setUser } = useUserStore();
+    const [searchParams] = useSearchParams();
+    const returnTo = useMemo(() => getSafeReturnTo(searchParams.get("return_to")), [searchParams]);
 
     const handleRegistered = useCallback((username: string) => {
         setDefaultUsername(username);
@@ -299,7 +326,7 @@ export default function Login() {
                             </TabsTrigger>
                         </TabsList>
                         <TabsContent value="login" className="pt-4">
-                            <LoginForm onSuccess={setUser} />
+                            <LoginForm returnTo={returnTo} onSuccess={setUser} />
                         </TabsContent>
                         <TabsContent value="register" className="pt-4">
                             <RegisterForm defaultUsername={defaultUsername} onRegistered={handleRegistered} />

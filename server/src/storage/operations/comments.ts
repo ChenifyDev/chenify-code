@@ -17,20 +17,22 @@ export async function deleteComments(store: CollectionStore, blobStore: BlobStor
 }
 
 async function deleteCommentRowsLeafFirst(store: CollectionStore, blobStore: BlobStore, ids: number[]) {
-const rows = await store.read<StoredComment>(C.comments);
-for (const row of rows.filter((r) => ids.includes(r.id))) {
-    await deleteContentBlob(blobStore, row.content);
-}
-const remaining = new Set(ids);
-while (remaining.size > 0) {
-    const allRows = await store.read<StoredComment>(C.comments);
-    const parents = new Set(allRows.filter((row) => remaining.has(row.parent_id ?? -1)).map((row) => row.parent_id));
-    const leaves = [...remaining].filter((id) => !parents.has(id));
-    if (leaves.length === 0) break;
-    await Promise.all(leaves.map((id) => store.removeById(C.comments, id)));
-    for (const id of leaves) remaining.delete(id);
-}
-await store.deleteWhere<StoredComment>(C.comments, (row) => ids.includes(row.id));
+    const rows = await store.read<StoredComment>(C.comments);
+    for (const row of rows.filter((r) => ids.includes(r.id))) {
+        await deleteContentBlob(blobStore, row.content);
+    }
+    const remaining = new Set(ids);
+    while (remaining.size > 0) {
+        const allRows = await store.read<StoredComment>(C.comments);
+        const parents = new Set(
+            allRows.filter((row) => remaining.has(row.parent_id ?? -1)).map((row) => row.parent_id),
+        );
+        const leaves = [...remaining].filter((id) => !parents.has(id));
+        if (leaves.length === 0) break;
+        await Promise.all(leaves.map((id) => store.removeById(C.comments, id)));
+        for (const id of leaves) remaining.delete(id);
+    }
+    await store.deleteWhere<StoredComment>(C.comments, (row) => ids.includes(row.id));
 }
 
 export function createCommentsRepo(store: CollectionStore, blobStore: BlobStore): CommentsRepo {
@@ -101,7 +103,12 @@ export function createCommentsRepo(store: CollectionStore, blobStore: BlobStore)
                 commentsOfPost.map(async (row) => {
                     const author = userMap.get(row.user_id);
                     const authorInfo: UserSummary = author
-                        ? { id: author.id, username: author.username, avatar: author.avatar, created_at: author.created_at }
+                        ? {
+                              id: author.id,
+                              username: author.username,
+                              avatar: author.avatar,
+                              created_at: author.created_at,
+                          }
                         : { id: row.user_id, username: "未知用户", avatar: null, created_at: "" };
                     return {
                         id: row.id,

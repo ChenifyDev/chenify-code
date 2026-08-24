@@ -1,5 +1,5 @@
 import { Home as HomePage } from "@/pages/home.tsx";
-import { clearToken } from "@/lib/api.ts";
+import { clearToken, logout } from "@/lib/api.ts";
 import { Loader2 } from "lucide-react";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,7 @@ function App() {
             <HomePage
                 user={user}
                 onLogout={() => {
+                    logout().catch(() => undefined);
                     clearToken();
                     setUser(null);
                 }}
