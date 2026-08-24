@@ -13,17 +13,23 @@ import { routes as oauthRoutes } from "./oauth";
 
 const app = new Hono();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()) ?? [];
+const allowedOrigins = ["https://code.chenify.top"];
+
 app.use(
     cors({
         origin: (origin) => {
-            if (!origin) return allowedOrigins[0] ?? "";
-            return allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] ?? "");
+            if (!origin) {
+                return allowedOrigins[0] ?? "";
+            }
+            if (allowedOrigins.includes(origin)) {
+                return origin;
+            }
+            return null;
         },
         allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "Authorization"],
         exposeHeaders: ["Location"],
-        credentials: allowedOrigins.length > 0,
+        credentials: true,
         maxAge: 86400,
     }),
 );
