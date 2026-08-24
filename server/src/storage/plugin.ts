@@ -8,8 +8,6 @@ import type {
     SpaceUser,
     User,
     UserPublic,
-    Work,
-    WorkComment,
 } from "./types";
 import type { BlobStore, CollectionStore } from "./store";
 
@@ -144,48 +142,6 @@ export interface RankRepo {
     rankUsersByPoints(options: { offset: number; limit: number }, viewerId?: number): Promise<PointsUser[]>;
     getFollowerRank(userId: number): Promise<number>;
     getPointsRank(userId: number): Promise<number>;
-}
-
-export interface WorksRepo {
-    getWorkOwner(workId: number): Promise<number | null>;
-    createWork(
-        userId: number,
-        data: { title?: string | null; description?: string | null; cover?: string | null; git_path?: string | null },
-    ): Promise<Work | null>;
-    getWorkById(id: number, viewerId: number | null): Promise<Work | null>;
-    listWorks(options: {
-        offset: number;
-        limit: number;
-        viewerId: number | null;
-        sort?: "latest" | "hot";
-    }): Promise<Work[]>;
-    updateWork(
-        id: number,
-        data: { title?: string | null; description?: string | null; cover?: string | null; git_path?: string | null },
-    ): Promise<Work | null>;
-    deleteWork(id: number): Promise<{ coverPath: string | null }>;
-    toggleWorkLike(userId: number, workId: number): Promise<{ liked: boolean; likes_count: number }>;
-    unlikeWork(userId: number, workId: number): Promise<{ liked: boolean; likes_count: number }>;
-    searchWorks(options: { offset: number; limit: number; keyword: string; sort?: "latest" | "hot" }): Promise<Work[]>;
-}
-
-export interface WorksCommentsRepo {
-    createWorkComment(
-        userId: number,
-        workId: number,
-        content: string,
-        parentId?: number | null,
-    ): Promise<WorkComment | null>;
-    listWorkComments(
-        workId: number,
-        viewerId: number | null,
-        options: { offset: number; limit: number },
-    ): Promise<WorkComment[]>;
-    getWorkCommentOwner(id: number): Promise<number | null>;
-    workCommentBelongsToWork(commentId: number, workId: number): Promise<boolean>;
-    toggleWorkCommentLike(userId: number, commentId: number): Promise<{ liked: boolean; likes_count: number }>;
-    unlikeWorkComment(userId: number, commentId: number): Promise<{ liked: boolean; likes_count: number }>;
-    deleteWorkComment(id: number): Promise<boolean>;
 }
 
 export interface StoragePlugin {

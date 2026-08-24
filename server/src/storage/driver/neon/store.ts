@@ -2,7 +2,6 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as dbSchema from "../../../db/pg-schema";
-import * as worksSchema from "../../../works/pg-schema";
 import type { CollectionStore } from "../../store";
 
 const NO_ID = new Set(["follows", "post_tags", "draft_tags"]);
@@ -35,14 +34,14 @@ function connectionString(): string {
 function getDb(): any {
     if (!db) {
         const sql = neon(connectionString());
-        db = drizzle(sql, { schema: { ...dbSchema, ...worksSchema } });
+        db = drizzle(sql, { schema: { ...dbSchema } });
     }
     return db;
 }
 
 function resolve(name: string): { table: any; hasId: boolean } {
     const key = TABLE_KEY[name] ?? name;
-    const table = (dbSchema as any)[key] ?? (worksSchema as any)[key];
+    const table = (dbSchema as any)[key];
     if (table == null) throw new Error(`unknown collection: ${name}`);
     return { table, hasId: !NO_ID.has(name) };
 }

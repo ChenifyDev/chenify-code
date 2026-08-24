@@ -10,10 +10,6 @@ import type {
     User,
     UserPublic,
     UserSummary,
-    Work,
-    WorkComment,
-    WorkCommentFlat,
-    WorkRowWithCounts,
 } from "./types";
 
 export function toPublicUser(user: User): UserPublic {
@@ -88,21 +84,6 @@ export interface WorkHydrationContext {
     likedIds: Set<number>;
 }
 
-export function buildWorks(rows: WorkRowWithCounts[], ctx: WorkHydrationContext): Work[] {
-    return rows.map((row) => ({
-        id: row.id,
-        user_id: row.user_id,
-        title: row.title,
-        description: row.description,
-        cover: row.cover,
-        git_path: row.git_path,
-        likes_count: row.likes_count,
-        comments_count: row.comments_count,
-        author: ctx.authors.get(row.user_id) ?? { id: row.user_id, username: "未知用户", avatar: null, created_at: "" },
-        is_liked: ctx.likedIds.has(row.id),
-    }));
-}
-
 export interface NotificationHydrationContext {
     actors: Map<number, UserSummary>;
     postSnippets: Map<number, string>;
@@ -173,22 +154,6 @@ export function toCommentNode(node: CommentNode): Comment {
     };
 }
 
-export type WorkCommentNode = WorkCommentFlat & { author: UserSummary; likes_count: number; is_liked: boolean };
-
-export function toWorkCommentNode(node: WorkCommentNode): WorkComment {
-    return {
-        id: node.id,
-        work_id: node.work_id,
-        parent_id: node.parent_id,
-        content: node.content,
-        created_at: node.created_at,
-        author: node.author,
-        likes_count: node.likes_count,
-        is_liked: node.is_liked,
-        replies: [],
-    };
-}
-
 function nestThread<T extends { id: number; parent_id: number | null; created_at: string }, N extends { replies: N[] }>(
     base: T[],
     options: { offset: number; limit: number },
@@ -230,11 +195,4 @@ function nestThread<T extends { id: number; parent_id: number | null; created_at
 
 export function buildCommentTree(rows: CommentNode[], options: { offset: number; limit: number }): Comment[] {
     return nestThread(rows, options, toCommentNode);
-}
-
-export function buildWorkCommentTree(
-    rows: WorkCommentNode[],
-    options: { offset: number; limit: number },
-): WorkComment[] {
-    return nestThread(rows, options, toWorkCommentNode);
 }

@@ -10,8 +10,6 @@ import type {
     RankRepo,
     TagsRepo,
     UsersRepo,
-    WorksCommentsRepo,
-    WorksRepo,
 } from "../plugin";
 import { createUsersRepo } from "./users";
 import { createPostsRepo } from "./posts";
@@ -23,8 +21,6 @@ import { createDraftsRepo } from "./drafts";
 import { createTagsRepo } from "./tags";
 import { createNotificationsRepo } from "./notifications";
 import { createRankRepo } from "./rank";
-import { createWorksRepo } from "./works";
-import { createWorksCommentsRepo } from "./works-comments";
 
 export interface Operations {
     users: UsersRepo;
@@ -37,8 +33,6 @@ export interface Operations {
     tags: TagsRepo;
     notifications: NotificationsRepo;
     rank: RankRepo;
-    works: WorksRepo;
-    worksComments: WorksCommentsRepo;
 }
 
 export function createOperations(store: CollectionStore, blobs: BlobStore): Operations {
@@ -53,7 +47,5 @@ export function createOperations(store: CollectionStore, blobs: BlobStore): Oper
         tags: createTagsRepo(store),
         notifications: createNotificationsRepo(store),
         rank: createRankRepo(store),
-        works: createWorksRepo(store),
-        worksComments: createWorksCommentsRepo(store),
     };
 }

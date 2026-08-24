@@ -10,8 +10,6 @@ import type {
     RankRepo,
     TagsRepo,
     UsersRepo,
-    WorksCommentsRepo,
-    WorksRepo,
 } from "./plugin";
 import type { StoragePlugin } from "./plugin";
 import { createOperations } from "./operations";
@@ -32,8 +30,6 @@ export interface Storage {
     readonly tags: TagsRepo;
     readonly notifications: NotificationsRepo;
     readonly rank: RankRepo;
-    readonly works: WorksRepo;
-    readonly worksComments: WorksCommentsRepo;
 }
 
 let storage: Storage | null = null;

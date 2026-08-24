@@ -1,8 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getDb as getAppDb } from "../../../db/client";
-import { getWorksDb } from "../../../works/db";
 import * as appSchema from "../../../db/schema";
-import * as worksSchema from "../../../works/schema";
 import type { CollectionStore } from "../../store";
 
 const appTables: Record<string, unknown> = {
@@ -25,13 +23,6 @@ const appTables: Record<string, unknown> = {
     oauth_refresh_tokens: appSchema.oauthRefreshTokens,
 };
 
-const worksTables: Record<string, unknown> = {
-    works: worksSchema.works,
-    works_likes: worksSchema.likes,
-    works_comments: worksSchema.comments,
-    works_comment_likes: worksSchema.commentLikes,
-};
-
 const NO_ID = new Set(["follows", "post_tags", "draft_tags"]);
 
 const PK_COLUMNS: Record<string, string[]> = {
@@ -42,9 +33,9 @@ const PK_COLUMNS: Record<string, string[]> = {
 
 function resolve(name: string): { db: any; table: any; hasId: boolean } {
     const inApp = name in appTables;
-    const table = inApp ? appTables[name] : worksTables[name];
+    const table = inApp ? appTables[name] : null;
     if (table == null) throw new Error(`unknown collection: ${name}`);
-    return { db: inApp ? getAppDb() : getWorksDb(), table, hasId: !NO_ID.has(name) };
+    return { db: inApp ? getAppDb() : null, table, hasId: !NO_ID.has(name) };
 }
 
 function pkColumns(name: string): string[] {

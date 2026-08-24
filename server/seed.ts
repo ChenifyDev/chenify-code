@@ -404,9 +404,7 @@ async function main() {
 
     if (reset) {
         const allUsers = await store.read<StoredUser>(C.users);
-        const userIds = allUsers
-            .filter((user) => SAMPLE_USERNAMES.includes(user.username))
-            .map((user) => user.id);
+        const userIds = allUsers.filter((user) => SAMPLE_USERNAMES.includes(user.username)).map((user) => user.id);
         const userIdSet = new Set(userIds);
 
         if (userIdSet.size > 0) {
@@ -433,9 +431,16 @@ async function main() {
             await store.deleteWhere<StoredComment>(C.comments, (row) => userIdSet.has(row.user_id));
             await store.deleteWhere<StoredFavorite>(C.favorites, (row) => userIdSet.has(row.user_id));
             await store.deleteWhere<StoredLike>(C.likes, (row) => userIdSet.has(row.user_id));
-            await store.deleteWhere<StoredFollow>(C.follows, (row) => userIdSet.has(row.follower_id) || userIdSet.has(row.following_id));
-            await store.deleteWhere<StoredPostTag>(C.postTags, (row) => postsByUser.some((post) => post.id === row.post_id));
-            await store.deleteWhere<StoredDraftTag>(C.draftTags, (row) => draftsByUser.some((draft) => draft.id === row.draft_id));
+            await store.deleteWhere<StoredFollow>(
+                C.follows,
+                (row) => userIdSet.has(row.follower_id) || userIdSet.has(row.following_id),
+            );
+            await store.deleteWhere<StoredPostTag>(C.postTags, (row) =>
+                postsByUser.some((post) => post.id === row.post_id),
+            );
+            await store.deleteWhere<StoredDraftTag>(C.draftTags, (row) =>
+                draftsByUser.some((draft) => draft.id === row.draft_id),
+            );
             await store.deleteWhere<StoredPost>(C.posts, (row) => userIdSet.has(row.user_id));
             await store.deleteWhere<StoredUser>(C.users, (row) => userIdSet.has(row.id));
         }
@@ -507,6 +512,7 @@ async function main() {
             const postId = postIds.get(key);
             if (postId !== undefined) {
                 await store.append<StoredFavorite>(C.favorites, {
+                    id: Math.random(),
                     user_id: followerId,
                     post_id: postId,
                     created_at: new Date().toISOString(),
@@ -517,6 +523,7 @@ async function main() {
             const postId = postIds.get(key);
             if (postId !== undefined) {
                 await store.append<StoredLike>(C.likes, {
+                    id: Math.random(),
                     user_id: followerId,
                     post_id: postId,
                     created_at: new Date().toISOString(),
@@ -539,7 +546,10 @@ async function main() {
             if (comment.parent_content) {
                 const comments = await store.read<StoredComment>(C.comments);
                 for (const row of comments) {
-                    if (row.post_id === postId && (await loadContentBlob(blobs, row.content)) === comment.parent_content) {
+                    if (
+                        row.post_id === postId &&
+                        (await loadContentBlob(blobs, row.content)) === comment.parent_content
+                    ) {
                         parentId = row.id;
                         break;
                     }
@@ -561,6 +571,7 @@ async function main() {
                 const likerId = idMap.get(liker);
                 if (likerId !== undefined) {
                     await store.append<StoredCommentLike>(C.commentLikes, {
+                        id: Math.random(),
                         comment_id: commentId,
                         user_id: likerId,
                         created_at: comment.created_at,

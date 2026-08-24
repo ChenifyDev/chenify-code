@@ -8,7 +8,6 @@ import { routes as forumRoutes } from "./routes/forum";
 import { routes as spaceRoutes } from "./routes/space";
 import { routes as searchRoutes } from "./routes/search";
 import { routes as notificationRoutes } from "./routes/notifications";
-import { routes as worksRoutes } from "./routes/works";
 import { routes as rankRoutes } from "./routes/rank";
 import { routes as oauthRoutes } from "./oauth";
 
@@ -37,7 +36,6 @@ registerRoutes(app, {
     ...spaceRoutes,
     ...searchRoutes,
     ...notificationRoutes,
-    ...worksRoutes,
     ...rankRoutes,
     ...oauthRoutes,
 });
