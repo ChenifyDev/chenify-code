@@ -22,7 +22,7 @@ export function Home() {
         setError(null);
         try {
             const list = await listFollowingPosts({ offset: offsetRef.current, limit: LIMIT });
-            setHasMore(list.posts.length === LIMIT);
+            setHasMore(Boolean(list.hasMore));
             setItems((prev) => [...prev, ...list.posts]);
             offsetRef.current += list.posts.length;
         } catch (err) {

@@ -9,7 +9,11 @@ export const routes = {
         if (!me) return jsonError(401, "Unauthorized");
         const { offset, limit } = parsePagination(url);
         const storage = getStorage();
-        const posts = await storage.home.listFollowingPosts(me.id, { offset, limit });
-        return Response.json({ posts, offset, limit });
+        const [posts, total] = await Promise.all([
+            storage.home.listFollowingPosts(me.id, { offset, limit }),
+            storage.home.countFollowingPosts(me.id),
+        ]);
+        const hasMore = offset + posts.length < total;
+        return Response.json({ posts, total, offset, limit, hasMore });
     },
 } satisfies RouteMap;

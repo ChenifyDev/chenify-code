@@ -44,9 +44,9 @@ export default function DraftList() {
         setLoading(true);
         setError(null);
         try {
-            const list = await listDrafts(status === "all" ? undefined : status, 0, LIMIT);
-            setItems(list);
-            setHasMore(list.length === LIMIT);
+            const res = await listDrafts(status === "all" ? undefined : status, 0, LIMIT);
+            setItems(res.items);
+            setHasMore(Boolean(res.hasMore));
         } catch (err) {
             setError(err instanceof Error ? err.message : "加载失败");
         } finally {
@@ -58,10 +58,10 @@ export default function DraftList() {
         setLoadingMore(true);
         setError(null);
         try {
-            const list = await listDrafts(status === "all" ? undefined : status, offsetRef.current, LIMIT);
-            setItems((prev) => [...prev, ...list]);
-            offsetRef.current += list.length;
-            setHasMore(list.length === LIMIT);
+            const res = await listDrafts(status === "all" ? undefined : status, offsetRef.current, LIMIT);
+            setItems((prev) => [...prev, ...res.items]);
+            offsetRef.current += res.items.length;
+            setHasMore(Boolean(res.hasMore));
         } catch (err) {
             setError(err instanceof Error ? err.message : "加载失败");
         } finally {

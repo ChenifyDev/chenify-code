@@ -15,12 +15,16 @@ export const routes = {
         if (!keyword) return jsonError(400, "Invalid keyword");
         const storage = getStorage();
         if (type === "posts") {
-            const data = await storage.posts.searchPosts({ offset, limit, sort, keyword });
-            return Response.json(data);
+            const items = await storage.posts.searchPosts({ offset, limit, sort, keyword });
+            const total = (await storage.posts.searchPosts({ offset: 0, limit: Number.MAX_SAFE_INTEGER, sort, keyword })).length;
+            return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         } else {
             const me = await getAuthUser(req);
-            const data = await storage.users.searchUsers({ offset, limit, keyword }, me?.id ?? null);
-            return Response.json(data);
+            const items = await storage.users.searchUsers({ offset, limit, keyword }, me?.id ?? null);
+            const total = (
+                await storage.users.searchUsers({ offset: 0, limit: Number.MAX_SAFE_INTEGER, keyword }, me?.id ?? null)
+            ).length;
+            return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         }
     },
 } satisfies RouteMap;

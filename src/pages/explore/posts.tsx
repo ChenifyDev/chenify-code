@@ -25,10 +25,10 @@ function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
         setLoadingMore(true);
         setError(null);
         try {
-            const list = await listPosts({ offset: offsetRef.current, limit: LIMIT, tag, sort });
-            setHasMore(list.length === LIMIT);
-            setItems((prev) => [...prev, ...list]);
-            offsetRef.current += list.length;
+            const res = await listPosts({ offset: offsetRef.current, limit: LIMIT, tag, sort });
+            setHasMore(Boolean(res.hasMore));
+            setItems((prev) => [...prev, ...res.items]);
+            offsetRef.current += res.items.length;
         } catch (err) {
             setError(err instanceof Error ? err.message : "加载失败");
         } finally {

@@ -52,9 +52,11 @@ export const routes = {
             if (!(await storage.users.userExists(id))) return jsonError(404, "用户不存在");
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const viewer = await getAuthUser(req);
-            return Response.json(
-                await storage.posts.listUserPosts(id, { offset, limit, viewerId: viewer?.id ?? null }),
-            );
+            const items = await storage.posts.listUserPosts(id, { offset, limit, viewerId: viewer?.id ?? null });
+            const total = (
+                await storage.posts.listUserPosts(id, { offset: 0, limit: Number.MAX_SAFE_INTEGER, viewerId: viewer?.id ?? null })
+            ).length;
+            return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         },
     },
 
@@ -68,13 +70,12 @@ export const routes = {
             const me = await getAuthUser(req);
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_favorites_public;
-            if (hidden) return Response.json({ posts: [], hidden: true, offset, limit });
-            return Response.json({
-                posts: await storage.posts.listUserFavorites(id, { offset, limit, viewerId: me?.id ?? null }),
-                hidden: false,
-                offset,
-                limit,
-            });
+            if (hidden) return Response.json({ items: [], total: 0, hidden: true, offset, limit, hasMore: false });
+            const items = await storage.posts.listUserFavorites(id, { offset, limit, viewerId: me?.id ?? null });
+            const total = (
+                await storage.posts.listUserFavorites(id, { offset: 0, limit: Number.MAX_SAFE_INTEGER, viewerId: me?.id ?? null })
+            ).length;
+            return Response.json({ items, total, hidden: false, offset, limit, hasMore: offset + items.length < total });
         },
     },
 
@@ -88,13 +89,12 @@ export const routes = {
             const me = await getAuthUser(req);
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_follows_public;
-            if (hidden) return Response.json({ users: [], hidden: true, offset, limit });
-            return Response.json({
-                users: await storage.follows.listFollowing(id, me?.id ?? null, { offset, limit }),
-                hidden: false,
-                offset,
-                limit,
-            });
+            if (hidden) return Response.json({ items: [], total: 0, hidden: true, offset, limit, hasMore: false });
+            const items = await storage.follows.listFollowing(id, me?.id ?? null, { offset, limit });
+            const total = (
+                await storage.follows.listFollowing(id, me?.id ?? null, { offset: 0, limit: Number.MAX_SAFE_INTEGER })
+            ).length;
+            return Response.json({ items, total, hidden: false, offset, limit, hasMore: offset + items.length < total });
         },
     },
 
@@ -108,13 +108,12 @@ export const routes = {
             const me = await getAuthUser(req);
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const hidden = me?.id !== id && !user.is_follows_public;
-            if (hidden) return Response.json({ users: [], hidden: true, offset, limit });
-            return Response.json({
-                users: await storage.follows.listFollowers(id, me?.id ?? null, { offset, limit }),
-                hidden: false,
-                offset,
-                limit,
-            });
+            if (hidden) return Response.json({ items: [], total: 0, hidden: true, offset, limit, hasMore: false });
+            const items = await storage.follows.listFollowers(id, me?.id ?? null, { offset, limit });
+            const total = (
+                await storage.follows.listFollowers(id, me?.id ?? null, { offset: 0, limit: Number.MAX_SAFE_INTEGER })
+            ).length;
+            return Response.json({ items, total, hidden: false, offset, limit, hasMore: offset + items.length < total });
         },
     },
 } satisfies RouteMap;

@@ -137,10 +137,22 @@ export async function listViewerFollowingPosts(
 
 export const getViewerFollowingsPosts = listViewerFollowingPosts;
 
+export async function countViewerFollowingPosts(store: CollectionStore, viewerId: number): Promise<number> {
+    const follows = await store.read<StoredFollow>(C.follows);
+    const followingIds = new Set(follows.filter((row) => row.follower_id === viewerId).map((row) => row.following_id));
+    if (followingIds.size === 0) return 0;
+
+    const posts = await store.read<StoredPost>(C.posts);
+    return posts.filter((post) => followingIds.has(post.user_id)).length;
+}
+
 export function createHomeRepo(store: CollectionStore, blobStore: BlobStore): HomeRepo {
     return {
         async listFollowingPosts(viewerId, options) {
             return listViewerFollowingPosts(store, blobStore, viewerId, options);
+        },
+        async countFollowingPosts(viewerId) {
+            return countViewerFollowingPosts(store, viewerId);
         },
     };
 }

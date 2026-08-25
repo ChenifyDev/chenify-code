@@ -148,8 +148,8 @@ function ProfileTabs({ userId }: { userId: number }) {
     const posts = useTab(
         useCallback(
             async (offset) => {
-                const list = await getSpacePosts(userId, offset, LIMIT);
-                return { items: list, hasMore: list.length === LIMIT, hidden: false };
+                const res = await getSpacePosts(userId, offset, LIMIT);
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
             },
             [userId],
         ),
@@ -159,7 +159,7 @@ function ProfileTabs({ userId }: { userId: number }) {
         useCallback(
             async (offset) => {
                 const res = await getSpaceFavorites(userId, offset, LIMIT);
-                return { items: res.posts, hasMore: !res.hidden && res.posts.length === LIMIT, hidden: res.hidden };
+                return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),
@@ -169,7 +169,7 @@ function ProfileTabs({ userId }: { userId: number }) {
         useCallback(
             async (offset) => {
                 const res = await getSpaceFollowing(userId, offset, LIMIT);
-                return { items: res.users, hasMore: !res.hidden && res.users.length === LIMIT, hidden: res.hidden };
+                return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),
@@ -179,7 +179,7 @@ function ProfileTabs({ userId }: { userId: number }) {
         useCallback(
             async (offset) => {
                 const res = await getSpaceFollowers(userId, offset, LIMIT);
-                return { items: res.users, hasMore: !res.hidden && res.users.length === LIMIT, hidden: res.hidden };
+                return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),

@@ -9,7 +9,15 @@ export const routes = {
         const { offset, limit } = parsePagination(url);
         const storage = getStorage();
         const users = await storage.rank.rankUsersByFollowers({ offset, limit }, me?.id);
-        return Response.json({ users, my_rank: me ? await storage.rank.getFollowerRank(me.id) : null, offset, limit });
+        const total = (await storage.rank.rankUsersByFollowers({ offset: 0, limit: Number.MAX_SAFE_INTEGER }, me?.id)).length;
+        return Response.json({
+            items: users,
+            total,
+            hasMore: offset + users.length < total,
+            my_rank: me ? await storage.rank.getFollowerRank(me.id) : null,
+            offset,
+            limit,
+        });
     },
     "/api/rank/post/points": async (req) => {
         const url = new URL(req.url);
@@ -17,6 +25,14 @@ export const routes = {
         const { offset, limit } = parsePagination(url);
         const storage = getStorage();
         const users = await storage.rank.rankUsersByPoints({ offset, limit }, me?.id);
-        return Response.json({ users, my_rank: me ? await storage.rank.getPointsRank(me.id) : null, offset, limit });
+        const total = (await storage.rank.rankUsersByPoints({ offset: 0, limit: Number.MAX_SAFE_INTEGER }, me?.id)).length;
+        return Response.json({
+            items: users,
+            total,
+            hasMore: offset + users.length < total,
+            my_rank: me ? await storage.rank.getPointsRank(me.id) : null,
+            offset,
+            limit,
+        });
     },
 } satisfies RouteMap;

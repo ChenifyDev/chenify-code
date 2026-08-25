@@ -225,14 +225,14 @@ function RankTabs() {
         useCallback(async (offset) => {
             const res = await rankUsersByFollowers({ limit: LIMIT, offset });
             setMyRank(res.my_rank);
-            return { items: res.users, hasMore: res.users.length === LIMIT, hidden: false };
+            return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
     );
     const points = useTab(
         useCallback(async (offset) => {
             const res = await rankUsersByPostPoints({ limit: LIMIT, offset });
             setMyPointsRank(res.my_rank);
-            return { items: res.users, hasMore: res.users.length === LIMIT, hidden: false };
+            return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
     );
 

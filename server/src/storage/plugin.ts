@@ -139,6 +139,7 @@ export interface NotificationsRepo {
 
 export interface HomeRepo {
     listFollowingPosts(viewerId: number | null, options: { offset: number; limit: number }): Promise<Post[]>;
+    countFollowingPosts(viewerId: number): Promise<number>;
 }
 
 export interface RankRepo {

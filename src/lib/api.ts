@@ -192,13 +192,21 @@ function qs(params: Record<string, string | number | boolean | undefined | null>
     return text ? `?${text}` : "";
 }
 
+export type Paginated<T> = {
+    items: T[];
+    total: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+};
+
 export function listPosts(options: {
     offset?: number;
     limit?: number;
     tag?: string | null;
     sort?: "latest" | "hot";
-}): Promise<Post[]> {
-    return request<Post[]>(
+}): Promise<Paginated<Post>> {
+    return request<Paginated<Post>>(
         `/posts${qs({ offset: options.offset ?? 0, limit: options.limit ?? 20, tag: options.tag, sort: options.sort })}`,
         {
             headers: authHeaders(),
@@ -329,16 +337,20 @@ export function getSpace(userId: number): Promise<SpaceSkeleton> {
     return request<SpaceSkeleton>(`/users/${userId}/space`, { headers: authHeaders() });
 }
 
-export function getSpacePosts(userId: number, offset = 0, limit = 20): Promise<Post[]> {
-    return request<Post[]>(`/users/${userId}/space/posts${qs({ offset, limit })}`, { headers: authHeaders() });
+export function getSpacePosts(
+    userId: number,
+    offset = 0,
+    limit = 20,
+): Promise<Paginated<Post>> {
+    return request<Paginated<Post>>(`/users/${userId}/space/posts${qs({ offset, limit })}`, { headers: authHeaders() });
 }
 
 export function getSpaceFavorites(
     userId: number,
     offset = 0,
     limit = 20,
-): Promise<{ posts: Post[]; hidden: boolean; offset: number; limit: number }> {
-    return request<{ posts: Post[]; hidden: boolean; offset: number; limit: number }>(
+): Promise<{ items: Post[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }> {
+    return request<{ items: Post[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }>(
         `/users/${userId}/space/favorites${qs({ offset, limit })}`,
         { headers: authHeaders() },
     );
@@ -348,8 +360,8 @@ export function getSpaceFollowing(
     userId: number,
     offset = 0,
     limit = 20,
-): Promise<{ users: FollowUser[]; hidden: boolean; offset: number; limit: number }> {
-    return request<{ users: FollowUser[]; hidden: boolean; offset: number; limit: number }>(
+): Promise<{ items: FollowUser[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }> {
+    return request<{ items: FollowUser[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }>(
         `/users/${userId}/space/following${qs({ offset, limit })}`,
         { headers: authHeaders() },
     );
@@ -359,8 +371,8 @@ export function getSpaceFollowers(
     userId: number,
     offset = 0,
     limit = 20,
-): Promise<{ users: FollowUser[]; hidden: boolean; offset: number; limit: number }> {
-    return request<{ users: FollowUser[]; hidden: boolean; offset: number; limit: number }>(
+): Promise<{ items: FollowUser[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }> {
+    return request<{ items: FollowUser[]; total: number; hidden: boolean; offset: number; limit: number; hasMore: boolean }>(
         `/users/${userId}/space/followers${qs({ offset, limit })}`,
         { headers: authHeaders() },
     );
@@ -389,8 +401,12 @@ export function updateProfile(options: {
     return request<UserPublic>("/user/profile", { method: "PATCH", body: form, headers: authHeaders() });
 }
 
-export function listDrafts(status?: "draft" | "published", offset = 0, limit = 20): Promise<Draft[]> {
-    return request<Draft[]>(`/drafts${qs({ status, offset, limit })}`, { headers: authHeaders() });
+export function listDrafts(
+    status?: "draft" | "published",
+    offset = 0,
+    limit = 20,
+): Promise<Paginated<Draft>> {
+    return request<Paginated<Draft>>(`/drafts${qs({ status, offset, limit })}`, { headers: authHeaders() });
 }
 
 export function getDraft(id: number): Promise<Draft> {
@@ -419,8 +435,10 @@ export function searchPosts({
     limit: number;
     sort: "latest" | "hot";
     keyword: string;
-}): Promise<Post[]> {
-    return request<Post[]>(`/search${qs({ offset, limit, type: "posts", keyword, sort })}`, { headers: authHeaders() });
+}): Promise<Paginated<Post>> {
+    return request<Paginated<Post>>(`/search${qs({ offset, limit, type: "posts", keyword, sort })}`, {
+        headers: authHeaders(),
+    });
 }
 
 export function searchUsers({
@@ -431,8 +449,10 @@ export function searchUsers({
     offset: number;
     limit: number;
     keyword: string;
-}): Promise<FollowUser[]> {
-    return request<FollowUser[]>(`/search${qs({ offset, limit, type: "users", keyword })}`, { headers: authHeaders() });
+}): Promise<Paginated<FollowUser>> {
+    return request<Paginated<FollowUser>>(`/search${qs({ offset, limit, type: "users", keyword })}`, {
+        headers: authHeaders(),
+    });
 }
 
 export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply";
@@ -451,8 +471,8 @@ export interface AppNotification {
     comment: string;
 }
 
-export function listNotifications(offset = 0, limit = 20): Promise<AppNotification[]> {
-    return request<AppNotification[]>(`/notifications${qs({ offset, limit })}`, { headers: authHeaders() });
+export function listNotifications(offset = 0, limit = 20): Promise<Paginated<AppNotification>> {
+    return request<Paginated<AppNotification>>(`/notifications${qs({ offset, limit })}`, { headers: authHeaders() });
 }
 
 export function getUnreadNotifications(): Promise<{ count: number }> {
@@ -473,8 +493,8 @@ export function rankUsersByFollowers({
 }: {
     offset: number;
     limit: number;
-}): Promise<{ users: FollowUser[]; my_rank: number; offset: number; limit: number }> {
-    return request<{ users: FollowUser[]; my_rank: number; offset: number; limit: number }>(
+}): Promise<{ items: FollowUser[]; total: number; hasMore: boolean; my_rank: number; offset: number; limit: number }> {
+    return request<{ items: FollowUser[]; total: number; hasMore: boolean; my_rank: number; offset: number; limit: number }>(
         `/rank/followers${qs({ offset, limit })}`,
         { headers: authHeaders() },
     );
@@ -486,8 +506,8 @@ export function rankUsersByPostPoints({
 }: {
     offset: number;
     limit: number;
-}): Promise<{ users: PointsUser[]; my_rank: number; offset: number; limit: number }> {
-    return request<{ users: PointsUser[]; my_rank: number; offset: number; limit: number }>(
+}): Promise<{ items: PointsUser[]; total: number; hasMore: boolean; my_rank: number; offset: number; limit: number }> {
+    return request<{ items: PointsUser[]; total: number; hasMore: boolean; my_rank: number; offset: number; limit: number }>(
         `/rank/post/points${qs({ offset, limit })}`,
         { headers: authHeaders() },
     );
@@ -499,8 +519,11 @@ export function listFollowingPosts({
 }: {
     offset: number;
     limit: number;
-}): Promise<{ posts: Post[]; offset: number; limit: number }> {
-    return request<{ posts: Post[]; offset: number; limit: number }>(`/home/following${qs({ offset, limit })}`, {
-        headers: authHeaders(),
-    });
+}): Promise<{ posts: Post[]; total: number; offset: number; limit: number; hasMore: boolean }> {
+    return request<{ posts: Post[]; total: number; offset: number; limit: number; hasMore: boolean }>(
+        `/home/following${qs({ offset, limit })}`,
+        {
+            headers: authHeaders(),
+        },
+    );
 }
