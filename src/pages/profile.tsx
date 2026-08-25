@@ -191,9 +191,6 @@ function ProfileTabs({ userId }: { userId: number }) {
                 <TabsTrigger value="posts" className="flex-1">
                     帖子
                 </TabsTrigger>
-                <TabsTrigger value={"works"} className="flex-1">
-                    作品
-                </TabsTrigger>
                 <TabsTrigger value="favorites" className="flex-1">
                     收藏
                 </TabsTrigger>
