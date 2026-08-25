@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ImagePlus, Loader2, Save, Send, X } from "lucide-react";
-import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
@@ -42,7 +42,6 @@ export default function Write() {
     const [dirty, setDirty] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const saveDraftRef = useRef<() => Promise<void>>(async () => {});
-    const isHandlingBlock = useRef(false);
 
     // 加载已有草稿
     useEffect(() => {
@@ -113,29 +112,6 @@ export default function Write() {
     useEffect(() => {
         saveDraftRef.current = handleSaveDraft;
     }, [handleSaveDraft]);
-
-    const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-        return dirty && currentLocation.pathname !== nextLocation.pathname;
-    });
-
-    // 拦截SPA路由跳转
-    useEffect(() => {
-        if (blocker.state !== "blocked") {
-            isHandlingBlock.current = false;
-            return;
-        }
-        if (isHandlingBlock.current) return;
-        isHandlingBlock.current = true;
-
-        const ok = confirm("内容尚未保存，是否保存草稿后离开？");
-        if (ok) {
-            void saveDraftRef.current?.().then(() => {
-                blocker.proceed?.();
-            });
-        } else {
-            blocker.proceed?.();
-        }
-    }, [blocker]);
 
     if (!me) {
         navigate("/login");
