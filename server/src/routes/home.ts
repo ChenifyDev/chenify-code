@@ -1,4 +1,4 @@
-import { getAuthUser, jsonError, parsePagination } from "./util.ts";
+import { getAuthUser, jsonError, parsePagination } from "./util";
 import { getStorage } from "../storage";
 import type { RouteMap } from "../utils";
 
