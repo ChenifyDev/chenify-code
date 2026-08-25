@@ -1,28 +1,68 @@
-import type { UserPublic } from "@/lib/api.ts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { listFollowingPosts, type Post } from "@/lib/api.ts";
+import Empty from "@/components/tab/Empty";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
+import PostCard from "@/components/forum/PostCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { Loader2, Signpost } from "lucide-react";
 
-export function Home({ user, onLogout }: { user: UserPublic; onLogout: () => void }) {
-    console.log(user);
+const LIMIT = 5;
+
+export function Home() {
+    const [items, setItems] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const offsetRef = useRef(0);
+    const startedRef = useRef(false);
+
+    const load = useCallback(async () => {
+        setLoadingMore(true);
+        setError(null);
+        try {
+            const list = await listFollowingPosts({ offset: offsetRef.current, limit: LIMIT });
+            setHasMore(list.posts.length === LIMIT);
+            setItems((prev) => [...prev, ...list.posts]);
+            offsetRef.current += list.posts.length;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "加载失败");
+        } finally {
+            setLoadingMore(false);
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (startedRef.current) return;
+        startedRef.current = true;
+        void load();
+    }, [load]);
+
+    if (loading) return <SkeletonList />;
+    if (error) return <Empty text={error} />;
+    if (items.length === 0) return <Empty text="这里还空空如也" />;
+
     return (
-        <Card className="w-full max-w-sm">
-            <CardHeader className="text-center">
-                <CardTitle className="text-xl">已登录</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 justify-items-center">
-                <Avatar size={"lg"}>
-                    <AvatarImage src={user.avatar} alt={user.username} />
-                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="grid gap-1 text-center">
-                    <p className="text-base font-medium">{user.username}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                </div>
-                <Button size="lg" className="w-full" onClick={onLogout}>
-                    退出登录
-                </Button>
-            </CardContent>
-        </Card>
+        <div className="mx-auto w-full max-w-3xl px-4">
+            <header className="mb-4">
+                <h1 className="flex items-center gap-2 text-xl font-semibold">
+                    <Signpost className="size-5" />
+                    我的关注
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">查看你关注的用户的动态</p>
+            </header>
+            <div className="grid gap-3">
+                {items.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                ))}
+                {hasMore && (
+                    <Button variant="outline" className="w-full" disabled={loadingMore} onClick={() => void load()}>
+                        {loadingMore && <Loader2 className="animate-spin" />}
+                        {loadingMore ? "加载中…" : "加载更多"}
+                    </Button>
+                )}
+            </div>
+        </div>
     );
 }

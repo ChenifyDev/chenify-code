@@ -137,6 +137,10 @@ export interface NotificationsRepo {
     deleteNotificationsForComment(commentIds: number[]): Promise<void>;
 }
 
+export interface HomeRepo {
+    listFollowingPosts(viewerId: number | null, options: { offset: number; limit: number }): Promise<Post[]>;
+}
+
 export interface RankRepo {
     rankUsersByFollowers(options: { offset: number; limit: number }, viewerId?: number): Promise<FollowUser[]>;
     rankUsersByPoints(options: { offset: number; limit: number }, viewerId?: number): Promise<PointsUser[]>;

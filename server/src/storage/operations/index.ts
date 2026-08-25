@@ -4,6 +4,7 @@ import type {
     DraftsRepo,
     FavoritesRepo,
     FollowsRepo,
+    HomeRepo,
     LikesRepo,
     NotificationsRepo,
     PostsRepo,
@@ -17,6 +18,7 @@ import { createCommentsRepo } from "./comments";
 import { createLikesRepo } from "./likes";
 import { createFavoritesRepo } from "./favorites";
 import { createFollowsRepo } from "./follows";
+import { createHomeRepo } from "./home";
 import { createDraftsRepo } from "./drafts";
 import { createTagsRepo } from "./tags";
 import { createNotificationsRepo } from "./notifications";
@@ -29,6 +31,7 @@ export interface Operations {
     likes: LikesRepo;
     favorites: FavoritesRepo;
     follows: FollowsRepo;
+    home: HomeRepo;
     drafts: DraftsRepo;
     tags: TagsRepo;
     notifications: NotificationsRepo;
@@ -43,6 +46,7 @@ export function createOperations(store: CollectionStore, blobs: BlobStore): Oper
         likes: createLikesRepo(store),
         favorites: createFavoritesRepo(store),
         follows: createFollowsRepo(store),
+        home: createHomeRepo(store, blobs),
         drafts: createDraftsRepo(store, blobs),
         tags: createTagsRepo(store),
         notifications: createNotificationsRepo(store),

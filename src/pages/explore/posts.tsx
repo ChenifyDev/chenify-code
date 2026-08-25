@@ -3,33 +3,14 @@ import { Clock, Flame, Loader2, Signpost } from "lucide-react";
 
 import PostCard from "@/components/forum/PostCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Card, CardContent } from "@/components/ui/card.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { listPosts, listTags, type Post } from "@/lib/api.ts";
 import { cn } from "@/lib/utils.ts";
+import Empty from "@/components/tab/Empty.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 
 type Sort = "hot" | "latest";
 
 const LIMIT = 10;
-
-function SkeletonList() {
-    return (
-        <div className="grid gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} size="sm">
-                    <CardContent className="grid gap-3">
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="size-6 rounded-full" />
-                            <Skeleton className="h-4 w-24" />
-                        </div>
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-    );
-}
 
 function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
     const [items, setItems] = useState<Post[]>([]);
@@ -78,10 +59,6 @@ function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
             )}
         </div>
     );
-}
-
-function Empty({ text }: { text: string }) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>;
 }
 
 export default function Posts() {

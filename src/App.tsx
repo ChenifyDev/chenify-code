@@ -1,11 +1,10 @@
 import { Home as HomePage } from "@/pages/home.tsx";
-import { clearToken, logout } from "@/lib/api.ts";
 import { Loader2 } from "lucide-react";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useNavigate } from "react-router-dom";
 
 function App() {
-    const { user, setUser, checking } = useUserStore();
+    const { user, checking } = useUserStore();
     const navigate = useNavigate();
 
     if (checking) {
@@ -22,14 +21,7 @@ function App() {
 
     return (
         <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
-            <HomePage
-                user={user}
-                onLogout={() => {
-                    logout().catch(() => undefined);
-                    clearToken();
-                    setUser(null);
-                }}
-            />
+            <HomePage />
         </div>
     );
 }

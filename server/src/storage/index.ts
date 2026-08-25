@@ -4,6 +4,7 @@ import type {
     DraftsRepo,
     FavoritesRepo,
     FollowsRepo,
+    HomeRepo,
     LikesRepo,
     NotificationsRepo,
     PostsRepo,
@@ -26,6 +27,7 @@ export interface Storage {
     readonly likes: LikesRepo;
     readonly favorites: FavoritesRepo;
     readonly follows: FollowsRepo;
+    readonly home: HomeRepo;
     readonly drafts: DraftsRepo;
     readonly tags: TagsRepo;
     readonly notifications: NotificationsRepo;

@@ -492,3 +492,15 @@ export function rankUsersByPostPoints({
         { headers: authHeaders() },
     );
 }
+
+export function listFollowingPosts({
+    offset,
+    limit,
+}: {
+    offset: number;
+    limit: number;
+}): Promise<{ posts: Post[]; offset: number; limit: number }> {
+    return request<{ posts: Post[]; offset: number; limit: number }>(`/home/following${qs({ offset, limit })}`, {
+        headers: authHeaders(),
+    });
+}

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getStorage } from "./storage";
 import { registerRoutes } from "./utils";
+import { routes as homeRoutes } from "./routes/home";
 import { routes as passportRoutes } from "./routes/passport";
 import { routes as forumRoutes } from "./routes/forum";
 import { routes as spaceRoutes } from "./routes/space";
@@ -44,6 +45,7 @@ registerRoutes(app, {
     ...notificationRoutes,
     ...rankRoutes,
     ...oauthRoutes,
+    ...homeRoutes,
 });
 
 const storage = getStorage();
