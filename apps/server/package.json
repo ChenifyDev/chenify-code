@@ -1,5 +1,5 @@
 {
-    "name": "server",
+    "name": "@chenify/server",
     "private": true,
     "type": "module",
     "module": "index.ts",
