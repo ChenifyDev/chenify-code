@@ -5,6 +5,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { lowlight } from "lowlight";
+import { InputRule } from "@tiptap/core";
 
 import { MathExtensions } from "@/lib/tiptap-math.ts";
 import {
@@ -28,6 +29,7 @@ import {
     type LucideIcon,
     CheckIcon,
     XIcon,
+    Link,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button.tsx";
@@ -39,12 +41,20 @@ const extensions = [
     ...MathExtensions,
     StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        link: { openOnClick: false },
+        link: {
+            openOnClick: false,
+            autolink: true,
+            validate: (url) => /^https?:\/\//.test(url),
+        },
         codeBlock: false,
     }),
     CodeBlockLowlight.configure({ lowlight, defaultLanguage: "auto" }),
     Placeholder.configure({ placeholder: "在这里写帖子…" }),
-    Markdown.configure({ markedOptions: { breaks: true } }),
+    Markdown.configure({
+        markedOptions: {
+            breaks: true,
+        },
+    }),
 ];
 
 function ToolButton({
@@ -78,7 +88,7 @@ function ToolButton({
 type inputDataType = {
     needInput: boolean;
     value: string;
-    inputType: "block" | "line";
+    inputType: "block" | "line" | "link";
 };
 
 export default function EditorField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -155,6 +165,20 @@ export default function EditorField({ value, onChange }: { value: string; onChan
         });
     };
 
+    const insertLink = () => {
+        const url = inputData.value;
+        if (!url) {
+            toast.warning("请输入链接 URL");
+            return;
+        }
+        editor.chain().focus().toggleLink({ href: url }).run();
+        setInputData({
+            value: "",
+            needInput: false,
+            inputType: "block",
+        });
+    };
+
     const group = "flex items-center gap-0.5 border-r border-border/60 pr-0.5 last:border-r-0";
 
     return (
@@ -212,6 +236,12 @@ export default function EditorField({ value, onChange }: { value: string; onChan
                         label="删除线"
                         active={toolbar?.strike}
                         onClick={() => editor.chain().focus().toggleStrike().run()}
+                    />
+                    <ToolButton
+                        icon={Link}
+                        label="插入链接"
+                        active={toolbar?.link}
+                        onClick={() => setInputData({ needInput: true, value: "", inputType: "link" })}
                     />
                 </div>
                 <div className={group}>
@@ -274,9 +304,11 @@ export default function EditorField({ value, onChange }: { value: string; onChan
                     <div className={cn(group, "flex gap-2")}>
                         <Input
                             placeholder={
-                                inputData.inputType === "block"
-                                    ? "输入块级公式的 LaTeX（无需 $$）"
-                                    : "输入行内公式的 LaTeX（无需 $）"
+                                inputData.inputType === "link"
+                                    ? "输入链接 URL"
+                                    : inputData.inputType === "block"
+                                      ? "输入块级公式的 LaTeX（无需 $$）"
+                                      : "输入行内公式的 LaTeX（无需 $）"
                             }
                             value={inputData.value}
                             onChange={(e) =>
@@ -286,7 +318,11 @@ export default function EditorField({ value, onChange }: { value: string; onChan
                                 })
                             }
                         />
-                        <Button size={"icon-sm"} variant={"outline"} onClick={insertMath}>
+                        <Button
+                            size={"icon-sm"}
+                            variant={"outline"}
+                            onClick={inputData.inputType === "link" ? insertLink : insertMath}
+                        >
                             <CheckIcon />
                         </Button>
                         <Button
