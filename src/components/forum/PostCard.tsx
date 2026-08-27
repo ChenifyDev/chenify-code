@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Bookmark, Heart, MessageCircle } from "lucide-react";
+import { Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -97,7 +97,13 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                         />
                     </Link>
                     {isTruncated && (
-                        <Button size="sm" className="w-fit self-start text-xs mx-auto" onClick={toggleExpanded}>
+                        <Button
+                            size="sm"
+                            variant={"ghost"}
+                            className="self-start w-full text-xs"
+                            onClick={toggleExpanded}
+                        >
+                            {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
                             {expanded ? "收起" : "展开"}
                         </Button>
                     )}
