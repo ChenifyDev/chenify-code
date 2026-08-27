@@ -72,7 +72,7 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
 
     const handleCopyLink = async () => {
         try {
-            await navigator.clipboard.writeText(window.location.href);
+            await navigator.clipboard.writeText(window.location.host + `/posts/${postState.id}`);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
         } catch {
