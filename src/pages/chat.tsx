@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useUserStore } from "@/stores/useUser";
 import { useChatStore } from "@/stores/useChat";
 import { ConversationList } from "@/components/chat/ConversationList";
@@ -10,7 +10,6 @@ import { MessageSquare } from "lucide-react";
 export default function ChatPage() {
     const user = useUserStore((s) => s.user);
     const checking = useUserStore((s) => s.checking);
-    const navigate = useNavigate();
     const { peerId } = useParams();
     const isMobile = useIsMobile();
 
@@ -23,7 +22,6 @@ export default function ChatPage() {
     useEffect(() => {
         if (checking) return;
         if (!user) {
-            navigate("/login");
             return;
         }
         initKeys(user.id).then(() => connect());
