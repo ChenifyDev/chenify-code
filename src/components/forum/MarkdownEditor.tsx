@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { cn } from "@/lib/utils.ts";
 import { Input } from "@/components/ui/input.tsx";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const extensions = [
     ...MathExtensions,
@@ -70,17 +71,26 @@ function ToolButton({
     onClick: () => void;
 }) {
     return (
-        <Button
-            type="button"
-            variant={active ? "outline" : "ghost"}
-            size="icon-sm"
-            aria-label={label}
-            aria-pressed={active}
-            disabled={disabled}
-            onClick={onClick}
-        >
-            <Icon />
-        </Button>
+        <Tooltip>
+            <TooltipTrigger
+                render={
+                    <Button
+                        type="button"
+                        variant={active ? "outline" : "ghost"}
+                        size="icon-sm"
+                        aria-label={label}
+                        aria-pressed={active}
+                        disabled={disabled}
+                        onClick={onClick}
+                    >
+                        <Icon />
+                    </Button>
+                }
+            />
+            <TooltipContent>
+                <p>{label}</p>
+            </TooltipContent>
+        </Tooltip>
     );
 }
 
