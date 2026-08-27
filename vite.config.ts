@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import * as path from "node:path";
 
 const API_PATH = loadEnv("development", process.cwd()).VITE_API_PATH;
+const CHAT_PATH = loadEnv("development", process.cwd()).VITE_CHAT_PATH || "http://localhost:8081";
+
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [react(), tailwindcss()],
@@ -21,6 +23,11 @@ export default defineConfig({
             "/uploads": {
                 target: API_PATH,
                 changeOrigin: true,
+            },
+            "/chat-api": {
+                target: CHAT_PATH,
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/chat-api/, ""),
             },
         },
     },

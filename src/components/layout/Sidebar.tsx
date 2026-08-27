@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Settings, Bell, Ellipsis, Podium } from "lucide-react";
+import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Settings, Bell, Ellipsis, Podium, MessageSquare } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
@@ -127,6 +127,18 @@ export default function AppSidebar() {
                                     )}
                                 </NavLink>
                             </SidebarMenuItem>
+                            {user && (
+                                <SidebarMenuItem>
+                                    <NavLink to="/chat">
+                                        {({ isActive }) => (
+                                            <SidebarMenuButton isActive={isActive} tooltip="私聊">
+                                                <MessageSquare />
+                                                <span>私聊</span>
+                                            </SidebarMenuButton>
+                                        )}
+                                    </NavLink>
+                                </SidebarMenuItem>
+                            )}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

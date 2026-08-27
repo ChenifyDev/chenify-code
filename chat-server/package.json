@@ -1,0 +1,29 @@
+{
+    "name": "chenify-chat-server",
+    "private": true,
+    "type": "module",
+    "module": "index.ts",
+    "scripts": {
+        "start": "bun index.ts",
+        "dev": "bun index.ts --watch",
+        "db:push": "drizzle-kit push",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio",
+        "test": "bun test"
+    },
+    "dependencies": {
+        "@noble/ciphers": "^2.3.0",
+        "@noble/curves": "^2.3.0",
+        "@noble/hashes": "^2.3.0",
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.13.3",
+        "jose": "^6.2.9"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "better-sqlite3": "^13.0.3",
+        "drizzle-kit": "^0.31.10",
+        "typescript": "~5.8.3"
+    }
+}

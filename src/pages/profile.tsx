@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Calendar, UserCheck, UserPlus } from "lucide-react";
+import { Calendar, UserCheck, UserPlus, MessageSquare } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import PostCard from "@/components/forum/PostCard.tsx";
@@ -345,14 +345,25 @@ export default function Profile() {
                                     />
                                 </>
                             ) : (
-                                <Button
-                                    variant={following ? "outline" : "default"}
-                                    disabled={followBusy}
-                                    onClick={handleFollow}
-                                >
-                                    {following ? <UserCheck /> : <UserPlus />}
-                                    {following ? "取消关注" : me ? "关注" : "登录后关注"}
-                                </Button>
+                                <>
+                                    <Button
+                                        variant={following ? "outline" : "default"}
+                                        disabled={followBusy}
+                                        onClick={handleFollow}
+                                    >
+                                        {following ? <UserCheck /> : <UserPlus />}
+                                        {following ? "取消关注" : me ? "关注" : "登录后关注"}
+                                    </Button>
+                                    {me && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => navigate(`/chat/${id}`)}
+                                        >
+                                            <MessageSquare />
+                                            私聊
+                                        </Button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

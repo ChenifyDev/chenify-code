@@ -13,6 +13,7 @@ import Search from "@/pages/search/index.tsx";
 import SettingsPage from "@/pages/settings.tsx";
 import NotificationsPage from "@/pages/notifications.tsx";
 import RankPage from "@/pages/rank.tsx";
+import ChatPage from "@/pages/chat.tsx";
 const router = createBrowserRouter([
     {
         path: "/",
@@ -61,6 +62,14 @@ const router = createBrowserRouter([
             {
                 path: "rank",
                 element: <RankPage />,
+            },
+            {
+                path: "chat",
+                element: <ChatPage />,
+            },
+            {
+                path: "chat/:peerId",
+                element: <ChatPage />,
             },
         ],
     },

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Home as HomePage } from "@/pages/home.tsx";
 import { Loader2 } from "lucide-react";
 import { useUserStore } from "@/stores/useUser.ts";
@@ -7,6 +8,12 @@ function App() {
     const { user, checking } = useUserStore();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        if (!checking && !user) {
+            navigate("/login");
+        }
+    }, [user, checking, navigate]);
+
     if (checking) {
         return (
             <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
@@ -14,10 +21,7 @@ function App() {
             </div>
         );
     }
-    if (!user) {
-        navigate("/login");
-        return null;
-    }
+    if (!user) return null;
 
     return (
         <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
