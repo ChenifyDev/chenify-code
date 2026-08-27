@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { getChatDb, schema } from "../db/client";
+import { getChatDb, getSchema } from "../db/client";
 import { getAuthUser } from "../auth";
-import { isOnline, onlineCount } from "../rooms";
+import { isOnline } from "../rooms";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 export const routes = new Hono();
@@ -44,7 +44,8 @@ routes.post("/keys", async (c) => {
     }
 
     const db = getChatDb();
-    db.insert(schema.identityKeys)
+    const schema = getSchema();
+    await db.insert(schema.identityKeys)
         .values({
             user_id: user.id,
             ed25519_pub: body.ed25519_pub,
@@ -60,7 +61,7 @@ routes.post("/keys", async (c) => {
                 updated_at: new Date().toISOString(),
             },
         })
-        .run();
+        .execute();
 
     return c.json({ ok: true });
 });
@@ -75,7 +76,9 @@ routes.get("/keys/:userId", async (c) => {
     }
 
     const db = getChatDb();
-    const row = db.select().from(schema.identityKeys).where(eq(schema.identityKeys.user_id, targetId)).get();
+    const schema = getSchema();
+    const rows = await db.select().from(schema.identityKeys).where(eq(schema.identityKeys.user_id, targetId)).limit(1).execute();
+    const row = rows[0];
 
     if (!row) {
         return c.json({ message: "keys not found" }, 404);

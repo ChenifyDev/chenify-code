@@ -1,5 +1,5 @@
 import { eq, and, isNull, asc } from "drizzle-orm";
-import { getChatDb, schema } from "./db/client";
+import { getChatDb, getSchema } from "./db/client";
 import { deriveSessionKey } from "./crypto/session";
 import { open } from "./crypto/envelope";
 import { buildCanonicalHeader } from "./crypto/canonical";
@@ -51,25 +51,26 @@ function b64ToBytes(b64: string): Uint8Array {
 
 export async function deliverPending(
     recipientId: number,
-    getPrivateKey: (userId: number) => Uint8Array | null,
-    getPeerPubKey: (userId: number) => Uint8Array | null,
+    getPrivateKey: (userId: number) => Uint8Array | null | Promise<Uint8Array | null>,
+    getPeerPubKey: (userId: number) => Uint8Array | null | Promise<Uint8Array | null>,
 ): Promise<number> {
     const db = getChatDb();
-    const pending = db
+    const schema = getSchema();
+    const pending = await db
         .select()
         .from(schema.messages)
         .where(and(eq(schema.messages.recipient_id, recipientId), isNull(schema.messages.delivered_at)))
         .orderBy(asc(schema.messages.id))
-        .all();
+        .execute();
 
     let count = 0;
     for (const msg of pending) {
-        const recipientPrivKey = getPrivateKey(recipientId);
-        const senderPubKey = getPeerPubKey(msg.sender_id);
+        const recipientPrivKey = await getPrivateKey(recipientId);
+        const senderPubKey = await getPeerPubKey(msg.sender_id);
         if (!recipientPrivKey || !senderPubKey) continue;
 
         const sk = deriveSessionKey(recipientPrivKey, senderPubKey, msg.sender_id, recipientId);
-        const header = buildCanonicalHeader(msg.sender_id, msg.recipient_id, new Date(msg.created_at).getTime(), b64ToBytes(msg.nonce));
+        const header = buildCanonicalHeader(msg.sender_id, msg.recipient_id, msg.ts ?? new Date(msg.created_at).getTime(), b64ToBytes(msg.nonce));
         const pt = open(
             {
                 nonce: b64ToBytes(msg.nonce),
@@ -82,16 +83,16 @@ export async function deliverPending(
         );
         if (!pt) continue;
 
-        db.update(schema.messages)
+        await db.update(schema.messages)
             .set({ delivered_at: new Date().toISOString() })
             .where(eq(schema.messages.id, msg.id))
-            .run();
+            .execute();
 
         broadcastToUser(recipientId, JSON.stringify({
             t: "dm.recv",
             mid: msg.id,
             from: msg.sender_id,
-            env: { v: 1, nonce: msg.nonce, ct: msg.ct, sig: msg.sig, ts: new Date(msg.created_at).getTime() },
+            env: { v: 1, nonce: msg.nonce, ct: msg.ct, sig: msg.sig, ts: msg.ts ?? new Date(msg.created_at).getTime() },
         }));
         count++;
     }

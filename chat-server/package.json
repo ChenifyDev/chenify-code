@@ -10,12 +10,16 @@
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:studio": "drizzle-kit studio",
+        "db:push:neon": "drizzle-kit push --config drizzle-neon.config.ts",
+        "db:generate:neon": "drizzle-kit generate --config drizzle-neon.config.ts",
+        "db:migrate:neon": "drizzle-kit migrate --config drizzle-neon.config.ts",
         "test": "bun test"
     },
     "dependencies": {
         "@noble/ciphers": "^2.3.0",
         "@noble/curves": "^2.3.0",
         "@noble/hashes": "^2.3.0",
+        "@neondatabase/serverless": "^1.1.0",
         "drizzle-orm": "^0.45.2",
         "hono": "^4.13.3",
         "jose": "^6.2.9"
