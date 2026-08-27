@@ -17,7 +17,7 @@ export default function SearchBox({
     value,
     onValueChange,
     onSubmit,
-    placeholder = "搜索帖子、作品、用户…",
+    placeholder = "搜索帖子、用户…",
     className,
     autoFocus,
 }: SearchBoxProps) {

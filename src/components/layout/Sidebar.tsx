@@ -86,8 +86,8 @@ export default function AppSidebar() {
                             />
                         </div>
                         <div className={cn("grid gap-0.5 leading-tight", "group-data-[collapsible=icon]:hidden")}>
-                            <p className="text-sm font-semibold">ChenifyCode</p>
-                            <p className="text-xs text-muted-foreground">更好的编程社区</p>
+                            <p className="text-sm font-semibold">ChenifyHub</p>
+                            <p className="text-xs text-muted-foreground">更好的帖子社区</p>
                         </div>
                     </div>
                     <div className={cn("flex gap-1.5 items-center", "group-data-[collapsible=icon]:hidden")}>
@@ -213,9 +213,7 @@ export default function AppSidebar() {
                         >
                             {user?.username ?? "未登录"}
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                            {user?.email ?? "欢迎来到 ChenifyCode"}
-                        </p>
+                        <p className="truncate text-xs text-muted-foreground">{user?.email ?? "欢迎来到 ChenifyHub"}</p>
                     </div>
                     {user ? (
                         <DropdownMenu>
