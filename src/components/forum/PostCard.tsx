@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Bookmark, Check, ChevronDown, ChevronUp, Copy, Heart, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Card, CardAction, CardContent } from "@/components/ui/card.tsx";
+import { Card, CardContent } from "@/components/ui/card.tsx";
 import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";

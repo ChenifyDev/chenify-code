@@ -12,11 +12,13 @@ export default function useTab<T>(
     const [error, setError] = useState<string | null>(null);
     const offsetRef = useRef(0);
     const initializedRef = useRef(false);
+    const [initialized, setInitialized] = useState(false);
 
     const load = useCallback(
         async (reset = false) => {
             if (reset && !initializedRef.current) {
                 initializedRef.current = true;
+                setInitialized(true);
                 setLoading(true);
             } else if (!reset) {
                 setLoadingMore(true);
@@ -47,7 +49,7 @@ export default function useTab<T>(
         hasMore,
         hidden,
         error,
-        initialized: initializedRef.current,
+        initialized,
         load,
         updateItems,
     };
