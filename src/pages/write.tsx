@@ -102,6 +102,8 @@ export default function Write() {
             setStatus(draft.status);
             setDirty(false);
             setMessage(draft.status === "published" ? "帖子已更新" : `草稿已保存（#${draft.id}）`);
+            localStorage.removeItem("tmp_content");
+            localStorage.removeItem("tmp_tag");
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
         } finally {
@@ -155,6 +157,8 @@ export default function Write() {
                     return;
                 }
                 const post = await publishDraft(Number(currentId));
+                localStorage.removeItem("tmp_content");
+                localStorage.removeItem("tmp_tag");
                 navigate(`/posts/${post.id}`);
             } else {
                 const draft = await createDraft(content, imageFiles, tags);

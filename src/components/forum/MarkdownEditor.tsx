@@ -5,7 +5,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { lowlight } from "lowlight";
-import { InputRule } from "@tiptap/core";
 
 import { MathExtensions } from "@/lib/tiptap-math.ts";
 import {
