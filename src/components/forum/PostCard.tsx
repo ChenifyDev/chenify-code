@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle } from "lucide-react";
+import { Bookmark, Check, ChevronDown, ChevronUp, Copy, Heart, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Card, CardContent } from "@/components/ui/card.tsx";
+import { Card, CardAction, CardContent } from "@/components/ui/card.tsx";
 import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
@@ -18,6 +18,7 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
     const [expanded, setExpanded] = useState(false);
     const [postState, setPost] = useState<Post>(post);
     const [reactBusy, setReactBusy] = useState(false);
+    const [copied, setCopied] = useState(false);
     const { excerpt, isTruncated } = useMemo(
         () => truncateMarkdown(postState.content, PREVIEW_MAX_LENGTH),
         [postState.content],
@@ -66,6 +67,16 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
             console.error(err);
         } finally {
             setReactBusy(false);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch {
+            /* ignore */
         }
     };
 
@@ -156,6 +167,15 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                     <Button variant="ghost" size={"xs"} disabled className="inline-flex items-center gap-1">
                         <MessageCircle className="size-3.5" />
                         {postState.comments_count}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto text-muted-foreground"
+                        onClick={handleCopyLink}
+                    >
+                        {copied ? <Check /> : <Copy />}
+                        {copied ? "已复制" : "复制链接"}
                     </Button>
                 </div>
             </CardContent>
