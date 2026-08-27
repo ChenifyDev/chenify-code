@@ -9,9 +9,14 @@ function App() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!checking && !user) {
-            navigate("/login");
-        }
+        // Add a small delay to allow authentication to complete
+        const timer = setTimeout(() => {
+            if (!checking && !user) {
+                navigate("/login");
+            }
+        }, 100); // 100ms delay
+        
+        return () => clearTimeout(timer);
     }, [user, checking, navigate]);
 
     if (checking) {
