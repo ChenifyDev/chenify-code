@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {
     createComment,
     deleteComment,
-    deletePost,
     getPost,
     getPostDraft,
     listComments,
@@ -25,6 +24,7 @@ import {
     unLike,
     type PostComment as Comment,
     type Post,
+    deleteDraft,
 } from "@/lib/api.ts";
 import { formatDateTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
@@ -256,10 +256,10 @@ export default function PostDetail() {
     };
 
     const handleDeletePost = async () => {
-        if (!post) return;
+        if (!post || !draftId) return;
         setDeleting(true);
         try {
-            await deletePost(post.id);
+            await deleteDraft(draftId);
             navigate(`/users/${post.author.id}`);
         } catch (err) {
             console.error(err);
