@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import * as path from "node:path";
 
-const API_PATH = loadEnv("development", process.cwd()).VITE_API_PATH;
-const CHAT_PATH = loadEnv("development", process.cwd()).VITE_CHAT_PATH || "http://localhost:8081";
+const API_PATH = loadEnv(process.env.NODE_ENV || "development", process.cwd()).VITE_API_PATH;
+const CHAT_PATH = loadEnv(process.env.NODE_ENV || "development", process.cwd()).VITE_CHAT_PATH || "http://localhost:8081";
 
 // https://vite.dev/config/
 export default defineConfig({
