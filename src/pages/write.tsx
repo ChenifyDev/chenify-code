@@ -178,7 +178,7 @@ export default function Write() {
                             <ArrowLeft />
                         </Button>
                         <div className="grid min-w-0 flex-1 gap-0.5">
-                            <h1 className="text-base font-semibold">写文章</h1>
+                            <h1 className="text-base font-semibold">写帖子</h1>
                             <p className="text-xs text-muted-foreground">
                                 {content.length > MAX_CONTENT_LENGTH
                                     ? `内容已超过 ${MAX_CONTENT_LENGTH} 字`

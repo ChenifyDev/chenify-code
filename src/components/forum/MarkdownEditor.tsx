@@ -43,7 +43,7 @@ const extensions = [
         codeBlock: false,
     }),
     CodeBlockLowlight.configure({ lowlight, defaultLanguage: "auto" }),
-    Placeholder.configure({ placeholder: "在这里写文章…" }),
+    Placeholder.configure({ placeholder: "在这里写帖子…" }),
     Markdown.configure({ markedOptions: { breaks: true } }),
 ];
 

@@ -160,9 +160,9 @@ export default function AppSidebar() {
                         <SidebarMenuItem>
                             <NavLink to="/write">
                                 {({ isActive }) => (
-                                    <SidebarMenuButton isActive={isActive} tooltip="写文章">
+                                    <SidebarMenuButton isActive={isActive} tooltip="写帖子">
                                         <SquarePen />
-                                        <span>写文章</span>
+                                        <span>写帖子</span>
                                     </SidebarMenuButton>
                                 )}
                             </NavLink>

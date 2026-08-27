@@ -14,7 +14,7 @@ export default function Drafts() {
                     <FileText className="size-5" />
                     草稿管理
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">管理你的未发布内容和已发布的文章</p>
+                <p className="mt-1 text-sm text-muted-foreground">管理你的未发布内容和已发布的帖子</p>
             </header>
 
             <PostDraftList />
