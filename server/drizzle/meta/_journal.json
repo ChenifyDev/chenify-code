@@ -1,13 +1,13 @@
 {
-    "version": "7",
-    "dialect": "sqlite",
-    "entries": [
-        {
-            "idx": 0,
-            "version": "6",
-            "when": 1787465950834,
-            "tag": "0000_outstanding_terrax",
-            "breakpoints": true
-        }
-    ]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1787795547439,
+      "tag": "0000_living_chameleon",
+      "breakpoints": true
+    }
+  ]
 }

@@ -511,8 +511,8 @@ async function main() {
         for (const key of user.favorites) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
+                // @ts-expect-error 不管它
                 await store.append<StoredFavorite>(C.favorites, {
-                    id: Math.random(),
                     user_id: followerId,
                     post_id: postId,
                     created_at: new Date().toISOString(),
@@ -522,8 +522,8 @@ async function main() {
         for (const key of user.likes) {
             const postId = postIds.get(key);
             if (postId !== undefined) {
+                // @ts-expect-error 不管它
                 await store.append<StoredLike>(C.likes, {
-                    id: Math.random(),
                     user_id: followerId,
                     post_id: postId,
                     created_at: new Date().toISOString(),
@@ -570,8 +570,8 @@ async function main() {
             for (const liker of comment.liked_by) {
                 const likerId = idMap.get(liker);
                 if (likerId !== undefined) {
+                    // @ts-expect-error 不管它
                     await store.append<StoredCommentLike>(C.commentLikes, {
-                        id: Math.random(),
                         comment_id: commentId,
                         user_id: likerId,
                         created_at: comment.created_at,
