@@ -2,6 +2,8 @@ import type { Nodes } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { length, slice } from "mdast-util-slice-markdown";
 import { toMarkdown } from "mdast-util-to-markdown";
+import { math } from "micromark-extension-math";
+import { mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
 
 export interface TruncateMarkdownResult {
     excerpt: string;
@@ -9,7 +11,10 @@ export interface TruncateMarkdownResult {
 }
 
 export function truncateMarkdown(content: string, maxLength: number): TruncateMarkdownResult {
-    const tree = fromMarkdown(content);
+    const tree = fromMarkdown(content, {
+        extensions: [math()],
+        mdastExtensions: [mathFromMarkdown()],
+    });
     const totalLength = length(tree);
     if (totalLength <= maxLength) {
         return { excerpt: content, isTruncated: false };
@@ -20,6 +25,8 @@ export function truncateMarkdown(content: string, maxLength: number): TruncateMa
         return { excerpt: content, isTruncated: false };
     }
 
-    const excerpt = toMarkdown(sliced.node as Nodes).trimEnd();
+    const excerpt = toMarkdown(sliced.node as Nodes, {
+        extensions: [mathToMarkdown()],
+    }).trimEnd();
     return { excerpt, isTruncated: true };
 }
