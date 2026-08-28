@@ -114,6 +114,44 @@ export async function getPostByIdStandalone(
     return (await hydratePosts(store, [row], viewerId))[0] ?? null;
 }
 
+const contentCache = new Map<number, string>();
+const CONTENT_CACHE_MAX = 256;
+
+function getCachedContent(postId: number): string | null {
+    const content = contentCache.get(postId);
+    if (content === undefined) return null;
+    contentCache.delete(postId);
+    contentCache.set(postId, content);
+    return content;
+}
+
+function cacheContent(postId: number, content: string): void {
+    if (contentCache.has(postId)) contentCache.delete(postId);
+    contentCache.set(postId, content);
+    if (contentCache.size > CONTENT_CACHE_MAX) {
+        const oldest = contentCache.keys().next().value;
+        if (oldest !== undefined) contentCache.delete(oldest);
+    }
+}
+
+function invalidateContent(postId: number): void {
+    contentCache.delete(postId);
+}
+
+export async function getPostContentStandalone(
+    store: CollectionStore,
+    blobStore: BlobStore,
+    id: number,
+): Promise<string | null> {
+    const post = await store.getById<StoredPost>(C.posts, id);
+    if (!post) return null;
+    const cached = getCachedContent(id);
+    if (cached !== null) return cached;
+    const content = await loadContentBlob(blobStore, post.content);
+    cacheContent(id, content);
+    return content;
+}
+
 export async function createPostStandalone(
     store: CollectionStore,
     blobStore: BlobStore,
@@ -151,6 +189,7 @@ export async function updatePostContentStandalone(
     if (!post) return null;
     const contentRef = await saveContentBlob(blobStore, content);
     await deleteContentBlob(blobStore, post.content);
+    invalidateContent(postId);
     await store.updateById<StoredPost>(C.posts, postId, { content: contentRef });
     return getPostByIdStandalone(store, blobStore, postId, post.user_id);
 }
@@ -167,6 +206,7 @@ export async function updatePostStandalone(
     if (!post) return null;
     const contentRef = await saveContentBlob(blobStore, content);
     await deleteContentBlob(blobStore, post.content);
+    invalidateContent(postId);
 
     const existingTagRows = await store.read<StoredPostTag>(C.postTags);
     const removedTagIds = existingTagRows.filter((row) => row.post_id === postId).map((row) => row.tag_id);
@@ -225,11 +265,13 @@ export async function deletePostStandalone(
 ): Promise<string[]> {
     const images = await store.read<StoredPostImage>(C.postImages);
     const paths = images.filter((row) => row.post_id === id).map((row) => row.path);
+    invalidateContent(id);
     await deletePostRowsOnly(store, blobStore, id);
     return paths;
 }
 
 export async function deletePostRowStandalone(store: CollectionStore, blobStore: BlobStore, id: number): Promise<void> {
+    invalidateContent(id);
     await deletePostRowsOnly(store, blobStore, id);
 }
 
@@ -246,6 +288,10 @@ export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): P
 
         async getPostById(id, viewerId) {
             return getPostByIdStandalone(store, blobStore, id, viewerId);
+        },
+
+        async getPostContent(id) {
+            return getPostContentStandalone(store, blobStore, id);
         },
 
         async listPosts(options) {

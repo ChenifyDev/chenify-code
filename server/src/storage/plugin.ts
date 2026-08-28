@@ -39,6 +39,7 @@ export interface PostsRepo {
     getPostOwner(id: number): Promise<number | null>;
     createPost(userId: number, content: string, imagePaths: string[], postTagsNames: string[]): Promise<Post | null>;
     getPostById(id: number, viewerId: number | null): Promise<Post | null>;
+    getPostContent(id: number): Promise<string | null>;
     listPosts(options: {
         offset: number;
         limit: number;

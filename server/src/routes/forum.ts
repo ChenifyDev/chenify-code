@@ -1,7 +1,7 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
 import { saveAvatar, type RouteMap } from "../utils";
-import { setCommentArea } from "../utils/frontmatter";
+import { getCommentArea, setCommentArea } from "../utils/frontmatter";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 const IMAGE_EXTENSIONS: Record<string, string> = {
@@ -274,6 +274,8 @@ export const routes = {
             const parsed = numericIdError((req.params as any).id ?? "");
             if (parsed instanceof Response) return parsed;
             if ((await storage.posts.getPostOwner(parsed)) === null) return jsonError(404, "帖子不存在");
+            const postContent = await storage.posts.getPostContent(parsed);
+            if (postContent === null || !getCommentArea(postContent)) return jsonError(403, "该帖子已关闭评论");
             const body = (await req.json().catch(() => null)) as { content?: string; parent_id?: number | null } | null;
             const content = body?.content?.trim() ?? "";
             if (!content) return jsonError(400, "评论内容不能为空");

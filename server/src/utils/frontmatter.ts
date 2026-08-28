@@ -4,6 +4,19 @@ function stripLeadingNewline(text: string): string {
     return text.replace(/^\s*\r?\n/, "");
 }
 
+export function getCommentArea(content: string): boolean {
+    const match = FRONTMATTER_RE.exec(content);
+    if (!match) return true;
+    const raw = (match[1] ?? "").match(/^commentArea:\s*(.+)$/m)?.[1];
+    if (!raw) return true;
+    const value = raw.trim();
+    const quoted =
+        (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))
+            ? value.slice(1, -1)
+            : value;
+    return quoted.trim().toLowerCase() !== "false";
+}
+
 export function setCommentArea(content: string, open: boolean): string {
     const match = FRONTMATTER_RE.exec(content);
     if (!match) {
