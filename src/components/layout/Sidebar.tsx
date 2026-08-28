@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Settings, Bell, Ellipsis, Podium } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
-import { clearToken, getUnreadNotifications } from "@/lib/api.ts";
+import { clearToken, getUnreadNotifications } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import SearchBox from "@/components/search/SearchBox.tsx";

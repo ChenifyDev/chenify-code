@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 
 import PostCard from "@/components/forum/PostCard.tsx";
-import { searchPosts, type Post } from "@/lib/api.ts";
+import { searchPosts, type Post } from "@/lib/api";
 
 import { Empty, LoadMore, SkeletonList } from "@/pages/search/common.tsx";
 import { useSearchFeed } from "@/pages/search/useSearchFeed.ts";

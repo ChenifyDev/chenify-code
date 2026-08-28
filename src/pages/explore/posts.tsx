@@ -3,7 +3,7 @@ import { Clock, Flame, Loader2, Signpost } from "lucide-react";
 
 import PostCard from "@/components/forum/PostCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { listPosts, listTags, type Post } from "@/lib/api.ts";
+import { listPosts, listTags, type Post } from "@/lib/api";
 import { cn } from "@/lib/utils.ts";
 import Empty from "@/components/tab/Empty.tsx";
 import SkeletonList from "@/components/forum/SkeletonList.tsx";

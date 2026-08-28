@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
-import { type FollowUser, searchUsers, toggleFollow } from "@/lib/api.ts";
+import { type FollowUser, searchUsers, toggleFollow } from "@/lib/api";
 import { formatDate } from "@/lib/format.ts";
 
 import { Empty, LoadMore, SkeletonList } from "@/pages/search/common.tsx";

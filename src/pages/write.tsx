@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api.ts";
+import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api";
 import { parseFrontmatter, withTitle } from "@/lib/frontmatter.ts";
 import { cn, urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";

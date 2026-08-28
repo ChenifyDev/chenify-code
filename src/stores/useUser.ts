@@ -1,4 +1,4 @@
-import type { UserPublic } from "@/lib/api.ts";
+import type { UserPublic } from "@/lib/api";
 import { create } from "zustand";
 
 interface UserState {

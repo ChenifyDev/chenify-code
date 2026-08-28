@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { CommentRow } from "@/components/comments/CommentRow.tsx";
-import type { UserSummary } from "@/lib/api.ts";
+import type { UserSummary } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 type BaseComment<T> = {

@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
-import { login, register, setToken, type UserPublic } from "@/lib/api.ts";
+import { login, register, setToken, type UserPublic } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useNavigate, useSearchParams } from "react-router-dom";
 

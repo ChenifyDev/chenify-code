@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
-import { deleteDraft, listDrafts, publishDraft, unpublishDraft, type Draft } from "@/lib/api.ts";
+import { deleteDraft, listDrafts, publishDraft, unpublishDraft, type Draft } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { FileText, Loader2 } from "lucide-react";
 

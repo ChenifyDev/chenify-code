@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listFollowingPosts, type Post } from "@/lib/api.ts";
+import { listFollowingPosts, type Post } from "@/lib/api";
 import Empty from "@/components/tab/Empty";
 import SkeletonList from "@/components/forum/SkeletonList.tsx";
 import PostCard from "@/components/forum/PostCard.tsx";

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { updateProfile } from "@/lib/api.ts";
+import { updateProfile } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 
 type Status = { type: "error" | "success"; text: string } | null;

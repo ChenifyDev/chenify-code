@@ -21,7 +21,7 @@ import {
     type FollowUser,
     type Post,
     type SpaceSkeleton,
-} from "@/lib/api.ts";
+} from "@/lib/api";
 import { formatDate } from "@/lib/format.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import LoadMore from "@/components/tab/LoadMore.tsx";

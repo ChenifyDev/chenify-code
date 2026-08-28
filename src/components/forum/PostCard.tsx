@@ -6,7 +6,7 @@ import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api.ts";
+import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";

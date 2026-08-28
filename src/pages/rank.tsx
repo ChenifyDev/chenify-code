@@ -1,4 +1,4 @@
-import { type FollowUser, type PointsUser, rankUsersByFollowers, rankUsersByPostPoints } from "@/lib/api.ts";
+import { type FollowUser, type PointsUser, rankUsersByFollowers, rankUsersByPostPoints } from "@/lib/api";
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card.tsx";

@@ -25,7 +25,7 @@ import {
     type PostComment as Comment,
     type Post,
     deleteDraft,
-} from "@/lib/api.ts";
+} from "@/lib/api";
 import { formatDateTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";

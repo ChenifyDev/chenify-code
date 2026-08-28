@@ -1,5 +1,5 @@
 import { useUserStore } from "@/stores/useUser.ts";
-import { type UserSummary } from "@/lib/api.ts";
+import { type UserSummary } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { formatDateTime } from "@/lib/format.ts";

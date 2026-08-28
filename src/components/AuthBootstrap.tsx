@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { clearToken, getToken, me } from "@/lib/api.ts";
+import { clearToken, getToken, me } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 
 export default function AuthBootstrap({ children }: { children: ReactNode }) {

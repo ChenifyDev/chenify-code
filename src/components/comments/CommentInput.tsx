@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CornerDownRight, Loader2, Send } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import type { UserPublic, UserSummary } from "@/lib/api.ts";
+import type { UserPublic, UserSummary } from "@/lib/api";
 
 type BaseComment<T> = {
     id: number;

@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarBadge2, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api.ts";
+import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatRelativeTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
