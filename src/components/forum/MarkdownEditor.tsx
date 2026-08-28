@@ -163,9 +163,9 @@ export default function EditorField({ value, onChange }: { value: string; onChan
             return;
         }
         if (block) {
-            editor.chain().focus().insertBlockMath({ latex }).run();
+            editor.commands.insertBlockMath({ latex });
         } else {
-            editor.chain().focus().insertInlineMath({ latex }).run();
+            editor.commands.insertInlineMath({ latex });
         }
         setInputData({
             value: "",
