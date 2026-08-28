@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx"
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api.ts";
+import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
 import { cn } from "@/lib/utils.ts";
@@ -19,9 +20,10 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
     const [postState, setPost] = useState<Post>(post);
     const [reactBusy, setReactBusy] = useState(false);
     const [copied, setCopied] = useState(false);
+    const { title, body } = useMemo(() => parseFrontmatter(postState.content), [postState.content]);
     const { excerpt, isTruncated } = useMemo(
-        () => truncateMarkdown(postState.content, PREVIEW_MAX_LENGTH),
-        [postState.content],
+        () => truncateMarkdown(body, PREVIEW_MAX_LENGTH),
+        [body],
     );
 
     const toggleExpanded = (e: React.MouseEvent) => {
@@ -102,8 +104,9 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
 
                 <div className="min-w-0 flex flex-col gap-2">
                     <Link to={`/posts/${postState.id}`} className="group block min-w-0">
+                        {title && <h3 className="line-clamp-2 text-base font-semibold">{title}</h3>}
                         <Markdown
-                            content={expanded ? postState.content : excerpt}
+                            content={expanded ? body : excerpt}
                             className={cn("group-hover:opacity-80", compact && "line-clamp-6")}
                         />
                     </Link>

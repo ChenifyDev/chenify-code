@@ -1,4 +1,5 @@
 import type { Draft } from "@/lib/api";
+import { parseFrontmatter } from "@/lib/frontmatter";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
@@ -21,6 +22,7 @@ export function DraftItem({
     onDelete: (draft: Draft) => void;
 }) {
     const published = draft.status === "published";
+    const { title, body } = parseFrontmatter(draft.content);
     return (
         <Card size="sm">
             <CardContent className="grid gap-3">
@@ -36,8 +38,9 @@ export function DraftItem({
                     <span className="shrink-0">{formatDateTime(draft.updated_at)}</span>
                 </div>
 
+                {title && <p className="text-sm font-semibold">{title}</p>}
                 <p className="whitespace-pre-wrap text-sm">
-                    {draft.content || <span className="text-muted-foreground">（无内容）</span>}
+                    {body || <span className="text-muted-foreground">（无内容）</span>}
                 </p>
 
                 {draft.images.length > 0 && (

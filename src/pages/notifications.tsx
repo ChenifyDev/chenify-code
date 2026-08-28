@@ -6,6 +6,7 @@ import { Avatar, AvatarBadge2, AvatarFallback, AvatarImage } from "@/components/
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api.ts";
+import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatRelativeTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
@@ -64,10 +65,11 @@ function notificationLink(notification: AppNotification): { to: string; text: st
           ? `/works/${notification.work_id}`
           : null;
     if (!to) return null;
+    const snippet = (text: string) => parseFrontmatter(text).body || "查看详情";
     if (notification.type === "post_reply" || notification.type === "work_reply") {
-        return { to, text: notification.reply_to || notification.snippet || "查看详情" };
+        return { to, text: notification.reply_to ? snippet(notification.reply_to) : snippet(notification.snippet) };
     }
-    return { to, text: notification.snippet || "查看详情" };
+    return { to, text: snippet(notification.snippet) };
 }
 
 export default function NotificationsPage() {

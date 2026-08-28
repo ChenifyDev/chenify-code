@@ -5,6 +5,7 @@ import katex from "katex";
 import hljs from "highlight.js";
 import "katex/dist/katex.min.css";
 
+import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { cn } from "@/lib/utils.ts";
 
 const md = new MarkdownIt({
@@ -28,8 +29,14 @@ const md = new MarkdownIt({
 md.use(texmath, { engine: katex, delimiters: "dollars", katexOptions: { throwOnError: false, strict: false } });
 
 export function Markdown({ content, className }: { content: string; className?: string }) {
-    const html = useMemo(() => md.render(content), [content]);
-    return <div className={cn("markdown-body", className)} dangerouslySetInnerHTML={{ __html: html }} />;
+    const { title, body } = useMemo(() => parseFrontmatter(content), [content]);
+    const html = useMemo(() => md.render(body), [body]);
+    return (
+        <div className={cn("markdown-body", className)}>
+            {title && <h1>{title}</h1>}
+            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+    );
 }
 
 export default Markdown;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api.ts";
+import { parseFrontmatter, withTitle } from "@/lib/frontmatter.ts";
 import { cn, urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import EditorField from "@/components/forum/MarkdownEditor.tsx";
@@ -32,6 +33,7 @@ export default function Write() {
     const currentId = searchParams.get("id");
 
     const [content, setContent] = useState(localStorage.getItem("tmp_content") || "");
+    const [title, setTitle] = useState(localStorage.getItem("tmp_title") || "");
     const [tagInput, setTagInput] = useState(localStorage.getItem("tmp_tag") || "");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<Draft["status"]>("draft");
@@ -49,7 +51,9 @@ export default function Write() {
         const func = async () => {
             if (!currentId) return;
             const data = await getDraft(Number(currentId));
-            setContent(data.content);
+            const { title: draftTitle, body } = parseFrontmatter(data.content);
+            setTitle(draftTitle ?? "");
+            setContent(body);
             setTagInput(data.tags.join(" "));
             setStatus(data.status);
             const imageUrls = data.images;
@@ -72,10 +76,11 @@ export default function Write() {
     useEffect(() => {
         const timer = setTimeout(() => {
             localStorage.setItem("tmp_content", content);
+            localStorage.setItem("tmp_title", title);
             localStorage.setItem("tmp_tag", tagInput);
         }, 800);
         return () => clearTimeout(timer);
-    }, [content, tagInput]);
+    }, [content, title, tagInput]);
 
     // 浏览器刷新/关闭标签页警告
     useEffect(() => {
@@ -96,20 +101,22 @@ export default function Write() {
         setMessage(null);
         setError(null);
         try {
+            const finalContent = withTitle(title, content);
             const draft: Draft = currentId
-                ? await updateDraft(Number(currentId), content, imageFiles, tags)
-                : await createDraft(content, imageFiles, tags);
+                ? await updateDraft(Number(currentId), finalContent, imageFiles, tags)
+                : await createDraft(finalContent, imageFiles, tags);
             setStatus(draft.status);
             setDirty(false);
             setMessage(draft.status === "published" ? "帖子已更新" : `草稿已保存（#${draft.id}）`);
             localStorage.removeItem("tmp_content");
+            localStorage.removeItem("tmp_title");
             localStorage.removeItem("tmp_tag");
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
         } finally {
             setSaving(false);
         }
-    }, [tags, content, imageFiles, currentId]);
+    }, [tags, content, title, imageFiles, currentId]);
 
     useEffect(() => {
         saveDraftRef.current = handleSaveDraft;
@@ -127,6 +134,11 @@ export default function Write() {
 
     const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTagInput(e.target.value);
+        setDirty(true);
+    };
+
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTitle(e.target.value);
         setDirty(true);
     };
 
@@ -148,8 +160,9 @@ export default function Write() {
         setMessage(null);
         setError(null);
         try {
+            const finalContent = withTitle(title, content);
             if (currentId) {
-                const draft = await updateDraft(Number(currentId), content, imageFiles, tags);
+                const draft = await updateDraft(Number(currentId), finalContent, imageFiles, tags);
                 setStatus(draft.status);
                 setDirty(false);
                 if (draft.status === "published" && draft.post_id != null) {
@@ -158,10 +171,11 @@ export default function Write() {
                 }
                 const post = await publishDraft(Number(currentId));
                 localStorage.removeItem("tmp_content");
+                localStorage.removeItem("tmp_title");
                 localStorage.removeItem("tmp_tag");
                 navigate(`/posts/${post.id}`);
             } else {
-                const draft = await createDraft(content, imageFiles, tags);
+                const draft = await createDraft(finalContent, imageFiles, tags);
                 const post = await publishDraft(draft.id);
                 setDirty(false);
                 navigate(`/posts/${post.id}`);
@@ -184,7 +198,7 @@ export default function Write() {
                         <div className="grid min-w-0 flex-1 gap-0.5">
                             <h1 className="text-base font-semibold">写帖子</h1>
                             <p className="text-xs text-muted-foreground">
-                                {content.length > MAX_CONTENT_LENGTH
+                                {withTitle(title, content).length > MAX_CONTENT_LENGTH
                                     ? `内容已超过 ${MAX_CONTENT_LENGTH} 字`
                                     : `支持富文本与 LaTeX 数学公式，写作后可保存草稿或直接发布`}
                             </p>
@@ -212,6 +226,11 @@ export default function Write() {
 
                     {message && <p className="text-sm text-primary">{message}</p>}
                     {error && <p className="text-sm text-destructive">{error}</p>}
+
+                    <div className="grid gap-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">标题（可选）</span>
+                        <Input value={title} onChange={handleTitleChange} placeholder="给文章起个标题…" />
+                    </div>
 
                     <EditorField value={content} onChange={handleContentChange} />
 
