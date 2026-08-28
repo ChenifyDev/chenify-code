@@ -141,6 +141,20 @@ export async function createPostStandalone(
     return getPostByIdStandalone(store, blobStore, post.id, userId);
 }
 
+export async function updatePostContentStandalone(
+    store: CollectionStore,
+    blobStore: BlobStore,
+    postId: number,
+    content: string,
+): Promise<Post | null> {
+    const post = await store.getById<StoredPost>(C.posts, postId);
+    if (!post) return null;
+    const contentRef = await saveContentBlob(blobStore, content);
+    await deleteContentBlob(blobStore, post.content);
+    await store.updateById<StoredPost>(C.posts, postId, { content: contentRef });
+    return getPostByIdStandalone(store, blobStore, postId, post.user_id);
+}
+
 export async function updatePostStandalone(
     store: CollectionStore,
     blobStore: BlobStore,
@@ -291,6 +305,10 @@ export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): P
                 .slice(options.offset, options.offset + options.limit)
                 .map((fav) => rowMap.get(fav.post_id)!);
             return hydratePosts(store, page, options.viewerId);
+        },
+
+        async updatePostContent(id, content) {
+            return updatePostContentStandalone(store, blobStore, id, content);
         },
 
         async deletePost(id) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Check, Copy, Heart, MessageCircle, Pencil, Trash2, UserCheck, UserPlus } from "lucide-react";
+import { Bookmark, Check, Copy, Heart, MessageCircle, MessageCircleOff, Pencil, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -26,13 +26,16 @@ import {
     type PostComment as Comment,
     type Post,
     deleteDraft,
+    setPostCommentArea,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format.ts";
+import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import { insertReply, updateComment } from "@/components/comments/utils.ts";
 import CommentInput from "@/components/comments/CommentInput.tsx";
 import CommentList from "@/components/comments/CommentList.tsx";
+import Empty from "@/components/tab/Empty.tsx";
 
 const COMMENTS_LIMIT = 20;
 
@@ -83,6 +86,8 @@ export default function PostDetail() {
     const [reactBusy, setReactBusy] = useState(false);
     const [copied, setCopied] = useState(false);
     const [draftId, setDraftId] = useState<number | null>(null);
+    const [commentArea, setCommentArea] = useState(true);
+    const [commentAreaBusy, setCommentAreaBusy] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -94,6 +99,7 @@ export default function PostDetail() {
             .then(async (data) => {
                 if (cancelled) return;
                 setPost(data);
+                setCommentArea(parseFrontmatter(data.content).commentArea);
                 if (me?.id === data.author.id) {
                     try {
                         const draft = await getPostDraft(id);
@@ -140,8 +146,9 @@ export default function PostDetail() {
     );
 
     useEffect(() => {
+        if (!commentArea) return;
         void loadComments(true);
-    }, [loadComments]);
+    }, [loadComments, commentArea]);
 
     const requireLogin = (): boolean => {
         if (!me) {
@@ -202,6 +209,20 @@ export default function PostDetail() {
             setTimeout(() => setCopied(false), 1500);
         } catch {
             /* ignore */
+        }
+    };
+
+    const handleToggleCommentArea = async () => {
+        if (!post) return;
+        setCommentAreaBusy(true);
+        try {
+            const updated = await setPostCommentArea(post.id, !commentArea);
+            setPost(updated);
+            setCommentArea(parseFrontmatter(updated.content).commentArea);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCommentAreaBusy(false);
         }
     };
 
@@ -391,6 +412,19 @@ export default function PostDetail() {
                             <MessageCircle className="size-4" />
                             {post.comments_count}
                         </span>
+                        {isAuthor && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-muted-foreground"
+                                disabled={commentAreaBusy}
+                                onClick={handleToggleCommentArea}
+                                title={commentArea ? "关闭评论" : "开启评论"}
+                            >
+                                {commentArea ? <MessageCircleOff className="size-4" /> : <MessageCircle className="size-4" />}
+                                {commentAreaBusy ? "保存中…" : commentArea ? "关闭评论" : "开启评论"}
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="sm"
@@ -406,36 +440,40 @@ export default function PostDetail() {
 
             <Separator className="my-5" />
 
-            <Card>
-                <CardContent className="grid gap-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                        <MessageCircle className="size-4" />
-                        评论 {post.comments_count}
-                    </div>
+            {commentArea ? (
+                <Card>
+                    <CardContent className="grid gap-4">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <MessageCircle className="size-4" />
+                            评论 {post.comments_count}
+                        </div>
 
-                    <CommentInput
-                        me={me}
-                        draft={draft}
-                        sending={sending}
-                        replyTo={replyTo}
-                        setDraft={setDraft}
-                        setReplyTo={setReplyTo}
-                        handleSend={handleSend}
-                    />
+                        <CommentInput
+                            me={me}
+                            draft={draft}
+                            sending={sending}
+                            replyTo={replyTo}
+                            setDraft={setDraft}
+                            setReplyTo={setReplyTo}
+                            handleSend={handleSend}
+                        />
 
-                    <CommentList
-                        commentsLoading={commentsLoading}
-                        commentError={commentError}
-                        comments={comments}
-                        handleDeleteComment={handleDeleteComment}
-                        setReplyTo={setReplyTo}
-                        loadComments={loadComments}
-                        hasMoreComments={hasMoreComments}
-                        handleLikeComment={handleLikeComment}
-                        commentsLoadingMore={commentsLoadingMore}
-                    />
-                </CardContent>
-            </Card>
+                        <CommentList
+                            commentsLoading={commentsLoading}
+                            commentError={commentError}
+                            comments={comments}
+                            handleDeleteComment={handleDeleteComment}
+                            setReplyTo={setReplyTo}
+                            loadComments={loadComments}
+                            hasMoreComments={hasMoreComments}
+                            handleLikeComment={handleLikeComment}
+                            commentsLoadingMore={commentsLoadingMore}
+                        />
+                    </CardContent>
+                </Card>
+            ) : (
+                <Empty text={isAuthor ? "评论已关闭，点击上方「开启评论」可恢复" : "作者已关闭了评论"} />
+            )}
         </div>
     );
 }

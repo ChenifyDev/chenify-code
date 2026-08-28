@@ -39,6 +39,14 @@ export function deletePost(id: number): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/posts/${id}`, { method: "DELETE", headers: authHeaders() });
 }
 
+export function setPostCommentArea(id: number, open: boolean): Promise<Post> {
+    return request<Post>(`/posts/${id}/comment-area`, {
+        method: "PATCH",
+        body: JSON.stringify({ comment_area: open }),
+        headers: authHeaders(),
+    });
+}
+
 export function searchPosts({
     offset,
     limit,

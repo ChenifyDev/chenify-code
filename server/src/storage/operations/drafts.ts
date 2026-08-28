@@ -132,6 +132,29 @@ export function createDraftsRepo(store: CollectionStore, blobStore: BlobStore): 
             return { draft: row ? await toDraft(store, blobStore, row) : null, removedImages: goneImages };
         },
 
+        async updateDraftContent(id, content) {
+            const draftBefore = await store.getById<StoredDraft>(C.drafts, id);
+            if (!draftBefore) return null;
+            const nextContent = await saveContentBlob(blobStore, content);
+            await deleteContentBlob(blobStore, draftBefore.content);
+            await store.updateById<StoredDraft>(C.drafts, id, {
+                content: nextContent,
+                updated_at: new Date().toISOString(),
+            });
+            if (draftBefore.status === "published" && draftBefore.post_id != null) {
+                await updatePostStandalone(
+                    store,
+                    blobStore,
+                    draftBefore.post_id,
+                    content,
+                    await getDraftImages(store, id),
+                    await getDraftTags(store, id),
+                );
+            }
+            const row = await store.getById<StoredDraft>(C.drafts, id);
+            return row ? toDraft(store, blobStore, row) : null;
+        },
+
         async deleteDraft(id) {
             const images = await getDraftImages(store, id);
             const row = await store.getById<StoredDraft>(C.drafts, id);

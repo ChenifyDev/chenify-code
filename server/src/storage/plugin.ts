@@ -53,6 +53,7 @@ export interface PostsRepo {
     ): Promise<Post[]>;
     deletePost(id: number): Promise<string[]>;
     deletePostRow(id: number): Promise<void>;
+    updatePostContent(id: number, content: string): Promise<Post | null>;
     searchPosts(options: { offset: number; limit: number; sort?: "latest" | "hot"; keyword: string }): Promise<Post[]>;
 }
 
@@ -113,6 +114,7 @@ export interface DraftsRepo {
         imagePaths: string[],
         tagNames: string[],
     ): Promise<{ draft: Draft | null; removedImages: string[] }>;
+    updateDraftContent(id: number, content: string): Promise<Draft | null>;
     deleteDraft(id: number): Promise<string[]>;
     publishDraft(id: number): Promise<{ draft: Draft; post: Post } | null>;
     unpublishDraft(id: number): Promise<Draft | null>;

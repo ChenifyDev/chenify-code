@@ -20,25 +20,35 @@ function unquoteYaml(value: string): string {
 
 export interface Frontmatter {
     title?: string;
+    commentArea: boolean;
 }
 
 export function parseFrontmatter(content: string): Frontmatter & { body: string } {
     const match = FRONTMATTER_RE.exec(content);
-    if (!match) return { body: content };
+    if (!match) return { body: content, commentArea: true };
 
     const title = match[1].match(/^title:\s*(.+)$/m)?.[1];
+    const commentAreaRaw = match[1].match(/^commentArea:\s*(.+)$/m)?.[1];
     const body = content.slice(match[0].length).replace(/^\s*\r?\n/, "");
 
-    return { title: title ? unquoteYaml(title.trim()) : undefined, body };
+    return {
+        title: title ? unquoteYaml(title.trim()) : undefined,
+        commentArea: commentAreaRaw ? unquoteYaml(commentAreaRaw.trim()).toLowerCase() !== "false" : true,
+        body,
+    };
 }
 
 export function getTitle(content: string): string | undefined {
     return parseFrontmatter(content).title;
 }
 
-export function withTitle(title: string | undefined, body: string): string {
+export function withTitle(title: string | undefined, body: string, commentArea?: boolean): string {
     const trimmed = title?.trim();
     const cleanBody = body.trim();
-    if (!trimmed) return cleanBody;
-    return `---\ntitle: ${quoteYaml(trimmed)}\n---\n\n${cleanBody}`;
+    if (!trimmed && commentArea !== false) return cleanBody;
+    const lines = [`---`];
+    if (trimmed) lines.push(`title: ${quoteYaml(trimmed)}`);
+    if (commentArea === false) lines.push(`commentArea: false`);
+    lines.push(`---`);
+    return `${lines.join("\n")}\n\n${cleanBody}`;
 }

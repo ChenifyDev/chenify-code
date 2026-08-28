@@ -1,6 +1,7 @@
 import { getStorage } from "../storage";
 import { getAuthUser, jsonError, parsePagination } from "./util";
 import { saveAvatar, type RouteMap } from "../utils";
+import { setCommentArea } from "../utils/frontmatter";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 const IMAGE_EXTENSIONS: Record<string, string> = {
@@ -183,6 +184,34 @@ export const routes = {
             const draft = await storage.drafts.getDraftByPostId(parsed);
             if (!draft) return jsonError(404, "草稿不存在");
             return Response.json({ id: draft.id, status: draft.status, post_id: draft.post_id });
+        },
+    },
+
+    "/api/posts/:id/comment-area": {
+        PATCH: async (req) => {
+            const storage = getStorage();
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = await storage.posts.getPostOwner(parsed);
+            if (ownerId === null) return jsonError(404, "帖子不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权修改该帖子");
+            const body = (await req.json().catch(() => null)) as { comment_area?: unknown } | null;
+            if (body == null || typeof body.comment_area !== "boolean") {
+                return jsonError(400, "comment_area 必须为布尔值");
+            }
+            const draft = await storage.drafts.getDraftByPostId(parsed);
+            if (draft) {
+                await storage.drafts.updateDraftContent(draft.id, setCommentArea(draft.content, body.comment_area));
+            } else {
+                const post = await storage.posts.getPostById(parsed, me.id);
+                if (!post) return jsonError(404, "帖子不存在");
+                await storage.posts.updatePostContent(parsed, setCommentArea(post.content, body.comment_area));
+            }
+            const updated = await storage.posts.getPostById(parsed, me.id);
+            if (!updated) return jsonError(404, "帖子不存在");
+            return Response.json(updated);
         },
     },
 
