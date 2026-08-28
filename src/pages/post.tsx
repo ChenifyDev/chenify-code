@@ -3,6 +3,7 @@ import { Bookmark, Check, Copy, Heart, MessageCircle, Pencil, Trash2, UserCheck,
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
+import PostAstTree from "@/components/forum/PostAstTree.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
@@ -280,7 +281,8 @@ export default function PostDetail() {
     const following = post.is_following_author;
 
     return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
+        <div className="relative mx-auto w-full max-w-3xl p-4 md:p-6">
+            <PostAstTree content={post.content} />
             <Card>
                 <CardContent className="grid gap-4">
                     <div className="flex items-start justify-between gap-4">
