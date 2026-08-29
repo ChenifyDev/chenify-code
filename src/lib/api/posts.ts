@@ -47,6 +47,14 @@ export function setPostCommentArea(id: number, open: boolean): Promise<Post> {
     });
 }
 
+export function setPostPinned(id: number, pinned: boolean): Promise<Post> {
+    return request<Post>(`/posts/${id}/pin`, {
+        method: "PATCH",
+        body: JSON.stringify({ pinned }),
+        headers: authHeaders(),
+    });
+}
+
 export function searchPosts({
     offset,
     limit,

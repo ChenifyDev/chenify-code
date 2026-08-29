@@ -26,6 +26,7 @@ export interface Post {
     is_liked: boolean;
     is_favorited: boolean;
     is_following_author: boolean;
+    pinned: boolean;
 }
 
 export interface PostComment {

@@ -25,6 +25,7 @@ export default function useTab<T>(
             }
             setError(null);
             try {
+                if (reset) offsetRef.current = 0;
                 const res = await fetcher(offsetRef.current);
                 setHidden(res.hidden);
                 setHasMore(res.hasMore);

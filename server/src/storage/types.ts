@@ -53,6 +53,7 @@ export interface Post {
     is_liked: boolean;
     is_favorited: boolean;
     is_following_author: boolean;
+    pinned: boolean;
 }
 
 export interface Comment {
@@ -98,6 +99,7 @@ export interface PostRow {
     comments_count: number;
     likes_count: number;
     favorites_count: number;
+    pinned: boolean;
 }
 
 export interface CommentRow {

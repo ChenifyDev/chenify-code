@@ -50,6 +50,7 @@ async function boardViewerFollowingsPosts(
                 comments_count: comments.filter((comment) => comment.post_id === post.id).length,
                 likes_count: likes.filter((like) => like.post_id === post.id).length,
                 favorites_count: favorites.filter((favorite) => favorite.post_id === post.id).length,
+                pinned: post.pinned,
             };
         });
 }

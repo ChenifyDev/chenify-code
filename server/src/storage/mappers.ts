@@ -52,6 +52,7 @@ export function buildPosts(rows: PostRow[], ctx: PostHydrationContext): Post[] {
         is_liked: ctx.likedIds.has(row.id),
         is_favorited: ctx.favoritedIds.has(row.id),
         is_following_author: ctx.followedAuthorIds.has(row.user_id),
+        pinned: row.pinned,
     }));
 }
 

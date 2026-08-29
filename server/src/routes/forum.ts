@@ -209,6 +209,26 @@ export const routes = {
         },
     },
 
+    "/api/posts/:id/pin": {
+        PATCH: async (req) => {
+            const storage = getStorage();
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = await storage.posts.getPostOwner(parsed);
+            if (ownerId === null) return jsonError(404, "帖子不存在");
+            if (ownerId !== me.id) return jsonError(403, "无权修改该帖子");
+            const body = (await req.json().catch(() => null)) as { pinned?: unknown } | null;
+            if (body == null || typeof body.pinned !== "boolean") {
+                return jsonError(400, "pinned 必须为布尔值");
+            }
+            const updated = await storage.posts.setPostPinned(parsed, body.pinned);
+            if (!updated) return jsonError(404, "帖子不存在");
+            return Response.json(updated);
+        },
+    },
+
     "/api/posts/:id/like": {
         POST: async (req) => {
             const storage = getStorage();

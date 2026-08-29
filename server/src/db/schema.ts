@@ -31,6 +31,7 @@ export const posts = sqliteTable(
             .references(() => users.id),
         content: text("content").notNull(),
         created_at: text("created_at").notNull().default(now),
+        pinned: integer("pinned", { mode: "boolean" }).notNull().default(sql.raw("0")),
     },
     (table) => [index("idx_posts_user_id").on(table.user_id), index("idx_posts_created_at").on(table.created_at)],
 );

@@ -51,7 +51,7 @@ function SkeletonList() {
     );
 }
 
-function PostsTab({ tab }: { tab: TabData<Post> }) {
+function PostsTab({ tab, canPin }: { tab: TabData<Post>; canPin: boolean }) {
     const { load, initialized } = tab;
     useEffect(() => {
         if (!initialized) void load(true);
@@ -63,7 +63,14 @@ function PostsTab({ tab }: { tab: TabData<Post> }) {
     return (
         <div className="grid gap-3">
             {tab.items.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard
+                    key={post.id}
+                    post={post}
+                    canPin={canPin}
+                    onPinChanged={() => {
+                        void tab.load(true);
+                    }}
+                />
             ))}
             <LoadMore tab={tab} />
         </div>
@@ -144,7 +151,7 @@ function Stat({ label, value }: { label: string; value: number | null }) {
     );
 }
 
-function ProfileTabs({ userId }: { userId: number }) {
+function ProfileTabs({ userId, canPin }: { userId: number; canPin: boolean }) {
     const posts = useTab(
         useCallback(
             async (offset) => {
@@ -202,7 +209,7 @@ function ProfileTabs({ userId }: { userId: number }) {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="posts" className="pt-4">
-                <PostsTab tab={posts} />
+                <PostsTab tab={posts} canPin={canPin} />
             </TabsContent>
             <TabsContent value="favorites" className="pt-4">
                 <FavoritesTab tab={favorites} />
@@ -366,7 +373,7 @@ export default function Profile() {
                 </CardHeader>
             </Card>
             <div className="mt-4">
-                <ProfileTabs key={id} userId={id} />
+                <ProfileTabs key={id} userId={id} canPin={isSelf} />
             </div>
         </div>
     );

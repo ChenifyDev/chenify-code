@@ -1,5 +1,7 @@
 import { defineConfig } from "drizzle-kit";
+import dotenv from "dotenv";
 
+dotenv.config({ path: ".env.production" });
 export default defineConfig({
     schema: ["./src/db/pg-schema.ts", "./src/works/pg-schema.ts"],
     out: "./drizzle-neon",

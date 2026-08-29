@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Check, Copy, Heart, MessageCircle, MessageCircleOff, Pencil, Trash2, UserCheck, UserPlus } from "lucide-react";
+import { Bookmark, Check, Copy, Heart, MessageCircle, MessageCircleOff, Pencil, Pin, PinOff, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
@@ -27,6 +27,7 @@ import {
     type Post,
     deleteDraft,
     setPostCommentArea,
+    setPostPinned,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format.ts";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
@@ -88,6 +89,7 @@ export default function PostDetail() {
     const [draftId, setDraftId] = useState<number | null>(null);
     const [commentArea, setCommentArea] = useState(true);
     const [commentAreaBusy, setCommentAreaBusy] = useState(false);
+    const [pinBusy, setPinBusy] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -223,6 +225,20 @@ export default function PostDetail() {
             console.error(err);
         } finally {
             setCommentAreaBusy(false);
+        }
+    };
+
+    const handleTogglePin = async () => {
+        if (!post) return;
+        if (!requireLogin()) return;
+        setPinBusy(true);
+        try {
+            const updated = await setPostPinned(post.id, !post.pinned);
+            setPost(updated);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setPinBusy(false);
         }
     };
 
@@ -412,6 +428,19 @@ export default function PostDetail() {
                             <MessageCircle className="size-4" />
                             {post.comments_count}
                         </span>
+                        {isAuthor && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(post.pinned && "text-primary")}
+                                disabled={pinBusy}
+                                onClick={handleTogglePin}
+                                title={post.pinned ? "取消置顶" : "置顶"}
+                            >
+                                {post.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+                                {pinBusy ? "保存中…" : post.pinned ? "取消置顶" : "置顶"}
+                            </Button>
+                        )}
                         {isAuthor && (
                             <Button
                                 variant="ghost"

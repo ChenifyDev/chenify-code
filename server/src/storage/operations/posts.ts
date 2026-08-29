@@ -49,6 +49,7 @@ async function boardPosts(
                 comments_count: comments.filter((c) => c.post_id === post.id).length,
                 likes_count: likes.filter((l) => l.post_id === post.id).length,
                 favorites_count: favorites.filter((f) => f.post_id === post.id).length,
+                pinned: post.pinned,
             };
         }),
     );
@@ -195,6 +196,7 @@ export async function createPostStandalone(
         user_id: userId,
         content: contentRef,
         created_at: new Date().toISOString(),
+        pinned: false,
     });
     for (const path of imagePaths) {
         await store.insert<StoredPostImage>(C.postImages, { post_id: post.id, path });
@@ -305,6 +307,27 @@ export async function deletePostRowStandalone(store: CollectionStore, blobStore:
     await deletePostRowsOnly(store, blobStore, id);
 }
 
+export async function setPostPinnedStandalone(
+    store: CollectionStore,
+    blobStore: BlobStore,
+    postId: number,
+    pinned: boolean,
+): Promise<Post | null> {
+    const post = await store.getById<StoredPost>(C.posts, postId);
+    if (!post) return null;
+
+    if (pinned) {
+        const all = await store.read<StoredPost>(C.posts);
+        const others = all.filter((row) => row.user_id === post.user_id && row.id !== postId && row.pinned);
+        await Promise.all(others.map((row) => store.updateById<StoredPost>(C.posts, row.id, { pinned: false })));
+        if (!post.pinned) await store.updateById<StoredPost>(C.posts, postId, { pinned: true });
+    } else if (post.pinned) {
+        await store.updateById<StoredPost>(C.posts, postId, { pinned: false });
+    }
+
+    return getPostByIdStandalone(store, blobStore, postId, post.user_id);
+}
+
 export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): PostsRepo {
     return {
         async getPostOwner(id) {
@@ -363,7 +386,12 @@ export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): P
             const rows = await boardPosts(store, blobStore);
             const filtered = rows
                 .filter((row) => row.user_id === userId)
-                .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+                .sort(
+                    (a, b) =>
+                        Number(b.pinned) - Number(a.pinned) ||
+                        b.created_at.localeCompare(a.created_at) ||
+                        b.id - a.id,
+                );
             const page = filtered.slice(options.offset, options.offset + options.limit);
             await loadRowsContent(blobStore, page);
             return hydratePosts(store, page, options.viewerId);
@@ -397,6 +425,10 @@ export function createPostsRepo(store: CollectionStore, blobStore: BlobStore): P
 
         async updatePostContent(id, content) {
             return updatePostContentStandalone(store, blobStore, id, content);
+        },
+
+        async setPostPinned(postId, pinned) {
+            return setPostPinnedStandalone(store, blobStore, postId, pinned);
         },
 
         async deletePost(id) {

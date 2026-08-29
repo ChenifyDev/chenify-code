@@ -471,7 +471,27 @@ Token 端点：
 
 无需登录（可携带 Token）。查询参数：`offset`、`limit`。返回 `200`，`Post[]`。
 
+- 置顶的帖子始终排在最前；同一用户同时最多有一条置顶帖子
+- 其余帖子按发布时间倒序
+
 错误：`404` 用户不存在。
+
+#### 置顶/取消置顶帖子
+
+`PATCH /api/posts/:id/pin`
+
+需要登录，且仅作者本人可操作。请求体：
+
+```json
+{ "pinned": true }
+```
+
+- `pinned: true` 置顶该帖子，并自动取消该作者当前其他置顶
+- `pinned: false` 取消置顶
+
+成功返回 `200`，更新后的 `Post`。
+
+错误：`401` 未登录，`400` `pinned` 非布尔值，`403` 无权操作，`404` 帖子不存在。
 
 #### 用户收藏
 
@@ -737,6 +757,7 @@ Token 端点：
 | `is_liked`            | boolean     | 我是否已点赞     |
 | `is_favorited`        | boolean     | 我是否已收藏     |
 | `is_following_author` | boolean     | 我是否关注了作者 |
+| `pinned`              | boolean     | 是否已置顶       |
 
 ### Comment
 
@@ -834,6 +855,7 @@ Token 端点：
 | DELETE | `/api/posts/:id/like`               | 是           |
 | POST   | `/api/posts/:id/favorite`           | 是           |
 | DELETE | `/api/posts/:id/favorite`           | 是           |
+| PATCH  | `/api/posts/:id/pin`                | 是（作者）   |
 | GET    | `/api/posts/:id/comments`           | 否           |
 | POST   | `/api/posts/:id/comments`           | 是           |
 | DELETE | `/api/comments/:id`                 | 是（本人）   |

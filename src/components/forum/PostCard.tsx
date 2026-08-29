@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { Bookmark, Check, ChevronDown, ChevronUp, Copy, Heart, MessageCircle } from "lucide-react";
+import { Bookmark, Check, ChevronDown, ChevronUp, Copy, Heart, MessageCircle, Pin, PinOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
+import { setPostPinned, toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
@@ -15,10 +15,21 @@ import { useUserStore } from "@/stores/useUser";
 
 const PREVIEW_MAX_LENGTH = 100;
 
-export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
+export function PostCard({
+    post,
+    compact,
+    canPin = false,
+    onPinChanged,
+}: {
+    post: Post;
+    compact?: boolean;
+    canPin?: boolean;
+    onPinChanged?: () => void;
+}) {
     const [expanded, setExpanded] = useState(false);
     const [postState, setPost] = useState<Post>(post);
     const [reactBusy, setReactBusy] = useState(false);
+    const [pinBusy, setPinBusy] = useState(false);
     const [copied, setCopied] = useState(false);
     const { title, body } = useMemo(() => parseFrontmatter(postState.content), [postState.content]);
     const { excerpt, isTruncated } = useMemo(
@@ -72,6 +83,21 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
         }
     };
 
+    const handlePin = async () => {
+        if (!postState) return;
+        if (!requireLogin()) return;
+        setPinBusy(true);
+        try {
+            const updated = await setPostPinned(postState.id, !postState.pinned);
+            setPost(updated);
+            onPinChanged?.();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setPinBusy(false);
+        }
+    };
+
     const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.host + `/posts/${postState.id}`);
@@ -100,6 +126,12 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                     </Link>
                     <span>·</span>
                     <span className="shrink-0">{formatDate(postState.created_at)}</span>
+                    {postState.pinned && (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-primary">
+                            <Pin className="size-3 fill-current" />
+                            置顶
+                        </span>
+                    )}
                 </div>
 
                 <div className="min-w-0 flex flex-col gap-2">
@@ -171,6 +203,18 @@ export function PostCard({ post, compact }: { post: Post; compact?: boolean }) {
                         <MessageCircle className="size-3.5" />
                         {postState.comments_count}
                     </Button>
+                    {canPin && (
+                        <Button
+                            variant="ghost"
+                            size={"xs"}
+                            onClick={handlePin}
+                            disabled={pinBusy}
+                            className={cn("inline-flex items-center gap-1", postState.pinned && "text-primary")}
+                        >
+                            {postState.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+                            {postState.pinned ? "取消置顶" : "置顶"}
+                        </Button>
+                    )}
                     <Button
                         variant="ghost"
                         size="sm"

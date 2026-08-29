@@ -60,6 +60,7 @@ export interface PostsRepo {
     deletePost(id: number): Promise<string[]>;
     deletePostRow(id: number): Promise<void>;
     updatePostContent(id: number, content: string): Promise<Post | null>;
+    setPostPinned(postId: number, pinned: boolean): Promise<Post | null>;
     searchPosts(options: { offset: number; limit: number; sort?: "latest" | "hot"; keyword: string }): Promise<Post[]>;
     countSearchPosts(options: { keyword: string }): Promise<number>;
 }

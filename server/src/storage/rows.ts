@@ -14,6 +14,7 @@ export interface StoredPost {
     user_id: number;
     content: string;
     created_at: string;
+    pinned: boolean;
 }
 
 export interface StoredPostImage {

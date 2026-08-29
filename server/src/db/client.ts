@@ -11,11 +11,8 @@ function init(): BunSQLiteDatabase<typeof schema> {
     const sqlite = new Database(DB_PATH, { create: true });
     sqlite.run("PRAGMA foreign_keys = ON");
     const db = drizzle(sqlite, { schema, logger: false });
-    const hasSchema = sqlite.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'").get() != null;
-    if (!hasSchema) {
-        const migrationsFolder = join(import.meta.dir, "../../drizzle");
-        migrate(db, { migrationsFolder });
-    }
+    const migrationsFolder = join(import.meta.dir, "../../drizzle");
+    migrate(db, { migrationsFolder });
     return db;
 }
 

@@ -33,6 +33,7 @@ export const posts = pgTable(
             .references(() => users.id),
         content: text("content").notNull(),
         created_at: text("created_at").notNull().default(now),
+        pinned: boolean("pinned").notNull().default(false),
     },
     (table) => [index("idx_posts_user_id").on(table.user_id), index("idx_posts_created_at").on(table.created_at)],
 );

@@ -485,6 +485,7 @@ async function main() {
                     user_id: userId,
                     content: contentRef,
                     created_at: post.created_at,
+                    pinned: false,
                 });
                 postId = inserted.id;
                 await attachPostTags(postId, post.tags);
