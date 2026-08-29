@@ -4,6 +4,16 @@ export function getApiBase(): string {
     return (import.meta.env.VITE_API_PATH as string | undefined) ?? "";
 }
 
+export class ApiError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = "ApiError";
+        this.status = status;
+    }
+}
+
 export function authHeaders(): Record<string, string> {
     const token = getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -31,7 +41,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
 
     if (!res.ok) {
-        throw new Error(data?.message ?? `请求失败（${res.status}）`);
+        throw new ApiError(data?.message ?? `请求失败（${res.status}）`, res.status);
     }
     return data as T;
 }
@@ -51,7 +61,7 @@ export async function authRequest<T>(path: string, init?: RequestInit): Promise<
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
 
     if (!res.ok) {
-        throw new Error(data?.message ?? `请求失败（${res.status}）`);
+        throw new ApiError(data?.message ?? `请求失败（${res.status}）`, res.status);
     }
     return data as T;
 }

@@ -106,8 +106,9 @@ export function neonCollectionStore(): CollectionStore {
         },
 
         async getById<T extends { id: number }>(name: string, id: number): Promise<T | undefined> {
-            const rows = (await store.read<any>(name)) as any[];
-            return rows.find((row) => (row as any).id === id) as T | undefined;
+            const { table } = resolve(name);
+            const rows = (await getDb().select().from(table).where(eq(table.id, id)).execute()) as T[];
+            return rows[0];
         },
 
         async updateById<T extends { id: number }>(

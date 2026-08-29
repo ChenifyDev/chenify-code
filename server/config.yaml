@@ -6,10 +6,10 @@ database:
     # sqlite 数据库文件路径（相对本文件所在目录）
     path: ./app.db
 
-jwt:
-    # 与旧后端保持一致，前端已签发的 token 可以直接沿用
-    secret: chenify-dev-secret
-    expires_days: 7
+# JWT 配置不在本文件维护，由环境变量控制（见 .env.production / .env.development）：
+#   JWT_SECRET       签名密钥（HS256）
+#   JWT_EXPIRES_DAYS 有效期天数，默认 7 天
+# 生产环境务必在平台注入与 .env.production 一致的 JWT_SECRET，保证签发/校验一致。
 
 storage:
     # 资源文件存放方式：s3（S3API / MinIO）
