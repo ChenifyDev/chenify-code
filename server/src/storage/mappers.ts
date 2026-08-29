@@ -154,11 +154,7 @@ export function toCommentNode(node: CommentNode): Comment {
     };
 }
 
-function nestThread<T extends { id: number; parent_id: number | null; created_at: string }, N extends { replies: N[] }>(
-    base: T[],
-    options: { offset: number; limit: number },
-    make: (t: T) => N,
-): N[] {
+function treeIndex<T extends { id: number; parent_id: number | null; created_at: string }>(base: T[]) {
     const roots = base.filter((c) => c.parent_id == null);
     const childrenMap = new Map<number, T[]>();
     for (const c of base) {
@@ -185,7 +181,23 @@ function nestThread<T extends { id: number; parent_id: number | null; created_at
         descendants.set(rootId, out);
         return out;
     };
+    return { roots, descendants, collect };
+}
 
+export function treePageRows<T extends { id: number; parent_id: number | null; created_at: string }>(
+    base: T[],
+    options: { offset: number; limit: number },
+): T[] {
+    const { roots, collect } = treeIndex(base);
+    return roots.slice(options.offset, options.offset + options.limit).flatMap((root) => [root, ...collect(root.id)]);
+}
+
+function nestThread<T extends { id: number; parent_id: number | null; created_at: string }, N extends { replies: N[] }>(
+    base: T[],
+    options: { offset: number; limit: number },
+    make: (t: T) => N,
+): N[] {
+    const { roots, collect } = treeIndex(base);
     const pagedRoots = roots.slice(options.offset, options.offset + options.limit);
     return pagedRoots.map((root) => ({
         ...make(root),

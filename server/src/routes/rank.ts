@@ -9,7 +9,7 @@ export const routes = {
         const { offset, limit } = parsePagination(url);
         const storage = getStorage();
         const users = await storage.rank.rankUsersByFollowers({ offset, limit }, me?.id);
-        const total = (await storage.rank.rankUsersByFollowers({ offset: 0, limit: Number.MAX_SAFE_INTEGER }, me?.id)).length;
+        const total = await storage.users.countUsers();
         return Response.json({
             items: users,
             total,
@@ -25,7 +25,7 @@ export const routes = {
         const { offset, limit } = parsePagination(url);
         const storage = getStorage();
         const users = await storage.rank.rankUsersByPoints({ offset, limit }, me?.id);
-        const total = (await storage.rank.rankUsersByPoints({ offset: 0, limit: Number.MAX_SAFE_INTEGER }, me?.id)).length;
+        const total = await storage.users.countUsers();
         return Response.json({
             items: users,
             total,

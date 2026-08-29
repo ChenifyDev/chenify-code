@@ -87,6 +87,11 @@ export async function listNotificationRows(
     return buildNotifications(ordered, { actors, postSnippets, replyTo, commentContents });
 }
 
+export async function countNotificationRows(store: CollectionStore, userId: number): Promise<number> {
+    const rows = await store.read<StoredNotification>(C.notifications);
+    return rows.filter((row) => row.user_id === userId).length;
+}
+
 export async function deleteNotificationsForPost(store: CollectionStore, postId: number): Promise<void> {
     await store.deleteWhere<StoredNotification>(C.notifications, (row) => row.post_id === postId);
 }
@@ -103,6 +108,9 @@ export function createNotificationsRepo(store: CollectionStore): NotificationsRe
     return {
         async createNotification(input) {
             await insertNotificationRow(store, input);
+        },
+        async countNotifications(userId) {
+            return countNotificationRows(store, userId);
         },
         async countUnreadNotifications(userId) {
             return countUnreadRows(store, userId);

@@ -15,15 +15,17 @@ export const routes = {
         if (!keyword) return jsonError(400, "Invalid keyword");
         const storage = getStorage();
         if (type === "posts") {
-            const items = await storage.posts.searchPosts({ offset, limit, sort, keyword });
-            const total = (await storage.posts.searchPosts({ offset: 0, limit: Number.MAX_SAFE_INTEGER, sort, keyword })).length;
+            const [items, total] = await Promise.all([
+                storage.posts.searchPosts({ offset, limit, sort, keyword }),
+                storage.posts.countSearchPosts({ keyword }),
+            ]);
             return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         } else {
             const me = await getAuthUser(req);
-            const items = await storage.users.searchUsers({ offset, limit, keyword }, me?.id ?? null);
-            const total = (
-                await storage.users.searchUsers({ offset: 0, limit: Number.MAX_SAFE_INTEGER, keyword }, me?.id ?? null)
-            ).length;
+            const [items, total] = await Promise.all([
+                storage.users.searchUsers({ offset, limit, keyword }, me?.id ?? null),
+                storage.users.countSearchUsers(keyword),
+            ]);
             return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         }
     },

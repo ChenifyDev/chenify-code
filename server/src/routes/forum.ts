@@ -105,16 +105,10 @@ export const routes = {
             const { offset, limit } = parsePagination(url);
             const tag = url.searchParams.get("tag")?.trim().toLowerCase() || null;
             const sort = url.searchParams.get("sort") === "hot" ? "hot" : "latest";
-            const posts = await storage.posts.listPosts({ offset, limit, tag, sort, viewerId: me?.id ?? null });
-            const total = (
-                await storage.posts.listPosts({
-                    offset: 0,
-                    limit: Number.MAX_SAFE_INTEGER,
-                    tag,
-                    sort,
-                    viewerId: me?.id ?? null,
-                })
-            ).length;
+            const [posts, total] = await Promise.all([
+                storage.posts.listPosts({ offset, limit, tag, sort, viewerId: me?.id ?? null }),
+                storage.posts.countPosts({ tag }),
+            ]);
             return Response.json({ items: posts, total, offset, limit, hasMore: offset + posts.length < total });
         },
         POST: async (req) => {
@@ -455,9 +449,7 @@ export const routes = {
             const status = url.searchParams.get("status") as "draft" | "published" | null;
             const parsed = status === "draft" || status === "published" ? status : undefined;
             const items = await storage.drafts.listDrafts(me.id, { offset, limit, status: parsed });
-            const total = (
-                await storage.drafts.listDrafts(me.id, { offset: 0, limit: Number.MAX_SAFE_INTEGER, status: parsed })
-            ).length;
+            const total = await storage.drafts.countDrafts(me.id, parsed);
             return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         },
         POST: async (req) => {

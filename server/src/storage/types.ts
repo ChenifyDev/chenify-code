@@ -91,6 +91,7 @@ export interface PostRow {
     id: number;
     user_id: number;
     content: string;
+    contentRef: string;
     created_at: string;
     username: string;
     avatar: string | null;

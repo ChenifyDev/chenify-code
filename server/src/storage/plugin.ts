@@ -33,6 +33,8 @@ export interface UsersRepo {
         options: { offset: number; limit: number; keyword: string },
         viewerId: number | null,
     ): Promise<FollowUser[]>;
+    countSearchUsers(keyword: string): Promise<number>;
+    countUsers(): Promise<number>;
 }
 
 export interface PostsRepo {
@@ -47,15 +49,19 @@ export interface PostsRepo {
         sort?: "latest" | "hot";
         viewerId: number | null;
     }): Promise<Post[]>;
+    countPosts(options: { tag?: string | null }): Promise<number>;
     listUserPosts(userId: number, options: { offset: number; limit: number; viewerId: number | null }): Promise<Post[]>;
+    countUserPosts(userId: number): Promise<number>;
     listUserFavorites(
         userId: number,
         options: { offset: number; limit: number; viewerId: number | null },
     ): Promise<Post[]>;
+    countUserFavorites(userId: number): Promise<number>;
     deletePost(id: number): Promise<string[]>;
     deletePostRow(id: number): Promise<void>;
     updatePostContent(id: number, content: string): Promise<Post | null>;
     searchPosts(options: { offset: number; limit: number; sort?: "latest" | "hot"; keyword: string }): Promise<Post[]>;
+    countSearchPosts(options: { keyword: string }): Promise<number>;
 }
 
 export interface CommentsRepo {
@@ -93,11 +99,13 @@ export interface FollowsRepo {
         viewerId: number | null,
         options: { offset: number; limit: number },
     ): Promise<FollowUser[]>;
+    countFollowing(ownerId: number): Promise<number>;
     listFollowers(
         ownerId: number,
         viewerId: number | null,
         options: { offset: number; limit: number },
     ): Promise<FollowUser[]>;
+    countFollowers(ownerId: number): Promise<number>;
 }
 
 export interface DraftsRepo {
@@ -106,6 +114,7 @@ export interface DraftsRepo {
         userId: number,
         options: { offset: number; limit: number; status?: "draft" | "published" },
     ): Promise<Draft[]>;
+    countDrafts(userId: number, status?: "draft" | "published"): Promise<number>;
     getDraftById(id: number): Promise<Draft | null>;
     getDraftByPostId(postId: number): Promise<Draft | null>;
     getDraftOwner(id: number): Promise<number | null>;
@@ -134,6 +143,7 @@ export interface NotificationsRepo {
         commentId?: number | null;
     }): Promise<void>;
     countUnreadNotifications(userId: number): Promise<number>;
+    countNotifications(userId: number): Promise<number>;
     markNotificationsRead(userId: number, ids?: number[]): Promise<void>;
     listNotifications(userId: number, options: { offset: number; limit: number }): Promise<AppNotification[]>;
     deleteNotificationsForPost(postId: number): Promise<void>;

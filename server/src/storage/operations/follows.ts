@@ -88,6 +88,11 @@ export function createFollowsRepo(store: CollectionStore): FollowsRepo {
             );
         },
 
+        async countFollowing(ownerId) {
+            const rows = await store.read<StoredFollow>(C.follows);
+            return rows.filter((f) => f.follower_id === ownerId).length;
+        },
+
         async listFollowers(ownerId, viewerId, options) {
             return fetchFollowUsers(
                 store,
@@ -97,6 +102,11 @@ export function createFollowsRepo(store: CollectionStore): FollowsRepo {
                 (f) => f.following_id === ownerId,
                 (f) => f.follower_id,
             );
+        },
+
+        async countFollowers(ownerId) {
+            const rows = await store.read<StoredFollow>(C.follows);
+            return rows.filter((f) => f.following_id === ownerId).length;
         },
     };
 }

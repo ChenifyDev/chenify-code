@@ -122,5 +122,16 @@ export function createUsersRepo(store: CollectionStore): UsersRepo {
 
             return rankSearchUsers(enriched, { offset, limit });
         },
+
+        async countSearchUsers(keyword) {
+            const users = await store.read<StoredUser>(C.users);
+            const kw = keyword.toLowerCase();
+            return users.filter((user) => user.username.toLowerCase().includes(kw)).length;
+        },
+
+        async countUsers() {
+            const users = await store.read<StoredUser>(C.users);
+            return users.length;
+        },
     };
 }

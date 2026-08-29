@@ -35,23 +35,30 @@ async function boardViewerFollowingsPosts(
     const userMap = new Map(users.map((user) => [user.id, user]));
     const followingIds = new Set(follows.filter((row) => row.follower_id === viewerId).map((row) => row.following_id));
 
-    return Promise.all(
-        posts
-            .filter((post) => followingIds.has(post.user_id))
-            .map(async (post) => {
-                const author = userMap.get(post.user_id);
-                return {
-                    id: post.id,
-                    user_id: post.user_id,
-                    content: await loadContentBlob(blobStore, post.content),
-                    created_at: post.created_at,
-                    username: author?.username ?? "未知用户",
-                    avatar: author?.avatar ?? null,
-                    comments_count: comments.filter((comment) => comment.post_id === post.id).length,
-                    likes_count: likes.filter((like) => like.post_id === post.id).length,
-                    favorites_count: favorites.filter((favorite) => favorite.post_id === post.id).length,
-                };
-            }),
+    return posts
+        .filter((post) => followingIds.has(post.user_id))
+        .map((post) => {
+            const author = userMap.get(post.user_id);
+            return {
+                id: post.id,
+                user_id: post.user_id,
+                content: "",
+                contentRef: post.content,
+                created_at: post.created_at,
+                username: author?.username ?? "未知用户",
+                avatar: author?.avatar ?? null,
+                comments_count: comments.filter((comment) => comment.post_id === post.id).length,
+                likes_count: likes.filter((like) => like.post_id === post.id).length,
+                favorites_count: favorites.filter((favorite) => favorite.post_id === post.id).length,
+            };
+        });
+}
+
+async function loadPageContent(blobStore: BlobStore, rows: PostRow[]): Promise<void> {
+    await Promise.all(
+        rows.map(async (row) => {
+            row.content = await loadContentBlob(blobStore, row.contentRef);
+        }),
     );
 }
 
@@ -131,8 +138,9 @@ export async function listViewerFollowingPosts(
 
     let rows = await boardViewerFollowingsPosts(store, blobStore, viewerId);
     rows = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
-
-    return hydrateViewerFollowingsPosts(store, rows.slice(offset, offset + limit), viewerId);
+    const page = rows.slice(offset, offset + limit);
+    await loadPageContent(blobStore, page);
+    return hydrateViewerFollowingsPosts(store, page, viewerId);
 }
 
 export const getViewerFollowingsPosts = listViewerFollowingPosts;

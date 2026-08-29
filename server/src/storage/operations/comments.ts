@@ -3,7 +3,7 @@ import { deleteContentBlob, loadContentBlob, saveContentBlob } from "../content"
 import type { BlobStore, CollectionStore } from "../store";
 import type { StoredComment, StoredCommentLike, StoredPost, StoredUser } from "../rows";
 import { deleteNotificationsForComment } from "./notifications";
-import { buildCommentTree, snippet, toCommentNode, type CommentNode } from "../mappers";
+import { buildCommentTree, snippet, toCommentNode, treePageRows, type CommentNode } from "../mappers";
 import type { UserSummary } from "../types";
 import type { CommentsRepo } from "../plugin";
 
@@ -83,51 +83,50 @@ export function createCommentsRepo(store: CollectionStore, blobStore: BlobStore)
                 .filter((row) => row.post_id === postId)
                 .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
 
+            const pageRows = treePageRows(commentsOfPost, options);
+            const pageIdSet = new Set(pageRows.map((c) => c.id));
+
             const userMap = new Map(users.map((user) => [user.id, user]));
             const post = posts.find((p) => p.id === postId);
+            const postContent = post ? await loadContentBlob(blobStore, post.content) : "";
 
             const likeCounts = new Map<number, number>();
-            for (const like of commentLikes) {
-                if (!commentsOfPost.some((c) => c.id === like.comment_id)) continue;
-                likeCounts.set(like.comment_id, (likeCounts.get(like.comment_id) ?? 0) + 1);
-            }
-
             const likedIds = new Set<number>();
-            if (viewerId != null) {
-                for (const like of commentLikes)
-                    if (like.user_id === viewerId && commentsOfPost.some((c) => c.id === like.comment_id))
-                        likedIds.add(like.comment_id);
+            for (const like of commentLikes) {
+                if (!pageIdSet.has(like.comment_id)) continue;
+                likeCounts.set(like.comment_id, (likeCounts.get(like.comment_id) ?? 0) + 1);
+                if (viewerId != null && like.user_id === viewerId) likedIds.add(like.comment_id);
             }
 
-            const base: CommentNode[] = await Promise.all(
-                commentsOfPost.map(async (row) => {
-                    const author = userMap.get(row.user_id);
-                    const authorInfo: UserSummary = author
-                        ? {
-                              id: author.id,
-                              username: author.username,
-                              avatar: author.avatar,
-                              created_at: author.created_at,
-                          }
-                        : { id: row.user_id, username: "未知用户", avatar: null, created_at: "" };
-                    return {
-                        id: row.id,
-                        post_id: row.post_id,
-                        parent_id: row.parent_id,
-                        content: await loadContentBlob(blobStore, row.content),
-                        created_at: row.created_at,
-                        user_id: row.user_id,
-                        username: author?.username ?? "未知用户",
-                        avatar: author?.avatar ?? null,
-                        post_snippet: post ? snippet(await loadContentBlob(blobStore, post.content)) : "",
-                        author: authorInfo,
-                        likes_count: likeCounts.get(row.id) ?? 0,
-                        is_liked: likedIds.has(row.id),
-                    };
-                }),
-            );
+            const contents = await Promise.all(pageRows.map((row) => loadContentBlob(blobStore, row.content)));
 
-            return buildCommentTree(base, options);
+            const base: CommentNode[] = pageRows.map((row, index) => {
+                const author = userMap.get(row.user_id);
+                const authorInfo: UserSummary = author
+                    ? {
+                          id: author.id,
+                          username: author.username,
+                          avatar: author.avatar,
+                          created_at: author.created_at,
+                      }
+                    : { id: row.user_id, username: "未知用户", avatar: null, created_at: "" };
+                return {
+                    id: row.id,
+                    post_id: row.post_id,
+                    parent_id: row.parent_id,
+                    content: contents[index] ?? "",
+                    created_at: row.created_at,
+                    user_id: row.user_id,
+                    username: author?.username ?? "未知用户",
+                    avatar: author?.avatar ?? null,
+                    post_snippet: snippet(postContent),
+                    author: authorInfo,
+                    likes_count: likeCounts.get(row.id) ?? 0,
+                    is_liked: likedIds.has(row.id),
+                };
+            });
+
+            return buildCommentTree(base, { offset: 0, limit: base.length });
         },
 
         async getCommentOwner(id) {

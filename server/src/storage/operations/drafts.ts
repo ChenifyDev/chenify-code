@@ -67,6 +67,11 @@ export function createDraftsRepo(store: CollectionStore, blobStore: BlobStore): 
             return Promise.all(filtered.map((row) => toDraft(store, blobStore, row)));
         },
 
+        async countDrafts(userId, status) {
+            const rows = await store.read<StoredDraft>(C.drafts);
+            return rows.filter((row) => row.user_id === userId && (status == null || row.status === status)).length;
+        },
+
         async getDraftById(id) {
             const row = await store.getById<StoredDraft>(C.drafts, id);
             return row ? toDraft(store, blobStore, row) : null;

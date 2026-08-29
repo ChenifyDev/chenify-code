@@ -10,7 +10,7 @@ export const routes = {
             if (!me) return jsonError(401, "请先登录");
             const { offset, limit } = parsePagination(new URL(req.url), 20, 50);
             const items = await storage.notifications.listNotifications(me.id, { offset, limit });
-            const total = (await storage.notifications.listNotifications(me.id, { offset: 0, limit: Number.MAX_SAFE_INTEGER })).length;
+            const total = await storage.notifications.countNotifications(me.id);
             return Response.json({ items, total, offset, limit, hasMore: offset + items.length < total });
         },
     },
