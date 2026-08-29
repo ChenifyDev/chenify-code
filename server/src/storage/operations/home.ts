@@ -4,6 +4,7 @@ import { buildPosts } from "../mappers";
 import type { HomeRepo } from "../plugin";
 import type { BlobStore, CollectionStore } from "../store";
 import type {
+    StoredCoinTransaction,
     StoredComment,
     StoredFavorite,
     StoredFollow,
@@ -23,17 +24,20 @@ async function boardViewerFollowingsPosts(
 ): Promise<PostRow[]> {
     if (viewerId == null) return [];
 
-    const [posts, users, comments, likes, favorites, follows] = await Promise.all([
+    const [posts, users, comments, likes, favorites, follows, coins] = await Promise.all([
         store.read<StoredPost>(C.posts),
         store.read<StoredUser>(C.users),
         store.read<StoredComment>(C.comments),
         store.read<StoredLike>(C.likes),
         store.read<StoredFavorite>(C.favorites),
         store.read<StoredFollow>(C.follows),
+        store.read<StoredCoinTransaction>(C.coinTransactions),
     ]);
 
     const userMap = new Map(users.map((user) => [user.id, user]));
     const followingIds = new Set(follows.filter((row) => row.follower_id === viewerId).map((row) => row.following_id));
+    const coinsCount = (postId: number) =>
+        coins.reduce((sum, row) => (row.post_id === postId && row.type === "tip_in" ? sum + row.amount : sum), 0);
 
     return posts
         .filter((post) => followingIds.has(post.user_id))
@@ -50,6 +54,7 @@ async function boardViewerFollowingsPosts(
                 comments_count: comments.filter((comment) => comment.post_id === post.id).length,
                 likes_count: likes.filter((like) => like.post_id === post.id).length,
                 favorites_count: favorites.filter((favorite) => favorite.post_id === post.id).length,
+                coins_count: Math.round(coinsCount(post.id) * 10000) / 10000,
                 pinned: post.pinned,
             };
         });
