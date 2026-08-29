@@ -141,7 +141,7 @@ export interface NotificationsRepo {
     createNotification(input: {
         userId: number;
         actorId: number;
-        type: "post_comment" | "post_reply" | "post_tip";
+        type: "post_comment" | "post_reply" | "post_tip" | "user_tip";
         postId?: number | null;
         commentId?: number | null;
         data?: string | null;
@@ -175,6 +175,17 @@ export interface CoinsRepo {
         postId: number,
         postAuthorId: number,
     ): Promise<{ ok: boolean; reason?: "already_tipped" | "insufficient"; balance: number }>;
+    tipUser(
+        userId: number,
+        recipientId: number,
+        amount: number,
+        now?: Date,
+    ): Promise<{
+        ok: boolean;
+        reason?: "already_tipped" | "insufficient" | "invalid_amount" | "self_tip";
+        balance: number;
+        recipient_delta: number;
+    }>;
     hasTipped(userId: number, postId: number): Promise<boolean>;
     rankCoins(
         options: { period: CoinPeriod; offset: number; limit: number },

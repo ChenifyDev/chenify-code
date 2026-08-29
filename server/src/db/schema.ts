@@ -172,7 +172,7 @@ export const notifications = sqliteTable(
         actor_id: integer("actor_id")
             .notNull()
             .references(() => users.id),
-        type: text("type", { enum: ["post_comment", "post_reply", "post_tip"] }).notNull(),
+        type: text("type", { enum: ["post_comment", "post_reply", "post_tip", "user_tip"] }).notNull(),
         post_id: integer("post_id"),
         work_id: integer("work_id"),
         comment_id: integer("comment_id"),
@@ -194,6 +194,7 @@ export const coinTransactions = sqliteTable(
             .notNull()
             .references(() => users.id),
         post_id: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+        to_user_id: integer("to_user_id").references(() => users.id),
         type: text("type", { enum: ["daily", "tip_out", "tip_in"] }).notNull(),
         amount: real("amount").notNull(),
         reward_date: text("reward_date"),
@@ -202,6 +203,7 @@ export const coinTransactions = sqliteTable(
     (table) => [
         index("idx_coin_transactions_user_id").on(table.user_id),
         index("idx_coin_transactions_post_id").on(table.post_id),
+        index("idx_coin_transactions_to_user_id").on(table.to_user_id),
         index("idx_coin_transactions_created_at").on(table.created_at),
     ],
 );

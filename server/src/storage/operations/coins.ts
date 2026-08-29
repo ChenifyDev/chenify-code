@@ -7,6 +7,13 @@ import type { CoinsRepo } from "../plugin";
 const TIP_AMOUNT = 1;
 const TIP_REWARD = 0.1;
 const DAILY_REWARD = 1;
+const USER_TIP_MAX = 50;
+const USER_TIP_REWARD = 0.25;
+const USER_TIP_WINDOW_MS = 15 * 24 * 60 * 60 * 1000;
+
+function round1(value: number): number {
+    return Math.round(value * 10) / 10;
+}
 
 function summaryOf(user: StoredUser | undefined, fallbackId: number): UserSummary {
     return user
@@ -60,6 +67,7 @@ export function createCoinsRepo(store: CollectionStore): CoinsRepo {
             await store.insert<StoredCoinTransaction>(C.coinTransactions, {
                 user_id: userId,
                 post_id: null,
+                to_user_id: null,
                 type: "daily",
                 amount: DAILY_REWARD,
                 reward_date: date,
@@ -91,6 +99,7 @@ export function createCoinsRepo(store: CollectionStore): CoinsRepo {
             await store.insert<StoredCoinTransaction>(C.coinTransactions, {
                 user_id: userId,
                 post_id: postId,
+                to_user_id: null,
                 type: "tip_out",
                 amount: -TIP_AMOUNT,
                 reward_date: null,
@@ -99,6 +108,7 @@ export function createCoinsRepo(store: CollectionStore): CoinsRepo {
             await store.insert<StoredCoinTransaction>(C.coinTransactions, {
                 user_id: postAuthorId,
                 post_id: postId,
+                to_user_id: null,
                 type: "tip_in",
                 amount: TIP_REWARD,
                 reward_date: null,
@@ -110,6 +120,54 @@ export function createCoinsRepo(store: CollectionStore): CoinsRepo {
         async hasTipped(userId, postId) {
             const rows = await store.read<StoredCoinTransaction>(C.coinTransactions);
             return rows.some((row) => row.user_id === userId && row.type === "tip_out" && row.post_id === postId);
+        },
+
+        async tipUser(userId, recipientId, amount, now = new Date()) {
+            const rows = await store.read<StoredCoinTransaction>(C.coinTransactions);
+            if (!Number.isInteger(amount) || amount < 1 || amount > USER_TIP_MAX) {
+                return { ok: false, reason: "invalid_amount", balance: balanceOf(rows, userId), recipient_delta: 0 };
+            }
+            if (userId === recipientId) {
+                return { ok: false, reason: "self_tip", balance: balanceOf(rows, userId), recipient_delta: 0 };
+            }
+            const cutoff = now.getTime() - USER_TIP_WINDOW_MS;
+            const recent = rows.some(
+                (row) =>
+                    row.user_id === userId &&
+                    row.type === "tip_out" &&
+                    row.post_id === null &&
+                    row.to_user_id === recipientId &&
+                    new Date(row.created_at).getTime() >= cutoff,
+            );
+            if (recent) {
+                return { ok: false, reason: "already_tipped", balance: balanceOf(rows, userId), recipient_delta: 0 };
+            }
+            const balance = balanceOf(rows, userId);
+            if (balance < amount) {
+                return { ok: false, reason: "insufficient", balance, recipient_delta: 0 };
+            }
+
+            const recipientDelta = round1(amount * USER_TIP_REWARD);
+            const nowIso = now.toISOString();
+            await store.insert<StoredCoinTransaction>(C.coinTransactions, {
+                user_id: userId,
+                post_id: null,
+                to_user_id: recipientId,
+                type: "tip_out",
+                amount: -amount,
+                reward_date: null,
+                created_at: nowIso,
+            });
+            await store.insert<StoredCoinTransaction>(C.coinTransactions, {
+                user_id: recipientId,
+                post_id: null,
+                to_user_id: recipientId,
+                type: "tip_in",
+                amount: recipientDelta,
+                reward_date: null,
+                created_at: nowIso,
+            });
+            return { ok: true, balance: await this.getBalance(userId), recipient_delta: recipientDelta };
         },
 
         async rankCoins(options, viewerId) {

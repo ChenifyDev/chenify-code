@@ -73,7 +73,7 @@ export interface StoredNotification {
     id: number;
     user_id: number;
     actor_id: number;
-    type: "post_comment" | "post_reply" | "post_tip";
+    type: "post_comment" | "post_reply" | "post_tip" | "user_tip";
     post_id: number | null;
     work_id: number | null;
     comment_id: number | null;
@@ -141,6 +141,7 @@ export interface StoredCoinTransaction {
     id: number;
     user_id: number;
     post_id: number | null;
+    to_user_id: number | null;
     type: CoinTransactionType;
     amount: number;
     reward_date: string | null;

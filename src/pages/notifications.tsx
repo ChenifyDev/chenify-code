@@ -74,6 +74,25 @@ function NotificationMessage({ notification }: { notification: AppNotification }
                 </span>
             );
         }
+        case "user_tip": {
+            let amount = 0;
+            try {
+                if (notification.data) {
+                    const parsed = JSON.parse(notification.data) as { amount?: number };
+                    if (typeof parsed.amount === "number") amount = parsed.amount;
+                }
+            } catch {
+                // 忽略无效的 data
+            }
+            return (
+                <span>
+                    <Link to={`/users/${notification.actor.id}`}>
+                        <span className="font-medium">{name}</span>
+                    </Link>{" "}
+                    给你投了 {amount} 枚硬币
+                </span>
+            );
+        }
     }
 }
 

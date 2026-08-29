@@ -10,6 +10,17 @@ export function tipPost(
     });
 }
 
+export function tipUser(
+    userId: number,
+    amount: number,
+): Promise<{ success: boolean; balance: number; coins_received: number }> {
+    return request<{ success: boolean; balance: number; coins_received: number }>(`/users/${userId}/space/coin`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ amount }),
+    });
+}
+
 export function getMyCoins(): Promise<{ balance: number }> {
     return request<{ balance: number }>("/coins/me", { headers: authHeaders() });
 }

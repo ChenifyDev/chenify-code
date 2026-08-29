@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Calendar, UserCheck, UserPlus } from "lucide-react";
+import { Calendar, Coins, UserCheck, UserPlus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import PostCard from "@/components/forum/PostCard.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "@/components/ui/card.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog.tsx";
+import { Input } from "@/components/ui/input.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
@@ -16,6 +26,7 @@ import {
     getSpaceFollowers,
     getSpaceFollowing,
     getSpacePosts,
+    tipUser,
     toggleFollow,
     updatePrivacy,
     type FollowUser,
@@ -23,6 +34,7 @@ import {
     type SpaceSkeleton,
 } from "@/lib/api";
 import { formatDate } from "@/lib/format.ts";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import LoadMore from "@/components/tab/LoadMore.tsx";
 import Empty from "@/components/tab/Empty.tsx";
@@ -151,6 +163,97 @@ function Stat({ label, value }: { label: string; value: number | null }) {
     );
 }
 
+const TIP_MAX = 50;
+const TIP_RATE = 0.25;
+
+function TipDialog({
+    open,
+    onOpenChange,
+    userId,
+    username,
+    balance,
+    onTipped,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    userId: number;
+    username: string;
+    balance: number | null;
+    onTipped: (coinsReceived: number) => void;
+}) {
+    const [amount, setAmount] = useState<string>("");
+    const [busy, setBusy] = useState(false);
+    const numeric = Number(amount);
+    const valid = Number.isInteger(numeric) && numeric >= 1 && numeric <= TIP_MAX;
+    const recipient = valid ? Math.round(numeric * TIP_RATE * 10) / 10 : null;
+
+    const handleConfirm = async () => {
+        if (!valid || busy) return;
+        setBusy(true);
+        try {
+            const res = await tipUser(userId, numeric);
+            useCoinsStore.getState().setBalance(res.balance);
+            onTipped(res.coins_received);
+            toast.success(`投币成功，${username} 收到 ${recipient} 枚硬币`);
+            onOpenChange(false);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "投币失败");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    useEffect(() => {
+        if (open) setAmount("");
+    }, [open]);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>投币给 {username}</DialogTitle>
+                    <DialogDescription>
+                        请输入要投出的硬币数（1 - {TIP_MAX}）。对方只能收到 {TIP_RATE * 100}%。
+                        {balance != null && ` 当前余额：${balance} 枚`}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-2">
+                    <Input
+                        type="number"
+                        min={1}
+                        max={TIP_MAX}
+                        step={1}
+                        placeholder="数量"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") void handleConfirm();
+                        }}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                        {recipient != null
+                            ? `对方将收到 ${recipient} 枚硬币`
+                            : valid
+                              ? ""
+                              : amount !== ""
+                                ? "请输入 1 - 50 的整数"
+                                : ""}
+                    </p>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        取消
+                    </Button>
+                    <Button disabled={!valid || busy} onClick={handleConfirm}>
+                        {busy ? "投币中…" : "确认投币"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
 function ProfileTabs({ userId, canPin }: { userId: number; canPin: boolean }) {
     const posts = useTab(
         useCallback(
@@ -233,6 +336,17 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [followBusy, setFollowBusy] = useState(false);
+    const [tipOpen, setTipOpen] = useState(false);
+    const coinsBalance = useCoinsStore((s) => s.balance);
+
+    const handleTipOpen = () => {
+        if (!me) {
+            navigate("/login");
+            return;
+        }
+        if (coinsBalance == null) void useCoinsStore.getState().fetchBalance();
+        setTipOpen(true);
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -352,14 +466,20 @@ export default function Profile() {
                                     />
                                 </>
                             ) : (
-                                <Button
-                                    variant={following ? "outline" : "default"}
-                                    disabled={followBusy}
-                                    onClick={handleFollow}
-                                >
-                                    {following ? <UserCheck /> : <UserPlus />}
-                                    {following ? "取消关注" : me ? "关注" : "登录后关注"}
-                                </Button>
+                                <div className="grid gap-2">
+                                    <Button
+                                        variant={following ? "outline" : "default"}
+                                        disabled={followBusy}
+                                        onClick={handleFollow}
+                                    >
+                                        {following ? <UserCheck /> : <UserPlus />}
+                                        {following ? "取消关注" : me ? "关注" : "登录后关注"}
+                                    </Button>
+                                    <Button variant="outline" className="text-amber-500" onClick={handleTipOpen}>
+                                        <Coins />
+                                        投币
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -373,6 +493,16 @@ export default function Profile() {
                     </div>
                 </CardHeader>
             </Card>
+            <TipDialog
+                open={tipOpen}
+                onOpenChange={setTipOpen}
+                userId={user.id}
+                username={user.username}
+                balance={coinsBalance}
+                onTipped={(coinsReceived) =>
+                    setSpace((prev) => (prev ? { ...prev, counts: { ...prev.counts, coins: coinsReceived } } : prev))
+                }
+            />
             <div className="mt-4">
                 <ProfileTabs key={id} userId={id} canPin={isSelf} />
             </div>

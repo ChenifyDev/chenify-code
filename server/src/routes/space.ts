@@ -45,6 +45,48 @@ export const routes = {
         },
     },
 
+    "/api/users/:id/space/coin": {
+        POST: async (req) => {
+            const storage = getStorage();
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const id = paramId(req, "id");
+            if (isErr(id)) return id;
+            if (me.id === id) return jsonError(400, "不能给自己投币");
+            if (!(await storage.users.userExists(id))) return jsonError(404, "用户不存在");
+            let amount: number;
+            try {
+                const body = (await req.json()) as { amount?: unknown };
+                amount = Number(body.amount);
+            } catch {
+                return jsonError(400, "无效的投币数量");
+            }
+            const result = await storage.coins.tipUser(me.id, id, amount);
+            if (!result.ok) {
+                if (result.reason === "invalid_amount") return jsonError(400, "投币数量需为 1-50 的整数");
+                if (result.reason === "self_tip") return jsonError(400, "不能给自己投币");
+                if (result.reason === "already_tipped") return jsonError(400, "半个月内已给该用户投过币");
+                if (result.reason === "insufficient") return jsonError(400, "硬币不足，无法投币");
+                return jsonError(400, "投币失败");
+            }
+            if (id !== me.id) {
+                try {
+                    await storage.notifications.createNotification({
+                        userId: id,
+                        actorId: me.id,
+                        type: "user_tip",
+                        postId: null,
+                        data: JSON.stringify({ amount: result.recipient_delta }),
+                    });
+                } catch (err) {
+                    console.error("create user tip notification failed", err);
+                }
+            }
+            const coins_received = await storage.coins.getCoinsReceivedTotal(id);
+            return Response.json({ success: true, balance: result.balance, coins_received });
+        },
+    },
+
     "/api/users/:id/space/posts": {
         GET: async (req) => {
             const storage = getStorage();

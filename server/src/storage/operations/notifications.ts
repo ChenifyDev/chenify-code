@@ -11,7 +11,7 @@ export async function insertNotificationRow(
     input: {
         userId: number;
         actorId: number;
-        type: "post_comment" | "post_reply" | "post_tip";
+        type: "post_comment" | "post_reply" | "post_tip" | "user_tip";
         postId?: number | null;
         commentId?: number | null;
         data?: string | null;

@@ -127,7 +127,7 @@ export interface CommentRow {
 
 export type FollowUserRow = UserSummary & { is_following: number };
 
-export type NotificationType = "post_comment" | "post_reply" | "post_tip";
+export type NotificationType = "post_comment" | "post_reply" | "post_tip" | "user_tip";
 
 export interface NotificationRow {
     id: number;
