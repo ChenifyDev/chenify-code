@@ -1,5 +1,6 @@
 import { C } from "../collections";
-import type { CollectionStore } from "../store";
+import type { BlobStore, CollectionStore } from "../store";
+import { loadContentBlob } from "../content";
 import type { StoredComment, StoredNotification, StoredPost, StoredUser } from "../rows";
 import { buildNotifications, snippet } from "../mappers";
 import type { AppNotification, UserSummary } from "../types";
@@ -50,6 +51,7 @@ export async function markReadRows(store: CollectionStore, userId: number, ids?:
 
 export async function listNotificationRows(
     store: CollectionStore,
+    blobStore: BlobStore,
     userId: number,
     options: { offset: number; limit: number },
 ): Promise<AppNotification[]> {
@@ -69,8 +71,12 @@ export async function listNotificationRows(
     for (const user of users)
         actors.set(user.id, { id: user.id, username: user.username, avatar: user.avatar, created_at: user.created_at });
 
+    const involvedPostIds = new Set(ordered.map((row) => row.post_id).filter((id): id is number => id != null));
     const postSnippets = new Map<number, string>();
-    for (const post of posts) postSnippets.set(post.id, snippet(post.content));
+    for (const post of posts) {
+        if (!involvedPostIds.has(post.id)) continue;
+        postSnippets.set(post.id, snippet(await loadContentBlob(blobStore, post.content)));
+    }
 
     const commentMap = new Map(comments.map((c) => [c.id, c]));
     const replyTo = new Map<number, string>();
@@ -79,10 +85,10 @@ export async function listNotificationRows(
         if (row.comment_id == null) continue;
         const comment = commentMap.get(row.comment_id);
         if (!comment) continue;
-        commentContents.set(comment.id, comment.content);
+        commentContents.set(comment.id, await loadContentBlob(blobStore, comment.content));
         if (row.type === "post_reply" && comment.parent_id != null) {
             const parent = commentMap.get(comment.parent_id);
-            replyTo.set(comment.id, parent?.content ?? "");
+            if (parent) replyTo.set(comment.id, await loadContentBlob(blobStore, parent.content));
         }
     }
 
@@ -106,7 +112,7 @@ export async function deleteNotificationsForComment(store: CollectionStore, comm
     );
 }
 
-export function createNotificationsRepo(store: CollectionStore): NotificationsRepo {
+export function createNotificationsRepo(store: CollectionStore, blobStore: BlobStore): NotificationsRepo {
     return {
         async createNotification(input) {
             await insertNotificationRow(store, input);
@@ -121,7 +127,7 @@ export function createNotificationsRepo(store: CollectionStore): NotificationsRe
             await markReadRows(store, userId, ids);
         },
         async listNotifications(userId, options) {
-            return listNotificationRows(store, userId, options);
+            return listNotificationRows(store, blobStore, userId, options);
         },
         async deleteNotificationsForPost(postId) {
             await deleteNotificationsForPost(store, postId);

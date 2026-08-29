@@ -52,7 +52,7 @@ export function createOperations(store: CollectionStore, blobs: BlobStore): Oper
         home: createHomeRepo(store, blobs),
         drafts: createDraftsRepo(store, blobs),
         tags: createTagsRepo(store),
-        notifications: createNotificationsRepo(store),
+        notifications: createNotificationsRepo(store, blobs),
         rank: createRankRepo(store),
         coins: createCoinsRepo(store),
     };
