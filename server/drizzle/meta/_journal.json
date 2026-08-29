@@ -15,6 +15,13 @@
       "when": 1787966043020,
       "tag": "0001_cultured_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787978635425,
+      "tag": "0002_overconfident_nuke",
+      "breakpoints": true
     }
   ]
 }

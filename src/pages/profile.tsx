@@ -369,6 +369,7 @@ export default function Profile() {
                         <Stat label="收藏" value={counts.favorites} />
                         <Stat label="关注" value={counts.following} />
                         <Stat label="粉丝" value={counts.followers} />
+                        <Stat label="获得投币" value={Math.round(counts.coins * 100) / 100} />
                     </div>
                 </CardHeader>
             </Card>

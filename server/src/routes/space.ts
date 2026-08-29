@@ -31,6 +31,7 @@ export const routes = {
                 favorites: isSelf || user.is_favorites_public ? rawCounts.favorites : null,
                 following: isSelf || user.is_follows_public ? rawCounts.following : null,
                 followers: isSelf || user.is_follows_public ? rawCounts.followers : null,
+                coins: await storage.coins.getCoinsReceivedTotal(id),
             };
 
             const relation = me

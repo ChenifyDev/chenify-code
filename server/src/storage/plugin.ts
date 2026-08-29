@@ -1,5 +1,7 @@
 import type {
     AppNotification,
+    CoinPeriod,
+    CoinUser,
     Comment,
     Draft,
     FollowUser,
@@ -139,9 +141,10 @@ export interface NotificationsRepo {
     createNotification(input: {
         userId: number;
         actorId: number;
-        type: "post_comment" | "post_reply";
+        type: "post_comment" | "post_reply" | "post_tip";
         postId?: number | null;
         commentId?: number | null;
+        data?: string | null;
     }): Promise<void>;
     countUnreadNotifications(userId: number): Promise<number>;
     countNotifications(userId: number): Promise<number>;
@@ -161,6 +164,25 @@ export interface RankRepo {
     rankUsersByPoints(options: { offset: number; limit: number }, viewerId?: number): Promise<PointsUser[]>;
     getFollowerRank(userId: number): Promise<number>;
     getPointsRank(userId: number): Promise<number>;
+}
+
+export interface CoinsRepo {
+    getBalance(userId: number): Promise<number>;
+    checkIn(userId: number, now?: Date): Promise<{ granted: boolean; balance: number }>;
+    listDailyCheckins(userId: number, limit?: number): Promise<string[]>;
+    tipPost(
+        userId: number,
+        postId: number,
+        postAuthorId: number,
+    ): Promise<{ ok: boolean; reason?: "already_tipped" | "insufficient"; balance: number }>;
+    hasTipped(userId: number, postId: number): Promise<boolean>;
+    rankCoins(
+        options: { period: CoinPeriod; offset: number; limit: number },
+        viewerId?: number,
+    ): Promise<CoinUser[]>;
+    getCoinRank(userId: number, period: CoinPeriod): Promise<number>;
+    getPostCoinsReceived(postId: number): Promise<number>;
+    getCoinsReceivedTotal(userId: number): Promise<number>;
 }
 
 export interface StoragePlugin {

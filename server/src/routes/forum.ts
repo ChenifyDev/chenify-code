@@ -250,6 +250,39 @@ export const routes = {
         },
     },
 
+    "/api/posts/:id/coin": {
+        POST: async (req) => {
+            const storage = getStorage();
+            const me = await getAuthUser(req);
+            if (!me) return jsonError(401, "请先登录");
+            const parsed = numericIdError((req.params as any).id ?? "");
+            if (parsed instanceof Response) return parsed;
+            const ownerId = await storage.posts.getPostOwner(parsed);
+            if (ownerId === null) return jsonError(404, "帖子不存在");
+            const result = await storage.coins.tipPost(me.id, parsed, ownerId);
+            if (!result.ok) {
+                if (result.reason === "already_tipped") return jsonError(400, "你已经给该帖子投过硬币了");
+                if (result.reason === "insufficient") return jsonError(400, "硬币不足，无法投币");
+                return jsonError(400, "投币失败");
+            }
+            if (ownerId !== me.id) {
+                try {
+                    await storage.notifications.createNotification({
+                        userId: ownerId,
+                        actorId: me.id,
+                        type: "post_tip",
+                        postId: parsed,
+                        data: JSON.stringify({ amount: 0.1 }),
+                    });
+                } catch (err) {
+                    console.error("create tip notification failed", err);
+                }
+            }
+            const coins_count = await storage.coins.getPostCoinsReceived(parsed);
+            return Response.json({ success: true, balance: result.balance, coins_count });
+        },
+    },
+
     "/api/posts/:id/favorite": {
         POST: async (req) => {
             const storage = getStorage();

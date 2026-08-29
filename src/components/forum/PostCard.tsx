@@ -1,17 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { Bookmark, Check, ChevronDown, ChevronUp, Copy, Heart, MessageCircle, Pin, PinOff } from "lucide-react";
+import { Bookmark, Check, ChevronDown, ChevronUp, Coins, Copy, Heart, MessageCircle, Pin, PinOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { setPostPinned, toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
+import { setPostPinned, tipPost, toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 
 const PREVIEW_MAX_LENGTH = 100;
 
@@ -32,10 +34,7 @@ export function PostCard({
     const [pinBusy, setPinBusy] = useState(false);
     const [copied, setCopied] = useState(false);
     const { title, body } = useMemo(() => parseFrontmatter(postState.content), [postState.content]);
-    const { excerpt, isTruncated } = useMemo(
-        () => truncateMarkdown(body, PREVIEW_MAX_LENGTH),
-        [body],
-    );
+    const { excerpt, isTruncated } = useMemo(() => truncateMarkdown(body, PREVIEW_MAX_LENGTH), [body]);
 
     const toggleExpanded = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -105,6 +104,22 @@ export function PostCard({
             setTimeout(() => setCopied(false), 1500);
         } catch {
             /* ignore */
+        }
+    };
+
+    const handleTip = async () => {
+        if (!postState) return;
+        if (!requireLogin()) return;
+        setReactBusy(true);
+        try {
+            const res = await tipPost(postState.id);
+            setPost((prev) => (prev ? { ...prev, coins_count: res.coins_count } : prev));
+            useCoinsStore.getState().setBalance(res.balance);
+            toast.success(`投币成功，当前余额 ${res.balance}`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "投币失败");
+        } finally {
+            setReactBusy(false);
         }
     };
 
@@ -198,6 +213,16 @@ export function PostCard({
                     >
                         <Bookmark className={cn("size-3.5", postState.is_favorited && "fill-current")} />
                         {postState.favorites_count}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size={"xs"}
+                        onClick={handleTip}
+                        disabled={reactBusy}
+                        className="inline-flex items-center gap-1 text-amber-500"
+                    >
+                        <Coins className="size-3.5" />
+                        {postState.coins_count * 10}
                     </Button>
                     <Button variant="ghost" size={"xs"} disabled className="inline-flex items-center gap-1">
                         <MessageCircle className="size-3.5" />

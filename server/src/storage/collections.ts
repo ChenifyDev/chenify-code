@@ -17,6 +17,7 @@ export const C = {
     worksLikes: "works_likes",
     worksComments: "works_comments",
     worksCommentLikes: "works_comment_likes",
+    coinTransactions: "coin_transactions",
 } as const;
 
 export type CollectionName = keyof typeof C;

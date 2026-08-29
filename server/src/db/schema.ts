@@ -3,6 +3,7 @@ import {
     index,
     integer,
     primaryKey,
+    real,
     sqliteTable,
     text,
     uniqueIndex,
@@ -171,16 +172,37 @@ export const notifications = sqliteTable(
         actor_id: integer("actor_id")
             .notNull()
             .references(() => users.id),
-        type: text("type", { enum: ["post_comment", "post_reply"] }).notNull(),
+        type: text("type", { enum: ["post_comment", "post_reply", "post_tip"] }).notNull(),
         post_id: integer("post_id"),
         work_id: integer("work_id"),
         comment_id: integer("comment_id"),
+        data: text("data"),
         is_read: integer("is_read", { mode: "boolean" }).notNull().default(sql.raw("0")),
         created_at: text("created_at").notNull().default(now),
     },
     (table) => [
         index("idx_notifications_user").on(table.user_id),
         index("idx_notifications_user_read").on(table.user_id, table.is_read),
+    ],
+);
+
+export const coinTransactions = sqliteTable(
+    "coin_transactions",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        user_id: integer("user_id")
+            .notNull()
+            .references(() => users.id),
+        post_id: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+        type: text("type", { enum: ["daily", "tip_out", "tip_in"] }).notNull(),
+        amount: real("amount").notNull(),
+        reward_date: text("reward_date"),
+        created_at: text("created_at").notNull().default(now),
+    },
+    (table) => [
+        index("idx_coin_transactions_user_id").on(table.user_id),
+        index("idx_coin_transactions_post_id").on(table.post_id),
+        index("idx_coin_transactions_created_at").on(table.created_at),
     ],
 );
 

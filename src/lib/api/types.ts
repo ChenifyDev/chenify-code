@@ -23,6 +23,7 @@ export interface Post {
     comments_count: number;
     likes_count: number;
     favorites_count: number;
+    coins_count: number;
     is_liked: boolean;
     is_favorited: boolean;
     is_following_author: boolean;
@@ -53,6 +54,7 @@ export interface SpaceCounts {
     favorites: number | null;
     following: number | null;
     followers: number | null;
+    coins: number;
 }
 
 export interface SpaceRelation {
@@ -77,6 +79,15 @@ export interface PointsUser extends FollowUser {
     points: number;
 }
 
+export type CoinPeriod = "week" | "month" | "total";
+
+export interface CoinUser extends UserSummary {
+    email: string;
+    coins: number;
+    is_following: boolean;
+    rank?: number;
+}
+
 export interface Draft {
     id: number;
     content: string;
@@ -97,7 +108,7 @@ export type Paginated<T> = {
     hasMore: boolean;
 };
 
-export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply";
+export type NotificationType = "post_comment" | "post_reply" | "work_comment" | "work_reply" | "post_tip";
 
 export interface AppNotification {
     id: number;
@@ -108,6 +119,7 @@ export interface AppNotification {
     post_id: number | null;
     work_id: number | null;
     comment_id: number | null;
+    data: string | null;
     snippet: string;
     reply_to: string | null;
     comment: string;

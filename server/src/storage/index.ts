@@ -1,5 +1,6 @@
 import type { BlobStore, CollectionStore } from "./store";
 import type {
+    CoinsRepo,
     CommentsRepo,
     DraftsRepo,
     FavoritesRepo,
@@ -32,6 +33,7 @@ export interface Storage {
     readonly tags: TagsRepo;
     readonly notifications: NotificationsRepo;
     readonly rank: RankRepo;
+    readonly coins: CoinsRepo;
 }
 
 let storage: Storage | null = null;

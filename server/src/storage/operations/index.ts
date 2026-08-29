@@ -1,5 +1,6 @@
 import type { BlobStore, CollectionStore } from "../store";
 import type {
+    CoinsRepo,
     CommentsRepo,
     DraftsRepo,
     FavoritesRepo,
@@ -23,6 +24,7 @@ import { createDraftsRepo } from "./drafts";
 import { createTagsRepo } from "./tags";
 import { createNotificationsRepo } from "./notifications";
 import { createRankRepo } from "./rank";
+import { createCoinsRepo } from "./coins";
 
 export interface Operations {
     users: UsersRepo;
@@ -36,6 +38,7 @@ export interface Operations {
     tags: TagsRepo;
     notifications: NotificationsRepo;
     rank: RankRepo;
+    coins: CoinsRepo;
 }
 
 export function createOperations(store: CollectionStore, blobs: BlobStore): Operations {
@@ -51,5 +54,6 @@ export function createOperations(store: CollectionStore, blobs: BlobStore): Oper
         tags: createTagsRepo(store),
         notifications: createNotificationsRepo(store),
         rank: createRankRepo(store),
+        coins: createCoinsRepo(store),
     };
 }

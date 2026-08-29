@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.production" });
 export default defineConfig({
-    schema: ["./src/db/pg-schema.ts", "./src/works/pg-schema.ts"],
+    schema: ["./src/db/pg-schema.ts"],
     out: "./drizzle-neon",
     dialect: "postgresql",
     dbCredentials: {

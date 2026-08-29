@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Check, Copy, Heart, MessageCircle, MessageCircleOff, Pencil, Pin, PinOff, Trash2, UserCheck, UserPlus } from "lucide-react";
+import {
+    Bookmark,
+    Check,
+    Coins,
+    Copy,
+    Heart,
+    MessageCircle,
+    MessageCircleOff,
+    Pencil,
+    Pin,
+    PinOff,
+    Trash2,
+    UserCheck,
+    UserPlus,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import PostAstTree from "@/components/forum/PostAstTree.tsx";
@@ -28,11 +43,13 @@ import {
     deleteDraft,
     setPostCommentArea,
     setPostPinned,
+    tipPost,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format.ts";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 import { insertReply, updateComment } from "@/components/comments/utils.ts";
 import CommentInput from "@/components/comments/CommentInput.tsx";
 import CommentList from "@/components/comments/CommentList.tsx";
@@ -211,6 +228,22 @@ export default function PostDetail() {
             setTimeout(() => setCopied(false), 1500);
         } catch {
             /* ignore */
+        }
+    };
+
+    const handleTip = async () => {
+        if (!post) return;
+        if (!requireLogin()) return;
+        setReactBusy(true);
+        try {
+            const res = await tipPost(post.id);
+            setPost((prev) => (prev ? { ...prev, coins_count: res.coins_count } : prev));
+            useCoinsStore.getState().setBalance(res.balance);
+            toast.success(`投币成功，当前余额 ${res.balance}`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "投币失败");
+        } finally {
+            setReactBusy(false);
         }
     };
 
@@ -424,6 +457,17 @@ export default function PostDetail() {
                             <Bookmark className={cn("size-4", post.is_favorited && "fill-current")} />
                             收藏 {post.favorites_count}
                         </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-amber-500"
+                            disabled={reactBusy}
+                            onClick={handleTip}
+                            title="投 1 枚硬币，作者获得 0.1 枚"
+                        >
+                            <Coins className="size-4" />
+                            投币 {post.coins_count * 10}
+                        </Button>
                         <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                             <MessageCircle className="size-4" />
                             {post.comments_count}
@@ -450,7 +494,11 @@ export default function PostDetail() {
                                 onClick={handleToggleCommentArea}
                                 title={commentArea ? "关闭评论" : "开启评论"}
                             >
-                                {commentArea ? <MessageCircleOff className="size-4" /> : <MessageCircle className="size-4" />}
+                                {commentArea ? (
+                                    <MessageCircleOff className="size-4" />
+                                ) : (
+                                    <MessageCircle className="size-4" />
+                                )}
                                 {commentAreaBusy ? "保存中…" : commentArea ? "关闭评论" : "开启评论"}
                             </Button>
                         )}

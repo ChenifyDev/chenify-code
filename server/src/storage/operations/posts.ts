@@ -2,6 +2,7 @@ import { C } from "../collections";
 import { deleteContentBlob, loadContentBlob, saveContentBlob } from "../content";
 import type { BlobStore, CollectionStore } from "../store";
 import type {
+    StoredCoinTransaction,
     StoredComment,
     StoredFavorite,
     StoredFollow,
@@ -24,14 +25,17 @@ async function boardPosts(
     blobStore: BlobStore,
     loadContent = false,
 ): Promise<PostRow[]> {
-    const [posts, users, comments, likes, favorites] = await Promise.all([
+    const [posts, users, comments, likes, favorites, coins] = await Promise.all([
         store.read<StoredPost>(C.posts),
         store.read<StoredUser>(C.users),
         store.read<StoredComment>(C.comments),
         store.read<StoredLike>(C.likes),
         store.read<StoredFavorite>(C.favorites),
+        store.read<StoredCoinTransaction>(C.coinTransactions),
     ]);
     const userMap = new Map(users.map((user) => [user.id, user]));
+    const coinsCount = (postId: number) =>
+        coins.reduce((sum, row) => (row.post_id === postId && row.type === "tip_in" ? sum + row.amount : sum), 0);
     const contentOf = loadContent
         ? (post: StoredPost) => loadContentBlob(blobStore, post.content)
         : () => Promise.resolve("");
@@ -49,6 +53,7 @@ async function boardPosts(
                 comments_count: comments.filter((c) => c.post_id === post.id).length,
                 likes_count: likes.filter((l) => l.post_id === post.id).length,
                 favorites_count: favorites.filter((f) => f.post_id === post.id).length,
+                coins_count: Math.round(coinsCount(post.id) * 10000) / 10000,
                 pinned: post.pinned,
             };
         }),

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Code2, FileText, Home, LogOut, SquarePen, Signpost, Settings, Bell, Ellipsis, Podium } from "lucide-react";
+import { Bell, CalendarCheck, Code2, Coins, Ellipsis, FileText, Home, LogOut, Podium, Settings, Signpost, SquarePen } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
-import { clearToken, getUnreadNotifications } from "@/lib/api";
+import { clearToken, getCheckinStatus, getUnreadNotifications } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import SearchBox from "@/components/search/SearchBox.tsx";
 import {
@@ -33,6 +34,9 @@ import {
 export default function AppSidebar() {
     const user = useUserStore((s) => s.user);
     const setUser = useUserStore((s) => s.setUser);
+    const balance = useCoinsStore((s) => s.balance);
+    const checkedToday = useCoinsStore((s) => s.checkedToday);
+    const setCheckedToday = useCoinsStore((s) => s.setCheckedToday);
     const navigate = useNavigate();
     const location = useLocation();
     const [keyword, setKeyword] = useState("");
@@ -50,6 +54,12 @@ export default function AppSidebar() {
             } catch {
                 // 忽略轮询失败
             }
+            try {
+                const status = await getCheckinStatus();
+                if (!cancelled) setCheckedToday(status.checked_today);
+            } catch {
+                // 忽略轮询失败
+            }
         };
         void refresh();
         const timer = setInterval(refresh, 30_000);
@@ -57,7 +67,7 @@ export default function AppSidebar() {
             cancelled = true;
             clearInterval(timer);
         };
-    }, [user]);
+    }, [user, setCheckedToday]);
 
     useEffect(() => {
         if (location.pathname === "/notifications") setUnread(0);
@@ -146,6 +156,28 @@ export default function AppSidebar() {
                     </SidebarMenuItem>
                     {user && (
                         <SidebarMenuItem>
+                            <NavLink to="/checkin">
+                                {({ isActive }) => (
+                                    <SidebarMenuButton isActive={isActive} tooltip="每日签到">
+                                        <span className="relative inline-flex">
+                                            <CalendarCheck />
+                                            {checkedToday === false && (
+                                                <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber-500 group-data-[collapsible=icon]:block hidden" />
+                                            )}
+                                        </span>
+                                        <span>每日签到</span>
+                                        {checkedToday === false && (
+                                            <span className="ml-auto rounded-full bg-amber-500 px-1.5 text-[10px] font-medium text-white group-data-[collapsible=icon]:hidden">
+                                                签到
+                                            </span>
+                                        )}
+                                    </SidebarMenuButton>
+                                )}
+                            </NavLink>
+                        </SidebarMenuItem>
+                    )}
+                    {user && (
+                        <SidebarMenuItem>
                             <NavLink to="/drafts">
                                 {({ isActive }) => (
                                     <SidebarMenuButton isActive={isActive} tooltip="草稿管理">
@@ -214,6 +246,12 @@ export default function AppSidebar() {
                             {user?.username ?? "未登录"}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">{user?.email ?? "欢迎来到 ChenifyHub"}</p>
+                        {user && balance != null && (
+                            <p className="flex items-center gap-1 truncate text-xs text-amber-500">
+                                <Coins className="size-3 shrink-0" />
+                                {Math.round(balance * 100) / 100}
+                            </p>
+                        )}
                     </div>
                     {user ? (
                         <DropdownMenu>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { login, register, setToken, type UserPublic } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type Status = { type: "error" | "success"; text: string } | null;
@@ -79,6 +80,7 @@ function LoginForm({ returnTo, onSuccess }: { returnTo: string | null; onSuccess
             const { token, user } = await login(loginName.trim(), password);
             setToken(token, remember);
             setStatus({ type: "success", text: `欢迎回来，${user.username}` });
+            void useCoinsStore.getState().fetchBalance();
             onSuccess(user);
             if (returnTo) {
                 window.location.href = returnTo;

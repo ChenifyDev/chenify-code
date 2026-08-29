@@ -1,10 +1,12 @@
 import { useEffect, type ReactNode } from "react";
 import { clearToken, getToken, me } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useCoinsStore } from "@/stores/useCoins.ts";
 
 export default function AuthBootstrap({ children }: { children: ReactNode }) {
     const setUser = useUserStore((s) => s.setUser);
     const setChecking = useUserStore((s) => s.setChecking);
+    const fetchBalance = useCoinsStore((s) => s.fetchBalance);
 
     useEffect(() => {
         const token = getToken();
@@ -14,12 +16,15 @@ export default function AuthBootstrap({ children }: { children: ReactNode }) {
         }
         setChecking(true);
         me()
-            .then(setUser)
+            .then((user) => {
+                setUser(user);
+                void fetchBalance();
+            })
             .catch(() => {
                 clearToken();
             })
             .finally(() => setChecking(false));
-    }, [setChecking, setUser]);
+    }, [setChecking, setUser, fetchBalance]);
 
     return children;
 }

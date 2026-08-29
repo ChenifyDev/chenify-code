@@ -40,6 +40,15 @@ export interface PointsUser extends UserSummary {
     rank?: number;
 }
 
+export type CoinPeriod = "week" | "month" | "total";
+
+export interface CoinUser extends UserSummary {
+    email: string;
+    is_following: boolean;
+    coins: number;
+    rank?: number;
+}
+
 export interface Post {
     id: number;
     content: string;
@@ -50,6 +59,7 @@ export interface Post {
     comments_count: number;
     likes_count: number;
     favorites_count: number;
+    coins_count: number;
     is_liked: boolean;
     is_favorited: boolean;
     is_following_author: boolean;
@@ -99,6 +109,7 @@ export interface PostRow {
     comments_count: number;
     likes_count: number;
     favorites_count: number;
+    coins_count: number;
     pinned: boolean;
 }
 
@@ -116,7 +127,7 @@ export interface CommentRow {
 
 export type FollowUserRow = UserSummary & { is_following: number };
 
-export type NotificationType = "post_comment" | "post_reply";
+export type NotificationType = "post_comment" | "post_reply" | "post_tip";
 
 export interface NotificationRow {
     id: number;
@@ -126,6 +137,7 @@ export interface NotificationRow {
     post_id: number | null;
     work_id: number | null;
     comment_id: number | null;
+    data: string | null;
     is_read: boolean;
     created_at: string;
 }
@@ -139,6 +151,7 @@ export interface AppNotification {
     post_id: number | null;
     work_id: number | null;
     comment_id: number | null;
+    data: string | null;
     snippet: string;
     reply_to: string | null;
     comment: string;

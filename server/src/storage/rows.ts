@@ -73,10 +73,11 @@ export interface StoredNotification {
     id: number;
     user_id: number;
     actor_id: number;
-    type: "post_comment" | "post_reply";
+    type: "post_comment" | "post_reply" | "post_tip";
     post_id: number | null;
     work_id: number | null;
     comment_id: number | null;
+    data: string | null;
     is_read: boolean;
     created_at: string;
 }
@@ -131,5 +132,17 @@ export interface StoredWorkCommentLike {
     id: number;
     comment_id: number;
     user_id: number;
+    created_at: string;
+}
+
+export type CoinTransactionType = "daily" | "tip_out" | "tip_in";
+
+export interface StoredCoinTransaction {
+    id: number;
+    user_id: number;
+    post_id: number | null;
+    type: CoinTransactionType;
+    amount: number;
+    reward_date: string | null;
     created_at: string;
 }

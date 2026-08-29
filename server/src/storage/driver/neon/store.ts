@@ -21,6 +21,7 @@ const TABLE_KEY: Record<string, string> = {
     works_likes: "worksLikes",
     works_comments: "worksComments",
     works_comment_likes: "worksCommentLikes",
+    coin_transactions: "coinTransactions",
 };
 
 let db: any;

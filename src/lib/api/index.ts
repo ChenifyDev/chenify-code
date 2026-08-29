@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./coins";
 export * from "./comments";
 export * from "./drafts";
 export * from "./home";

@@ -10,9 +10,10 @@ export async function insertNotificationRow(
     input: {
         userId: number;
         actorId: number;
-        type: "post_comment" | "post_reply";
+        type: "post_comment" | "post_reply" | "post_tip";
         postId?: number | null;
         commentId?: number | null;
+        data?: string | null;
     },
 ): Promise<void> {
     await store.insert<StoredNotification>(C.notifications, {
@@ -22,6 +23,7 @@ export async function insertNotificationRow(
         post_id: input.postId ?? null,
         work_id: null,
         comment_id: input.commentId ?? null,
+        data: input.data ?? null,
         is_read: false,
         created_at: new Date().toISOString(),
     });

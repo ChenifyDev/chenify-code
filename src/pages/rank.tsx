@@ -1,4 +1,4 @@
-import { type FollowUser, type PointsUser, rankUsersByFollowers, rankUsersByPostPoints } from "@/lib/api";
+import { type CoinPeriod, type CoinUser, type FollowUser, type PointsUser, coinLeaderboard, rankUsersByFollowers, rankUsersByPostPoints } from "@/lib/api";
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card.tsx";
@@ -218,6 +218,109 @@ function PostPointsTab({ tab, title }: { tab: TabData<PointsUser>; title: string
     );
 }
 
+function CoinsTab({ tab, title }: { tab: TabData<CoinUser>; title: string }) {
+    const { load, initialized } = tab;
+    useEffect(() => {
+        if (!initialized) void load(true);
+    }, [load, initialized]);
+
+    if (tab.loading) return <SkeletonList />;
+    if (tab.error) return <Empty text={tab.error} />;
+    if (tab.items.length === 0) return <Empty text={`还没有${title}`} />;
+    const top = tab.items.slice(0, 3);
+    const topIds = new Set(top.map((u) => u.id));
+    return (
+        <>
+            <Podium
+                top={top.map((u) => ({ id: u.id, username: u.username, avatar: u.avatar, value: u.coins }))}
+                label="硬币"
+            />
+            <div className="grid gap-1">
+                {tab.items
+                    .filter((u) => !topIds.has(u.id))
+                    .map((user) => (
+                        <UserRow
+                            key={user.id}
+                            user={user}
+                            onFollowChange={(updated) =>
+                                tab.updateItems((items) => items.map((u) => (u.id === updated.id ? updated : u)))
+                            }
+                        >
+                            {user.rank != null ? <RankBadge rank={user.rank} label="硬币" value={user.coins} /> : null}
+                        </UserRow>
+                    ))}
+                <div className="pt-2">
+                    <LoadMore tab={tab} />
+                </div>
+            </div>
+        </>
+    );
+}
+
+const COIN_PERIODS: { value: CoinPeriod; label: string }[] = [
+    { value: "week", label: "周榜" },
+    { value: "month", label: "月榜" },
+    { value: "total", label: "总榜" },
+];
+
+function CoinTabs() {
+    const [myCoinsRank, setMyCoinsRank] = useState<Record<CoinPeriod, number | null>>({
+        week: null,
+        month: null,
+        total: null,
+    });
+    const tabs: Record<CoinPeriod, TabData<CoinUser>> = {
+        week: useTab(
+            useCallback(async (offset) => {
+                const res = await coinLeaderboard({ period: "week", limit: LIMIT, offset });
+                setMyCoinsRank((prev) => ({ ...prev, week: res.my_rank }));
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            }, []),
+        ),
+        month: useTab(
+            useCallback(async (offset) => {
+                const res = await coinLeaderboard({ period: "month", limit: LIMIT, offset });
+                setMyCoinsRank((prev) => ({ ...prev, month: res.my_rank }));
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            }, []),
+        ),
+        total: useTab(
+            useCallback(async (offset) => {
+                const res = await coinLeaderboard({ period: "total", limit: LIMIT, offset });
+                setMyCoinsRank((prev) => ({ ...prev, total: res.my_rank }));
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            }, []),
+        ),
+    };
+
+    return (
+        <Tabs defaultValue="week" className="w-full">
+            <TabsList className="w-full">
+                {COIN_PERIODS.map((p) => (
+                    <TabsTrigger key={p.value} value={p.value} className="flex-1">
+                        {p.label}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+            {COIN_PERIODS.map((p) => (
+                <TabsContent key={p.value} value={p.value} className="pt-4">
+                    <CoinsTab tab={tabs[p.value]} title="用户" />
+                    {myCoinsRank[p.value] != null && (
+                        <Card className="mt-4">
+                            <CardContent className="flex items-center justify-center gap-2 py-4">
+                                <span className="text-sm text-muted-foreground">我的硬币排名</span>
+                                <span className={`text-lg font-bold ${rankColor(myCoinsRank[p.value]!)}`}>
+                                    第 {myCoinsRank[p.value]} 名
+                                </span>
+                            </CardContent>
+                        </Card>
+                    )}
+                </TabsContent>
+            ))}
+        </Tabs>
+    );
+}
+
 function RankTabs() {
     const [myRank, setMyRank] = useState<number | null>(null);
     const [myPointsRank, setMyPointsRank] = useState<number | null>(null);
@@ -245,6 +348,9 @@ function RankTabs() {
                 <TabsTrigger value="points" className="flex-1">
                     帖子积分排名
                 </TabsTrigger>
+                <TabsTrigger value="coins" className="flex-1">
+                    硬币打赏榜
+                </TabsTrigger>
             </TabsList>
             <TabsContent value="followers" className="pt-4">
                 <FollowersTab tab={followers} title="用户" />
@@ -267,6 +373,9 @@ function RankTabs() {
                         </CardContent>
                     </Card>
                 )}
+            </TabsContent>
+            <TabsContent value="coins" className="pt-4">
+                <CoinTabs />
             </TabsContent>
         </Tabs>
     );

@@ -35,4 +35,25 @@ export const routes = {
             limit,
         });
     },
+    "/api/rank/coins": async (req) => {
+        const url = new URL(req.url);
+        const me = await getAuthUser(req);
+        const { offset, limit } = parsePagination(url);
+        const period = url.searchParams.get("period");
+        const parsed =
+            period === "week" || period === "month" || period === "total"
+                ? period
+                : "week";
+        const storage = getStorage();
+        const items = await storage.coins.rankCoins({ period: parsed, offset, limit }, me?.id);
+        const total = await storage.users.countUsers();
+        return Response.json({
+            items,
+            total,
+            hasMore: offset + items.length < total,
+            my_rank: me ? await storage.coins.getCoinRank(me.id, parsed) : null,
+            offset,
+            limit,
+        });
+    },
 } satisfies RouteMap;

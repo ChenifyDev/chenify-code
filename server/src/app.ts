@@ -10,6 +10,7 @@ import { routes as spaceRoutes } from "./routes/space";
 import { routes as searchRoutes } from "./routes/search";
 import { routes as notificationRoutes } from "./routes/notifications";
 import { routes as rankRoutes } from "./routes/rank";
+import { routes as coinsRoutes } from "./routes/coins";
 import { routes as oauthRoutes } from "./oauth";
 
 const app = new Hono();
@@ -44,6 +45,7 @@ registerRoutes(app, {
     ...searchRoutes,
     ...notificationRoutes,
     ...rankRoutes,
+    ...coinsRoutes,
     ...oauthRoutes,
     ...homeRoutes,
 });
