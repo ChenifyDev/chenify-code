@@ -1,32 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ImagePlus, Loader2, Save, Send, X } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Send } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import EditorField from "@/components/forum/MarkdownEditor.tsx";
+import { ImagePicker } from "@/components/forum/write/ImagePicker.tsx";
+import { TagInput } from "@/components/forum/write/TagInput.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Input } from "@/components/ui/input.tsx";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence.ts";
 import { createDraft, updateDraft, publishDraft, type Draft, getDraft } from "@/lib/api";
 import { parseFrontmatter, withTitle } from "@/lib/frontmatter.ts";
-import { cn, urlToFile } from "@/lib/utils.ts";
+import { splitTags } from "@/lib/tags.ts";
+import { urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import EditorField from "@/components/forum/MarkdownEditor.tsx";
-import { useDraftPersistence } from "@/hooks/useDraftPersistence.ts";
 
 const MAX_IMAGES = 9;
-const MAX_TAGS = 10;
 const MAX_CONTENT_LENGTH = 20000;
-
-function splitTags(raw: string): string[] {
-    return [
-        ...new Set(
-            raw
-                .split(/[,，\s]+/)
-                .map((tag) => tag.trim().toLowerCase())
-                .filter(Boolean),
-        ),
-    ].slice(0, MAX_TAGS);
-}
 
 export default function Write() {
     const me = useUserStore((s) => s.user);
@@ -41,7 +32,6 @@ export default function Write() {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [dirty, setDirty] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     // 保存逻辑的"最新引用"：始终由下方 effect 同步为最新的 handleSaveDraft，
     // 便于在任意时刻（如侧边栏/定时器）触发保存时拿到当前闭包。
     const saveDraftRef = useRef<() => Promise<void>>(async () => {});
@@ -125,8 +115,8 @@ export default function Write() {
         setDirty(true);
     };
 
-    const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTagInput(e.target.value);
+    const handleTagInputChange = (v: string) => {
+        setTagInput(v);
         setDirty(true);
     };
 
@@ -231,72 +221,14 @@ export default function Write() {
                     <EditorField value={content} onChange={handleContentChange} />
 
                     <div className="grid gap-3 border-t pt-4">
-                        <div className="grid gap-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">标签（用逗号或空格分隔）</span>
-                            <Input value={tagInput} onChange={handleTagInputChange} />
-                            {tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                                        >
-                                            #{tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <TagInput value={tagInput} onChange={handleTagInputChange} tags={tags} />
 
-                        <div className="grid gap-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">
-                                图片（最多 {MAX_IMAGES} 张）
-                            </span>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp,image/gif"
-                                multiple
-                                className="hidden"
-                                onChange={(e) => {
-                                    handlePickImages(e.target.files);
-                                    e.target.value = "";
-                                }}
-                            />
-                            {imageFiles.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {imageFiles.map((file, i) => (
-                                        <div key={i} className="relative">
-                                            <img
-                                                src={URL.createObjectURL(file)}
-                                                alt={`图片 ${i + 1}`}
-                                                className={cn("size-20 rounded-md object-cover")}
-                                            />
-                                            <Button
-                                                variant="destructive"
-                                                size="icon-xs"
-                                                className="absolute -top-1.5 -right-1.5"
-                                                aria-label="移除图片"
-                                                onClick={() => removeImage(i)}
-                                            >
-                                                <X />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={imageFiles.length >= MAX_IMAGES}
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <ImagePlus />
-                                    添加图片
-                                </Button>
-                            </div>
-                        </div>
+                        <ImagePicker
+                            images={imageFiles}
+                            max={MAX_IMAGES}
+                            onPick={handlePickImages}
+                            onRemove={removeImage}
+                        />
                     </div>
                 </CardContent>
             </Card>

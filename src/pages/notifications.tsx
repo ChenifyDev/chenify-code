@@ -1,117 +1,18 @@
 import { useCallback, useState } from "react";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-import { AvatarBadge2 } from "@/components/ui/avatar.tsx";
-import { UserAvatar } from "@/components/avatar.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Card, CardContent } from "@/components/ui/card.tsx";
-import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api";
-import { parseFrontmatter } from "@/lib/frontmatter.ts";
-import { formatRelativeTime } from "@/lib/format.ts";
-import { cn } from "@/lib/utils.ts";
-import { useUserStore } from "@/stores/useUser.ts";
-
-import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
+import { NotificationRow } from "@/components/notifications/NotificationRow.tsx";
+import { notificationLink } from "@/components/notifications/notificationLink.ts";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 import Empty from "@/components/tab/Empty.tsx";
 import LoadMore from "@/components/tab/LoadMore.tsx";
-import SkeletonList from "@/components/forum/SkeletonList.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
+import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api";
+import { useUserStore } from "@/stores/useUser.ts";
 
 const LIMIT = 20;
-
-function NotificationMessage({ notification }: { notification: AppNotification }) {
-    const name = notification.actor.username;
-    switch (notification.type) {
-        case "post_comment":
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    评论了你的帖子
-                </span>
-            );
-        case "work_comment":
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    评论了你的作品
-                </span>
-            );
-        case "post_reply":
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    回复了你的评论
-                </span>
-            );
-        case "work_reply":
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    回复了你的评论
-                </span>
-            );
-        case "post_tip": {
-            let amount = 0.1;
-            try {
-                if (notification.data) {
-                    const parsed = JSON.parse(notification.data) as { amount?: number };
-                    if (typeof parsed.amount === "number") amount = parsed.amount;
-                }
-            } catch {
-                // 忽略无效的 data
-            }
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    给你投了 {amount} 枚硬币
-                </span>
-            );
-        }
-        case "user_tip": {
-            let amount = 0;
-            try {
-                if (notification.data) {
-                    const parsed = JSON.parse(notification.data) as { amount?: number };
-                    if (typeof parsed.amount === "number") amount = parsed.amount;
-                }
-            } catch {
-                // 忽略无效的 data
-            }
-            return (
-                <span>
-                    <Link to={`/users/${notification.actor.id}`}>
-                        <span className="font-medium">{name}</span>
-                    </Link>{" "}
-                    给你投了 {amount} 枚硬币
-                </span>
-            );
-        }
-    }
-}
-
-function notificationLink(notification: AppNotification): { to: string; text: string } | null {
-    const to = notification.post_id
-        ? `/posts/${notification.post_id}`
-        : notification.work_id
-          ? `/works/${notification.work_id}`
-          : null;
-    if (!to) return null;
-    const snippet = (text: string) => parseFrontmatter(text).body || "查看详情";
-    if (notification.type === "post_reply" || notification.type === "work_reply") {
-        return { to, text: notification.reply_to ? snippet(notification.reply_to) : snippet(notification.snippet) };
-    }
-    return { to, text: snippet(notification.snippet) };
-}
 
 export default function NotificationsPage() {
     const user = useUserStore((s) => s.user);
@@ -193,52 +94,13 @@ export default function NotificationsPage() {
                         const read = notification.is_read || marked.includes(notification.id);
                         const link = notificationLink(notification);
                         return (
-                            <Card key={notification.id} className={cn(!read && "border-primary/40 bg-primary/5")}>
-                                <CardContent
-                                    role="button"
-                                    tabIndex={0}
-                                    className={cn("flex items-start gap-3 p-3", !read && "font-medium")}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter" || event.key === " ") {
-                                            event.preventDefault();
-                                            void handleOpen(notification);
-                                        }
-                                    }}
-                                >
-                                    <Link to={`/users/${notification.actor.id}`}>
-                                        <UserAvatar user={notification.actor} className="shrink-0">
-                                            {!read && <AvatarBadge2 className={"bg-destructive"} />}
-                                        </UserAvatar>
-                                    </Link>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="truncate">
-                                                <NotificationMessage notification={notification} />
-                                            </span>
-                                            {link && (
-                                                <Link
-                                                    to={link.to}
-                                                    onClick={() => {
-                                                        if (!read) void handleOpen(notification);
-                                                    }}
-                                                    className="mt-1 block truncate text-sm text-primary hover:underline"
-                                                >
-                                                    {link.text}
-                                                </Link>
-                                            )}
-                                        </div>
-
-                                        {notification.comment && (
-                                            <p className="mt-1 line-clamp-2 rounded-md bg-muted/60 px-2 py-1.5 text-sm text-foreground">
-                                                {notification.comment}
-                                            </p>
-                                        )}
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {formatRelativeTime(notification.created_at)}
-                                        </p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <NotificationRow
+                                key={notification.id}
+                                notification={notification}
+                                read={read}
+                                link={link}
+                                onOpen={handleOpen}
+                            />
                         );
                     })}
                     {feed.hasMore && <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />}

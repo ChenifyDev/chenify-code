@@ -1,28 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-    Bookmark,
-    Check,
-    Coins,
-    Copy,
-    Heart,
-    MessageCircle,
-    MessageCircleOff,
-    Pencil,
-    Pin,
-    PinOff,
-    Trash2,
-    UserCheck,
-    UserPlus,
-} from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
+import CommentInput from "@/components/comments/CommentInput.tsx";
+import CommentList from "@/components/comments/CommentList.tsx";
+import { insertReply, updateComment } from "@/components/comments/utils.ts";
 import Markdown from "@/components/forum/Markdown.tsx";
 import PostAstTree from "@/components/forum/PostAstTree.tsx";
-import { UserAvatar } from "@/components/avatar.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { PostActionsBar } from "@/components/forum/PostActionsBar.tsx";
+import { PostDetailHeader } from "@/components/forum/PostDetailHeader.tsx";
+import { PostSkeleton } from "@/components/forum/PostSkeleton.tsx";
+import Empty from "@/components/tab/Empty.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { useCopyLink } from "@/hooks/useCopyLink.ts";
 import { useFollow } from "@/hooks/useFollow.ts";
 import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
@@ -40,38 +30,10 @@ import {
     type Post,
     type PostComment as Comment,
 } from "@/lib/api";
-import { formatDateTime } from "@/lib/format.ts";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
-import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import { insertReply, updateComment } from "@/components/comments/utils.ts";
-import CommentInput from "@/components/comments/CommentInput.tsx";
-import CommentList from "@/components/comments/CommentList.tsx";
-import Empty from "@/components/tab/Empty.tsx";
 
 const COMMENTS_LIMIT = 20;
-
-function PostSkeleton() {
-    return (
-        <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
-            <Card>
-                <CardContent className="grid gap-4">
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="size-8 rounded-full" />
-                        <Skeleton className="h-4 w-24" />
-                    </div>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-            </Card>
-            <div className="mt-4 grid gap-3">
-                <Skeleton className="h-32 w-full rounded-xl" />
-                <Skeleton className="h-32 w-full rounded-xl" />
-            </div>
-        </div>
-    );
-}
 
 export default function PostDetail() {
     const { id: idParam } = useParams();
@@ -271,53 +233,18 @@ export default function PostDetail() {
             <PostAstTree content={post.content} />
             <Card>
                 <CardContent className="grid gap-4">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 items-center gap-2">
-                            <Link
-                                to={`/users/${post.author.id}`}
-                                className="flex min-w-0 items-center gap-2 hover:text-foreground"
-                            >
-                                <UserAvatar user={post.author} />
-                                <span className="truncate text-sm font-medium">{post.author.username}</span>
-                            </Link>
-                            <span className="text-xs text-muted-foreground">· {formatDateTime(post.created_at)}</span>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                            {isAuthor ? (
-                                <div className="flex shrink-0 items-center gap-2">
-                                    {draftId != null && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => navigate(`/write?id=${draftId}`)}
-                                        >
-                                            <Pencil />
-                                            编辑
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        disabled={deleting}
-                                        onClick={handleDeletePost}
-                                    >
-                                        <Trash2 />
-                                        {deleting ? "删除中…" : "删除帖子"}
-                                    </Button>
-                                </div>
-                            ) : (
-                                <Button
-                                    size="sm"
-                                    variant={following ? "outline" : "default"}
-                                    disabled={followBusy}
-                                    onClick={handleFollow}
-                                >
-                                    {following ? <UserCheck /> : <UserPlus />}
-                                    {following ? "已关注" : me ? "关注" : "登录后关注"}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
+                    <PostDetailHeader
+                        post={post}
+                        isAuthor={isAuthor}
+                        isMe={!!me}
+                        draftId={draftId}
+                        following={following}
+                        followBusy={followBusy}
+                        deleting={deleting}
+                        onEdit={() => navigate(`/write?id=${draftId}`)}
+                        onDelete={() => void handleDeletePost()}
+                        onFollow={() => void handleFollow()}
+                    />
 
                     <Markdown content={post.content} />
 
@@ -347,83 +274,21 @@ export default function PostDetail() {
                         </div>
                     )}
 
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(post.is_liked && "text-primary")}
-                            disabled={reactBusy}
-                            onClick={handleLike}
-                        >
-                            <Heart className={cn("size-4", post.is_liked && "fill-current")} />
-                            点赞 {post.likes_count}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(post.is_favorited && "text-primary")}
-                            disabled={reactBusy}
-                            onClick={handleFavorite}
-                        >
-                            <Bookmark className={cn("size-4", post.is_favorited && "fill-current")} />
-                            收藏 {post.favorites_count}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-amber-500"
-                            disabled={reactBusy}
-                            onClick={handleTip}
-                            title="投 1 枚硬币，作者获得 0.1 枚"
-                        >
-                            <Coins className="size-4" />
-                            {/* coins_count 按 0.1 枚存储，这里换算为整枚展示 */}
-                            投币 {post.coins_count * 10}
-                        </Button>
-                        <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                            <MessageCircle className="size-4" />
-                            {post.comments_count}
-                        </span>
-                        {isAuthor && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(post.pinned && "text-primary")}
-                                disabled={pinBusy}
-                                onClick={() => void handleTogglePin()}
-                                title={post.pinned ? "取消置顶" : "置顶"}
-                            >
-                                {post.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
-                                {pinBusy ? "保存中…" : post.pinned ? "取消置顶" : "置顶"}
-                            </Button>
-                        )}
-                        {isAuthor && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-muted-foreground"
-                                disabled={commentAreaBusy}
-                                onClick={handleToggleCommentArea}
-                                title={commentArea ? "关闭评论" : "开启评论"}
-                            >
-                                {commentArea ? (
-                                    <MessageCircleOff className="size-4" />
-                                ) : (
-                                    <MessageCircle className="size-4" />
-                                )}
-                                {commentAreaBusy ? "保存中…" : commentArea ? "关闭评论" : "开启评论"}
-                            </Button>
-                        )}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="ml-auto text-muted-foreground"
-                            onClick={() => void copy(window.location.href)}
-                        >
-                            {copied ? <Check /> : <Copy />}
-                            {copied ? "已复制" : "复制链接"}
-                        </Button>
-                    </div>
+                    <PostActionsBar
+                        post={post}
+                        isAuthor={isAuthor}
+                        commentArea={commentArea}
+                        reactBusy={reactBusy}
+                        pinBusy={pinBusy}
+                        commentAreaBusy={commentAreaBusy}
+                        copied={copied}
+                        onLike={() => void handleLike()}
+                        onFavorite={() => void handleFavorite()}
+                        onTip={() => void handleTip()}
+                        onTogglePin={() => void handleTogglePin()}
+                        onToggleCommentArea={() => void handleToggleCommentArea()}
+                        onCopy={() => void copy(window.location.href)}
+                    />
                 </CardContent>
             </Card>
 
@@ -433,7 +298,7 @@ export default function PostDetail() {
                 <Card>
                     <CardContent className="grid gap-4">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                            <MessageCircle className="size-4" />
+                            <MessageCircle />
                             评论 {post.comments_count}
                         </div>
 
