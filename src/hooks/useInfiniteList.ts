@@ -71,6 +71,8 @@ export function useInfiniteList<T>({
     useEffect(() => {
         if (!autoStart) return;
         if (startedRef.current) return;
+        // 惰性 tab 已显式 load(true) 接管过加载时，autoStart 不再抢跑追加（避免首页重复）
+        if (initializedRef.current) return;
         startedRef.current = true;
         void load();
     }, [autoStart, load]);

@@ -259,6 +259,7 @@ function CoinTabs() {
                 setMyCoinsRank((prev) => ({ ...prev, week: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
+            autoStart: false,
         }),
         month: useInfiniteList<CoinUser>({
             fetcher: useCallback(async (offset) => {
@@ -266,6 +267,7 @@ function CoinTabs() {
                 setMyCoinsRank((prev) => ({ ...prev, month: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
+            autoStart: false,
         }),
         total: useInfiniteList<CoinUser>({
             fetcher: useCallback(async (offset) => {
@@ -273,6 +275,7 @@ function CoinTabs() {
                 setMyCoinsRank((prev) => ({ ...prev, total: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
+            autoStart: false,
         }),
     };
 
@@ -314,6 +317,7 @@ function RankTabs() {
             setMyRank(res.my_rank);
             return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
+        autoStart: false,
     });
     const points = useInfiniteList<PointsUser>({
         fetcher: useCallback(async (offset) => {
@@ -321,6 +325,7 @@ function RankTabs() {
             setMyPointsRank(res.my_rank);
             return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
+        autoStart: false,
     });
 
     return (
