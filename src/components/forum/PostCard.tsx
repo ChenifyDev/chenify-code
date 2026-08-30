@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import Markdown from "@/components/forum/Markdown.tsx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { setPostPinned, tipPost, toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
@@ -131,12 +131,7 @@ export function PostCard({
                         to={`/users/${postState.author.id}`}
                         className="flex min-w-0 items-center gap-2 hover:text-foreground"
                     >
-                        <Avatar size="sm">
-                            {postState.author.avatar ? (
-                                <AvatarImage src={postState.author.avatar} alt={postState.author.username} />
-                            ) : null}
-                            <AvatarFallback>{postState.author.username.slice(0, 2)}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar user={postState.author} size="sm" />
                         <span className="truncate font-medium">{postState.author.username}</span>
                     </Link>
                     <span>·</span>

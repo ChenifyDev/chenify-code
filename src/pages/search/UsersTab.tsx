@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { type FollowUser, searchUsers, toggleFollow } from "@/lib/api";
 import { formatDate } from "@/lib/format.ts";
 
@@ -49,10 +49,7 @@ export default function UsersTab({ keyword }: { keyword: string }) {
                     <CardContent className={"flex gap-2 justify-between"}>
                         <div className={"flex gap-2"}>
                             <Link to={`/users/${user.id}`}>
-                                <Avatar>
-                                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar user={user} />
                             </Link>
                             <div className="grid min-w-0 flex-1 gap-0.5">
                                 <Link to={`/users/${user.id}`}>

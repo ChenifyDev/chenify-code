@@ -2,7 +2,7 @@ import { useUserStore } from "@/stores/useUser.ts";
 import { Link, useNavigate } from "react-router-dom";
 import { type ReactNode, useState } from "react";
 import { toggleFollow } from "@/lib/api";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { UserCheck, UserPlus } from "lucide-react";
 
@@ -46,10 +46,7 @@ export default function UserRow<T extends RowUser>({
     return (
         <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted">
             <Link to={`/users/${user.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                <Avatar>
-                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar user={user} />
                 <span className="truncate text-sm font-medium">{user.username}</span>
             </Link>
             <div className={"flex gap-3"}>

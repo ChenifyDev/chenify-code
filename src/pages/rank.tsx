@@ -9,7 +9,7 @@ import LoadMore from "@/components/tab/LoadMore.tsx";
 import type { TabData } from "@/types/tab.ts";
 import useTab from "@/hooks/useTab.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 
 const LIMIT = 10;
 
@@ -79,10 +79,7 @@ function Podium({ top, label }: { top: PodiumUser[]; label: string }) {
                     <Link to={`/users/${user.id}`} className="w-full">
                         <Card className="relative w-full overflow-hidden py-4 sm:py-10">
                             <CardContent className="min-w-0 w-full px-2 sm:px-8 text-center">
-                                <Avatar className={`mx-auto mb-1 sm:mb-3 ${slot.avatar}`}>
-                                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar user={user} className={`mx-auto mb-1 sm:mb-3 ${slot.avatar}`} />
                                 <div className={`mb-0.5 sm:mb-2 truncate mx-auto font-semibold ${slot.name}`}>
                                     {user.username}
                                 </div>

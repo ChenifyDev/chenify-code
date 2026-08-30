@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
-import { Bell, CalendarCheck, Code2, Coins, Ellipsis, FileText, Home, LogOut, Podium, Settings, Signpost, SquarePen } from "lucide-react";
+import {
+    Bell,
+    CalendarCheck,
+    Code2,
+    Coins,
+    Ellipsis,
+    FileText,
+    Home,
+    LogOut,
+    Podium,
+    Settings,
+    Signpost,
+    SquarePen,
+} from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { clearToken, getCheckinStatus, getUnreadNotifications } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useCoinsStore } from "@/stores/useCoins.ts";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import SearchBox from "@/components/search/SearchBox.tsx";
 import {
     Sidebar,
@@ -226,13 +239,12 @@ export default function AppSidebar() {
                     )}
                 </SidebarMenu>
                 <div className="flex items-center gap-2 rounded-md px-2 py-1 group-data-[collapsible=icon]:justify-center">
-                    <Avatar
+                    <UserAvatar
+                        user={user}
                         onClick={() => navigate(`/users/${user?.id}`)}
                         className={cn("shrink-0", user && "cursor-pointer")}
-                    >
-                        {user?.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                        <AvatarFallback>{user ? user.username.slice(0, 2) : <Code2 />}</AvatarFallback>
-                    </Avatar>
+                        fallback={<Code2 />}
+                    />
                     <div
                         className={cn(
                             "grid min-w-0 flex-1 gap-0 leading-tight",

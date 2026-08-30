@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { CornerDownRight, Loader2, Send } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import type { UserPublic, UserSummary } from "@/lib/api";
 
@@ -54,10 +54,7 @@ export default function CommentInput<T extends BaseComment<T>>({
                         </div>
                     )}
                     <div className="flex gap-2">
-                        <Avatar size="sm" className="mt-1 shrink-0">
-                            {me.avatar ? <AvatarImage src={me.avatar} alt={me.username} /> : null}
-                            <AvatarFallback>{me.username.slice(0, 2)}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar user={me} size="sm" className="mt-1 shrink-0" />
                         <textarea
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}

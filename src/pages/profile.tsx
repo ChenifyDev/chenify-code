@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import PostCard from "@/components/forum/PostCard.tsx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "@/components/ui/card.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
@@ -438,10 +438,7 @@ export default function Profile() {
                 <CardHeader>
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex min-w-0 items-center gap-4">
-                            <Avatar size="lg" className="size-16">
-                                {user.avatar ? <AvatarImage src={user.avatar} alt={user.username} /> : null}
-                                <AvatarFallback className="text-xl">{user.username.slice(0, 2)}</AvatarFallback>
-                            </Avatar>
+                            <UserAvatar user={user} size="lg" className="size-16" fallbackClassName="text-xl" />
                             <div className="grid min-w-0 gap-1">
                                 <h1 className="truncate text-xl font-semibold">{user.username}</h1>
                                 <p className="flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -1,7 +1,7 @@
 import { useUserStore } from "@/stores/useUser.ts";
 import { type UserSummary } from "@/lib/api";
 import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { formatDateTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { CornerDownRight, Heart, Trash2 } from "lucide-react";
@@ -40,12 +40,7 @@ function CommentRow<T extends BaseComment<T>>({
                     to={`/users/${comment.author.id}`}
                     className="flex min-w-0 items-center gap-2 hover:text-foreground"
                 >
-                    <Avatar size="sm">
-                        {comment.author.avatar ? (
-                            <AvatarImage src={comment.author.avatar} alt={comment.author.username} />
-                        ) : null}
-                        <AvatarFallback>{comment.author.username.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={comment.author} size="sm" />
                     <span className="truncate font-medium">{comment.author.username}</span>
                 </Link>
                 {parent && (

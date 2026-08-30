@@ -19,7 +19,7 @@ import { toast } from "sonner";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import PostAstTree from "@/components/forum/PostAstTree.tsx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
@@ -361,12 +361,7 @@ export default function PostDetail() {
                                 to={`/users/${post.author.id}`}
                                 className="flex min-w-0 items-center gap-2 hover:text-foreground"
                             >
-                                <Avatar>
-                                    {post.author.avatar ? (
-                                        <AvatarImage src={post.author.avatar} alt={post.author.username} />
-                                    ) : null}
-                                    <AvatarFallback>{post.author.username.slice(0, 2)}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar user={post.author} />
                                 <span className="truncate text-sm font-medium">{post.author.username}</span>
                             </Link>
                             <span className="text-xs text-muted-foreground">· {formatDateTime(post.created_at)}</span>

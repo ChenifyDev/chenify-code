@@ -2,7 +2,8 @@ import { useCallback, useState } from "react";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { Avatar, AvatarBadge2, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { AvatarBadge2 } from "@/components/ui/avatar.tsx";
+import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { listNotifications, markNotificationsRead, type AppNotification } from "@/lib/api";
@@ -199,16 +200,9 @@ export default function NotificationsPage() {
                                     }}
                                 >
                                     <Link to={`/users/${notification.actor.id}`}>
-                                        <Avatar className="shrink-0">
-                                            {notification.actor.avatar ? (
-                                                <AvatarImage
-                                                    src={notification.actor.avatar}
-                                                    alt={notification.actor.username}
-                                                />
-                                            ) : null}
-                                            <AvatarFallback>{notification.actor.username.slice(0, 2)}</AvatarFallback>
+                                        <UserAvatar user={notification.actor} className="shrink-0">
                                             {!read && <AvatarBadge2 className={"bg-destructive"} />}
-                                        </Avatar>
+                                        </UserAvatar>
                                     </Link>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 text-sm">
