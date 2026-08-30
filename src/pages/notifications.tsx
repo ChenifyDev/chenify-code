@@ -12,8 +12,10 @@ import { formatRelativeTime } from "@/lib/format.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 
-import { Empty, LoadMore, SkeletonList } from "@/pages/search/common.tsx";
-import { useSearchFeed } from "@/pages/search/useSearchFeed.ts";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
+import Empty from "@/components/tab/Empty.tsx";
+import LoadMore from "@/components/tab/LoadMore.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 
 const LIMIT = 20;
 
@@ -117,11 +119,13 @@ export default function NotificationsPage() {
     const navigate = useNavigate();
     const [marked, setMarked] = useState<number[]>([]);
 
-    const fetcher = useCallback((offset: number, limit: number) => listNotifications(offset, limit), []);
-    const { items, loading, loadingMore, hasMore, error, load, setItems } = useSearchFeed<AppNotification>(
-        fetcher,
-        LIMIT,
-    );
+    const feed = useInfiniteList<AppNotification>({
+        fetcher: useCallback(async (offset, limit) => {
+            const res = await listNotifications(offset, limit);
+            return { items: res.items, hasMore: res.hasMore, hidden: false };
+        }, []),
+        limit: LIMIT,
+    });
 
     const handleOpen = async (notification: AppNotification) => {
         if (notification.is_read) {
@@ -142,7 +146,7 @@ export default function NotificationsPage() {
     const handleMarkAll = async () => {
         try {
             await markNotificationsRead();
-            setItems((items) => items.map((item) => ({ ...item, is_read: true })));
+            feed.setItems((items) => items.map((item) => ({ ...item, is_read: true })));
         } catch (err) {
             console.error(err);
         }
@@ -159,10 +163,10 @@ export default function NotificationsPage() {
         navigate("/login");
         return null;
     }
-    if (loading) return <SkeletonList />;
-    if (error) return <Empty text={error} />;
+    if (feed.loading) return <SkeletonList />;
+    if (feed.error) return <Empty text={feed.error} />;
 
-    const unreadCount = items.filter((item) => !item.is_read && !marked.includes(item.id)).length;
+    const unreadCount = feed.items.filter((item) => !item.is_read && !marked.includes(item.id)).length;
 
     return (
         <div className="mx-auto w-full p-4 md:p-6">
@@ -179,11 +183,11 @@ export default function NotificationsPage() {
                 )}
             </header>
 
-            {items.length === 0 ? (
+            {feed.items.length === 0 ? (
                 <Empty text="暂无消息" />
             ) : (
                 <div className="grid gap-3">
-                    {items.map((notification) => {
+                    {feed.items.map((notification) => {
                         const read = notification.is_read || marked.includes(notification.id);
                         const link = notificationLink(notification);
                         return (
@@ -235,7 +239,7 @@ export default function NotificationsPage() {
                             </Card>
                         );
                     })}
-                    {hasMore && <LoadMore loading={loadingMore} onClick={() => void load()} />}
+                    {feed.hasMore && <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />}
                 </div>
             )}
         </div>

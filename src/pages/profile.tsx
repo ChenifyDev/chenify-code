@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import PostCard from "@/components/forum/PostCard.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "@/components/ui/card.tsx";
@@ -20,6 +21,8 @@ import { Input } from "@/components/ui/input.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
+import { useFollow } from "@/hooks/useFollow.ts";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
 import {
     getSpace,
     getSpaceFavorites,
@@ -27,7 +30,6 @@ import {
     getSpaceFollowing,
     getSpacePosts,
     tipUser,
-    toggleFollow,
     updatePrivacy,
     type FollowUser,
     type Post,
@@ -40,28 +42,8 @@ import LoadMore from "@/components/tab/LoadMore.tsx";
 import Empty from "@/components/tab/Empty.tsx";
 import UserRow from "@/components/user/UserRow.tsx";
 import type { TabData } from "@/types/tab.ts";
-import useTab from "@/hooks/useTab.ts";
 
 const LIMIT = 10;
-
-function SkeletonList() {
-    return (
-        <div className="grid gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} size="sm">
-                    <CardContent className="grid gap-3">
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="size-6 rounded-full" />
-                            <Skeleton className="h-4 w-24" />
-                        </div>
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-    );
-}
 
 function PostsTab({ tab, canPin }: { tab: TabData<Post>; canPin: boolean }) {
     const { load, initialized } = tab;
@@ -255,45 +237,49 @@ function TipDialog({
 
 
 function ProfileTabs({ userId, canPin }: { userId: number; canPin: boolean }) {
-    const posts = useTab(
-        useCallback(
+    const posts = useInfiniteList<Post>({
+        fetcher: useCallback(
             async (offset) => {
                 const res = await getSpacePosts(userId, offset, LIMIT);
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             },
             [userId],
         ),
-    );
+        autoStart: false,
+    });
 
-    const favorites = useTab(
-        useCallback(
+    const favorites = useInfiniteList<Post>({
+        fetcher: useCallback(
             async (offset) => {
                 const res = await getSpaceFavorites(userId, offset, LIMIT);
                 return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),
-    );
+        autoStart: false,
+    });
 
-    const following = useTab(
-        useCallback(
+    const following = useInfiniteList<FollowUser>({
+        fetcher: useCallback(
             async (offset) => {
                 const res = await getSpaceFollowing(userId, offset, LIMIT);
                 return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),
-    );
+        autoStart: false,
+    });
 
-    const followers = useTab(
-        useCallback(
+    const followers = useInfiniteList<FollowUser>({
+        fetcher: useCallback(
             async (offset) => {
                 const res = await getSpaceFollowers(userId, offset, LIMIT);
                 return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
         ),
-    );
+        autoStart: false,
+    });
 
     return (
         <Tabs defaultValue="posts" className="w-full">
@@ -335,9 +321,23 @@ export default function Profile() {
     const [space, setSpace] = useState<SpaceSkeleton | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [followBusy, setFollowBusy] = useState(false);
     const [tipOpen, setTipOpen] = useState(false);
     const coinsBalance = useCoinsStore((s) => s.balance);
+
+    const { busy: followBusy, toggle: handleFollow } = useFollow({
+        userId: id,
+        isFollowing: space?.relation?.is_following ?? false,
+        onToggle: (res) =>
+            setSpace((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          counts: { ...prev.counts, followers: res.followers_count },
+                          relation: prev.relation ? { ...prev.relation, is_following: res.following } : prev.relation,
+                      }
+                    : prev,
+            ),
+    });
 
     const handleTipOpen = () => {
         if (!me) {
@@ -370,30 +370,6 @@ export default function Profile() {
 
     const isSelf = me?.id === id;
     const following = space?.relation?.is_following ?? false;
-
-    const handleFollow = async () => {
-        if (!me) {
-            navigate("/login");
-            return;
-        }
-        setFollowBusy(true);
-        try {
-            const res = await toggleFollow(id);
-            setSpace((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          counts: { ...prev.counts, followers: res.followers_count },
-                          relation: prev.relation ? { ...prev.relation, is_following: res.following } : prev.relation,
-                      }
-                    : prev,
-            );
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setFollowBusy(false);
-        }
-    };
 
     const handlePrivacy = async (field: "is_favorites_public" | "is_follows_public", value: boolean) => {
         try {

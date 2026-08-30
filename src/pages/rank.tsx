@@ -2,12 +2,12 @@ import { type CoinPeriod, type CoinUser, type FollowUser, type PointsUser, coinL
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
 import Empty from "@/components/tab/Empty.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 import UserRow from "@/components/user/UserRow.tsx";
 import LoadMore from "@/components/tab/LoadMore.tsx";
 import type { TabData } from "@/types/tab.ts";
-import useTab from "@/hooks/useTab.ts";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { UserAvatar } from "@/components/avatar.tsx";
 
@@ -112,25 +112,6 @@ function RankBadge({ rank, label, value }: { rank: number; label: string; value:
         >
             第{rank}名 · {label}：{value}
         </span>
-    );
-}
-
-function SkeletonList() {
-    return (
-        <div className="grid gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} size="sm">
-                    <CardContent className="grid gap-3">
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="size-6 rounded-full" />
-                            <Skeleton className="h-4 w-24" />
-                        </div>
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
     );
 }
 
@@ -267,27 +248,27 @@ function CoinTabs() {
         total: null,
     });
     const tabs: Record<CoinPeriod, TabData<CoinUser>> = {
-        week: useTab(
-            useCallback(async (offset) => {
+        week: useInfiniteList<CoinUser>({
+            fetcher: useCallback(async (offset) => {
                 const res = await coinLeaderboard({ period: "week", limit: LIMIT, offset });
                 setMyCoinsRank((prev) => ({ ...prev, week: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
-        ),
-        month: useTab(
-            useCallback(async (offset) => {
+        }),
+        month: useInfiniteList<CoinUser>({
+            fetcher: useCallback(async (offset) => {
                 const res = await coinLeaderboard({ period: "month", limit: LIMIT, offset });
                 setMyCoinsRank((prev) => ({ ...prev, month: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
-        ),
-        total: useTab(
-            useCallback(async (offset) => {
+        }),
+        total: useInfiniteList<CoinUser>({
+            fetcher: useCallback(async (offset) => {
                 const res = await coinLeaderboard({ period: "total", limit: LIMIT, offset });
                 setMyCoinsRank((prev) => ({ ...prev, total: res.my_rank }));
                 return { items: res.items, hasMore: res.hasMore, hidden: false };
             }, []),
-        ),
+        }),
     };
 
     return (
@@ -321,20 +302,20 @@ function CoinTabs() {
 function RankTabs() {
     const [myRank, setMyRank] = useState<number | null>(null);
     const [myPointsRank, setMyPointsRank] = useState<number | null>(null);
-    const followers = useTab(
-        useCallback(async (offset) => {
+    const followers = useInfiniteList<FollowUser>({
+        fetcher: useCallback(async (offset) => {
             const res = await rankUsersByFollowers({ limit: LIMIT, offset });
             setMyRank(res.my_rank);
             return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
-    );
-    const points = useTab(
-        useCallback(async (offset) => {
+    });
+    const points = useInfiniteList<PointsUser>({
+        fetcher: useCallback(async (offset) => {
             const res = await rankUsersByPostPoints({ limit: LIMIT, offset });
             setMyPointsRank(res.my_rank);
             return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),
-    );
+    });
 
     return (
         <Tabs defaultValue="followers" className="w-full">

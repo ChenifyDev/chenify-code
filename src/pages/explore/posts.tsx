@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock, Flame, Loader2, Signpost } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Clock, Flame, Signpost } from "lucide-react";
 
 import PostCard from "@/components/forum/PostCard.tsx";
+import LoadMore from "@/components/tab/LoadMore.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { listPosts, listTags, type Post } from "@/lib/api";
 import { cn } from "@/lib/utils.ts";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
 import Empty from "@/components/tab/Empty.tsx";
 import SkeletonList from "@/components/forum/SkeletonList.tsx";
 
@@ -13,50 +15,26 @@ type Sort = "hot" | "latest";
 const LIMIT = 10;
 
 function Feed({ sort, tag }: { sort: Sort; tag: string | null }) {
-    const [items, setItems] = useState<Post[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const offsetRef = useRef(0);
-    const startedRef = useRef(false);
+    const feed = useInfiniteList<Post>({
+        fetcher: useCallback(
+            async (offset) => {
+                const res = await listPosts({ offset, limit: LIMIT, tag, sort });
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            },
+            [sort, tag],
+        ),
+        limit: LIMIT,
+    });
 
-    const load = useCallback(async () => {
-        setLoadingMore(true);
-        setError(null);
-        try {
-            const res = await listPosts({ offset: offsetRef.current, limit: LIMIT, tag, sort });
-            setHasMore(Boolean(res.hasMore));
-            setItems((prev) => [...prev, ...res.items]);
-            offsetRef.current += res.items.length;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "加载失败");
-        } finally {
-            setLoadingMore(false);
-            setLoading(false);
-        }
-    }, [sort, tag]);
-
-    useEffect(() => {
-        if (startedRef.current) return;
-        startedRef.current = true;
-        void load();
-    }, [load]);
-
-    if (loading) return <SkeletonList />;
-    if (error) return <Empty text={error} />;
-    if (items.length === 0) return <Empty text="这里还空空如也" />;
+    if (feed.loading) return <SkeletonList />;
+    if (feed.error) return <Empty text={feed.error} />;
+    if (feed.items.length === 0) return <Empty text="这里还空空如也" />;
     return (
         <div className="grid gap-3">
-            {items.map((post) => (
+            {feed.items.map((post) => (
                 <PostCard key={post.id} post={post} />
             ))}
-            {hasMore && (
-                <Button variant="outline" className="w-full" disabled={loadingMore} onClick={() => void load()}>
-                    {loadingMore && <Loader2 className="animate-spin" />}
-                    {loadingMore ? "加载中…" : "加载更多"}
-                </Button>
-            )}
+            {feed.hasMore && <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />}
         </div>
     );
 }

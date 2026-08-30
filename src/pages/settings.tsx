@@ -1,4 +1,4 @@
-import { useState, type ChangeEventHandler, type SubmitEventHandler } from "react";
+import { type ChangeEvent, useState, type SubmitEventHandler } from "react";
 import { ImagePlus, Loader2, Settings, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -9,32 +9,31 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { updateProfile } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
-
-type Status = { type: "error" | "success"; text: string } | null;
-
-function StatusMessage({ status }: { status: Status }) {
-    if (!status) return null;
-    const tone =
-        status.type === "error"
-            ? "text-destructive bg-destructive/10 dark:bg-destructive/20"
-            : "text-foreground bg-muted";
-    return (
-        <div className={`rounded-md px-3 py-2 text-sm ${tone}`} role={status.type === "error" ? "alert" : "status"}>
-            {status.text}
-        </div>
-    );
-}
+import { useAvatarUpload } from "@/hooks/useAvatarUpload.ts";
+import { type FormStatus, StatusMessage } from "@/components/StatusMessage.tsx";
 
 export default function SettingsPage() {
     const { user, checking, setUser } = useUserStore();
     const navigate = useNavigate();
 
     const [username, setUsername] = useState(user?.username ?? "");
-    const [avatarFile, setAvatarFile] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [removeAvatar, setRemoveAvatar] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [status, setStatus] = useState<Status>(null);
+    const [status, setStatus] = useState<FormStatus>(null);
+    const { file, preview, handleChange, handleRemove } = useAvatarUpload({
+        onError: (message) => setStatus({ type: "error", text: message }),
+    });
+
+    const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setStatus(null);
+        handleChange(event);
+        if (event.target.files?.[0]) setRemoveAvatar(false);
+    };
+
+    const handleRemoveAvatar = () => {
+        handleRemove();
+        setRemoveAvatar(true);
+    };
 
     if (checking) {
         return (
@@ -47,29 +46,6 @@ export default function SettingsPage() {
         navigate("/login");
         return null;
     }
-
-    const handleAvatarChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-        const file = event.target.files?.[0] ?? null;
-        setStatus(null);
-        if (!file) return;
-        if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
-            setStatus({ type: "error", text: "头像仅支持 png、jpg、webp、gif 格式" });
-            return;
-        }
-        if (file.size > 2 * 1024 * 1024) {
-            setStatus({ type: "error", text: "头像大小不能超过 2MB" });
-            return;
-        }
-        setAvatarFile(file);
-        setAvatarPreview(URL.createObjectURL(file));
-        setRemoveAvatar(false);
-    };
-
-    const handleRemoveAvatar = () => {
-        setAvatarFile(null);
-        setAvatarPreview(null);
-        setRemoveAvatar(true);
-    };
 
     const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
@@ -86,12 +62,11 @@ export default function SettingsPage() {
         try {
             const updated = await updateProfile({
                 username: trimmed,
-                avatar: avatarFile ?? undefined,
+                avatar: file ?? undefined,
                 removeAvatar,
             });
             setUser(updated);
-            setAvatarFile(null);
-            setAvatarPreview(null);
+            handleRemove();
             setRemoveAvatar(false);
             setStatus({ type: "success", text: "资料已更新" });
         } catch (err) {
@@ -101,7 +76,7 @@ export default function SettingsPage() {
         }
     };
 
-    const showCurrent = !!user.avatar && !avatarPreview && !removeAvatar;
+    const showCurrent = !!user.avatar && !preview && !removeAvatar;
 
     return (
         <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
@@ -123,8 +98,8 @@ export default function SettingsPage() {
                             <Label htmlFor="settings-avatar">头像</Label>
                             <div className="flex items-center gap-3">
                                 <Avatar className="size-16">
-                                    {avatarPreview ? (
-                                        <AvatarImage src={avatarPreview} alt="头像预览" />
+                                    {preview ? (
+                                        <AvatarImage src={preview} alt="头像预览" />
                                     ) : showCurrent ? (
                                         <AvatarImage src={user.avatar!} alt="当前头像" />
                                     ) : null}
@@ -140,7 +115,7 @@ export default function SettingsPage() {
                                     onChange={handleAvatarChange}
                                     disabled={submitting}
                                 />
-                                {user.avatar && !avatarPreview && !removeAvatar && (
+                                {user.avatar && !preview && !removeAvatar && (
                                     <Button
                                         type="button"
                                         variant="ghost"

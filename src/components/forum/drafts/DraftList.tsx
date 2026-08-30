@@ -1,77 +1,42 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DraftItem } from "@/components/forum/drafts/DraftItem.tsx";
-import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { deleteDraft, listDrafts, publishDraft, unpublishDraft, type Draft } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText } from "lucide-react";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
+import LoadMore from "@/components/tab/LoadMore.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
 
 type DraftStatus = "all" | "draft" | "published";
 
 const LIMIT = 10;
 
-function SkeletonList() {
-    return (
-        <div className="grid gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} size="sm">
-                    <CardContent className="grid gap-3">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-    );
-}
-
 export default function DraftList() {
     const [status, setStatus] = useState<DraftStatus>("all");
-    const [items, setItems] = useState<Draft[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [busyId, setBusyId] = useState<number | null>(null);
-    const offsetRef = useRef(0);
+    const [actionError, setActionError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const reload = useCallback(async () => {
-        offsetRef.current = 0;
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await listDrafts(status === "all" ? undefined : status, 0, LIMIT);
-            setItems(res.items);
-            setHasMore(Boolean(res.hasMore));
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "加载失败");
-        } finally {
-            setLoading(false);
-        }
-    }, [status]);
+    const feed = useInfiniteList<Draft>({
+        fetcher: useCallback(
+            async (offset) => {
+                const res = await listDrafts(status === "all" ? undefined : status, offset, LIMIT);
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            },
+            [status],
+        ),
+        limit: LIMIT,
+        autoStart: false,
+    });
 
-    const loadMore = useCallback(async () => {
-        setLoadingMore(true);
-        setError(null);
-        try {
-            const res = await listDrafts(status === "all" ? undefined : status, offsetRef.current, LIMIT);
-            setItems((prev) => [...prev, ...res.items]);
-            offsetRef.current += res.items.length;
-            setHasMore(Boolean(res.hasMore));
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "加载失败");
-        } finally {
-            setLoadingMore(false);
-        }
-    }, [status]);
+    const { load } = feed;
 
     useEffect(() => {
-        void reload();
-    }, [reload]);
+        setActionError(null);
+        void load(true);
+    }, [load]);
 
     const runAction = async (
         draft: Draft,
@@ -79,12 +44,12 @@ export default function DraftList() {
         end: (prev: Draft[], result: unknown) => Draft[],
     ) => {
         setBusyId(draft.id);
-        setError(null);
+        setActionError(null);
         try {
             const result = await action(draft.id);
-            setItems((prev) => end(prev, result));
+            feed.setItems((prev) => end(prev, result));
         } catch (err) {
-            setError(err instanceof Error ? err.message : "操作失败");
+            setActionError(err instanceof Error ? err.message : "操作失败");
         } finally {
             setBusyId(null);
         }
@@ -109,6 +74,8 @@ export default function DraftList() {
         navigate(`/write?id=${draft.id}`);
     };
 
+    const error = feed.error ?? actionError;
+
     return (
         <Tabs value={status} onValueChange={(value) => setStatus(value as DraftStatus)} className="w-full">
             <TabsList className="w-full">
@@ -123,12 +90,12 @@ export default function DraftList() {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value={status} className="pt-4">
-                {loading ? (
+                {feed.loading ? (
                     <SkeletonList />
                 ) : (
                     <div className="grid gap-3">
                         {error && <p className="text-sm text-muted-foreground">{error}</p>}
-                        {items.length === 0 ? (
+                        {feed.items.length === 0 ? (
                             <Card>
                                 <CardContent className="grid justify-items-center gap-2 py-10 text-center text-sm text-muted-foreground">
                                     <FileText className="size-6" />
@@ -137,7 +104,7 @@ export default function DraftList() {
                             </Card>
                         ) : (
                             <>
-                                {items.map((draft) => (
+                                {feed.items.map((draft) => (
                                     <DraftItem
                                         key={draft.id}
                                         draft={draft}
@@ -148,16 +115,8 @@ export default function DraftList() {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                                {hasMore && (
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        disabled={loadingMore}
-                                        onClick={() => void loadMore()}
-                                    >
-                                        {loadingMore && <Loader2 className="animate-spin" />}
-                                        {loadingMore ? "加载中…" : "加载更多"}
-                                    </Button>
+                                {feed.hasMore && (
+                                    <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />
                                 )}
                             </>
                         )}

@@ -1,19 +1,18 @@
 import React, { useMemo, useState } from "react";
 import { Bookmark, Check, ChevronDown, ChevronUp, Coins, Copy, Heart, MessageCircle, Pin, PinOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import { UserAvatar } from "@/components/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
-import { setPostPinned, tipPost, toggleFavorite, toggleLike, unFavorite, unLike, type Post } from "@/lib/api";
+import { useCopyLink } from "@/hooks/useCopyLink.ts";
+import { usePostActions } from "@/hooks/usePostActions.ts";
+import { type Post } from "@/lib/api";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { formatDate } from "@/lib/format.ts";
 import { truncateMarkdown } from "@/lib/markdown.ts";
 import { cn } from "@/lib/utils.ts";
-import { useUserStore } from "@/stores/useUser";
-import { useCoinsStore } from "@/stores/useCoins.ts";
 
 const PREVIEW_MAX_LENGTH = 100;
 
@@ -30,9 +29,11 @@ export function PostCard({
 }) {
     const [expanded, setExpanded] = useState(false);
     const [postState, setPost] = useState<Post>(post);
-    const [reactBusy, setReactBusy] = useState(false);
-    const [pinBusy, setPinBusy] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const { copied, copy } = useCopyLink();
+    const { reactBusy, pinBusy, handleLike, handleFavorite, handleTip, handlePin } = usePostActions({
+        post: postState,
+        setPost,
+    });
     const { title, body } = useMemo(() => parseFrontmatter(postState.content), [postState.content]);
     const { excerpt, isTruncated } = useMemo(() => truncateMarkdown(body, PREVIEW_MAX_LENGTH), [body]);
 
@@ -40,87 +41,6 @@ export function PostCard({
         e.preventDefault();
         e.stopPropagation();
         setExpanded((prev) => !prev);
-    };
-
-    const me = useUserStore();
-    const navigate = useNavigate();
-    const requireLogin = (): boolean => {
-        if (!me) {
-            navigate("/login");
-            return false;
-        }
-        return true;
-    };
-
-    const handleLike = async () => {
-        if (!postState) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = postState.is_liked ? await unLike(postState.id) : await toggleLike(postState.id);
-            setPost((prev) => (prev ? { ...prev, is_liked: res.liked, likes_count: res.likes_count } : prev));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setReactBusy(false);
-        }
-    };
-
-    const handleFavorite = async () => {
-        if (!postState) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = postState.is_favorited ? await unFavorite(postState.id) : await toggleFavorite(postState.id);
-            setPost((prev) =>
-                prev ? { ...prev, is_favorited: res.favorited, favorites_count: res.favorites_count } : prev,
-            );
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setReactBusy(false);
-        }
-    };
-
-    const handlePin = async () => {
-        if (!postState) return;
-        if (!requireLogin()) return;
-        setPinBusy(true);
-        try {
-            const updated = await setPostPinned(postState.id, !postState.pinned);
-            setPost(updated);
-            onPinChanged?.();
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setPinBusy(false);
-        }
-    };
-
-    const handleCopyLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.host + `/posts/${postState.id}`);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-        } catch {
-            /* ignore */
-        }
-    };
-
-    const handleTip = async () => {
-        if (!postState) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = await tipPost(postState.id);
-            setPost((prev) => (prev ? { ...prev, coins_count: res.coins_count } : prev));
-            useCoinsStore.getState().setBalance(res.balance);
-            toast.success(`投币成功，当前余额 ${res.balance}`);
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "投币失败");
-        } finally {
-            setReactBusy(false);
-        }
     };
 
     return (
@@ -227,7 +147,7 @@ export function PostCard({
                         <Button
                             variant="ghost"
                             size={"xs"}
-                            onClick={handlePin}
+                            onClick={() => void handlePin(onPinChanged)}
                             disabled={pinBusy}
                             className={cn("inline-flex items-center gap-1", postState.pinned && "text-primary")}
                         >
@@ -239,7 +159,7 @@ export function PostCard({
                         variant="ghost"
                         size="sm"
                         className="ml-auto text-muted-foreground"
-                        onClick={handleCopyLink}
+                        onClick={() => void copy(window.location.host + `/posts/${postState.id}`)}
                     >
                         {copied ? <Check /> : <Copy />}
                         {copied ? "已复制" : "复制链接"}

@@ -38,10 +38,11 @@ function StatusSkeleton() {
 export default function CheckinPage() {
     const me = useUserStore((s) => s.user);
     const checking = useUserStore((s) => s.checking);
+    const balance = useCoinsStore((s) => s.balance);
+    const storeCheckedToday = useCoinsStore((s) => s.checkedToday);
     const navigate = useNavigate();
 
-    const [checkedToday, setCheckedToday] = useState(false);
-    const [balance, setBalance] = useState<number | null>(null);
+    const checkedToday = storeCheckedToday ?? false;
     const [days, setDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -53,8 +54,6 @@ export default function CheckinPage() {
         getCheckinStatus()
             .then((res) => {
                 if (cancelled) return;
-                setCheckedToday(res.checked_today);
-                setBalance(res.balance);
                 setDays(res.days);
                 useCoinsStore.getState().setBalance(res.balance);
                 useCoinsStore.getState().setCheckedToday(res.checked_today);
@@ -76,14 +75,12 @@ export default function CheckinPage() {
         try {
             const res = await checkIn();
             if (res.granted) {
-                setCheckedToday(true);
-                setBalance(res.balance);
                 setDays((prev) => [localTodayKey(), ...prev]);
                 useCoinsStore.getState().setBalance(res.balance);
                 useCoinsStore.getState().setCheckedToday(true);
                 toast.success("签到成功，获得 1 枚硬币");
             } else {
-                setCheckedToday(true);
+                useCoinsStore.getState().setCheckedToday(true);
                 toast.info("今天已经签到过了");
             }
         } catch (err) {

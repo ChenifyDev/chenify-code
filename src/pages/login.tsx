@@ -1,4 +1,4 @@
-import React, { type ChangeEventHandler, type SubmitEventHandler, useCallback, useMemo, useState } from "react";
+import React, { type SubmitEventHandler, useCallback, useMemo, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button.tsx";
@@ -11,8 +11,8 @@ import { login, register, setToken, type UserPublic } from "@/lib/api";
 import { useUserStore } from "@/stores/useUser.ts";
 import { useCoinsStore } from "@/stores/useCoins.ts";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-type Status = { type: "error" | "success"; text: string } | null;
+import { useAvatarUpload } from "@/hooks/useAvatarUpload.ts";
+import { type FormStatus, StatusMessage } from "@/components/StatusMessage.tsx";
 
 function getSafeReturnTo(raw: string | null): string | null {
     if (!raw) return null;
@@ -44,25 +44,12 @@ function Field({ id, label, children }: { id: string; label: string; children: R
     );
 }
 
-function StatusMessage({ status }: { status: Status }) {
-    if (!status) return null;
-    const tone =
-        status.type === "error"
-            ? "text-destructive bg-destructive/10 dark:bg-destructive/20"
-            : "text-foreground bg-muted";
-    return (
-        <div className={`rounded-md px-3 py-2 text-sm ${tone}`} role={status.type === "error" ? "alert" : "status"}>
-            {status.text}
-        </div>
-    );
-}
-
 function LoginForm({ returnTo, onSuccess }: { returnTo: string | null; onSuccess: (user: UserPublic) => void }) {
     const [loginName, setLoginName] = useState("");
     const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [status, setStatus] = useState<Status>(null);
+    const [status, setStatus] = useState<FormStatus>(null);
     const navigate = useNavigate();
 
     const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
@@ -149,31 +136,11 @@ function RegisterForm({
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
-    const [avatar, setAvatar] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [status, setStatus] = useState<Status>(null);
-
-    const handleAvatarChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-        const file = event.target.files?.[0] ?? null;
-        setStatus(null);
-        if (!file) return;
-        if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
-            setStatus({ type: "error", text: "头像仅支持 png、jpg、webp、gif 格式" });
-            return;
-        }
-        if (file.size > 2 * 1024 * 1024) {
-            setStatus({ type: "error", text: "头像大小不能超过 2MB" });
-            return;
-        }
-        setAvatar(file);
-        setAvatarPreview(URL.createObjectURL(file));
-    };
-
-    const handleRemoveAvatar = () => {
-        setAvatar(null);
-        setAvatarPreview(null);
-    };
+    const [status, setStatus] = useState<FormStatus>(null);
+    const { file, preview, handleChange, handleRemove } = useAvatarUpload({
+        onError: (message) => setStatus({ type: "error", text: message }),
+    });
 
     const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
@@ -199,7 +166,7 @@ function RegisterForm({
 
         setSubmitting(true);
         try {
-            await register(username.trim(), email.trim(), password, avatar);
+            await register(username.trim(), email.trim(), password, file);
             setStatus({ type: "success", text: "注册成功，请登录" });
             onRegistered(username.trim());
         } catch (err) {
@@ -214,8 +181,8 @@ function RegisterForm({
             <Field id="register-avatar" label="头像（可选，也可稍后上传）">
                 <div className="flex items-center gap-3">
                     <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted">
-                        {avatarPreview ? (
-                            <img src={avatarPreview} alt="头像预览" className="size-full object-cover" />
+                        {preview ? (
+                            <img src={preview} alt="头像预览" className="size-full object-cover" />
                         ) : (
                             <ImagePlus className="size-5 text-muted-foreground" />
                         )}
@@ -225,15 +192,15 @@ function RegisterForm({
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/gif"
                         className="flex-1 file:h-full file:cursor-pointer"
-                        onChange={handleAvatarChange}
+                        onChange={handleChange}
                         disabled={submitting}
                     />
-                    {avatar && (
+                    {file && (
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={handleRemoveAvatar}
+                            onClick={handleRemove}
                             aria-label="移除头像"
                         >
                             <X />

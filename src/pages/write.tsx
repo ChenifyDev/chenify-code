@@ -11,6 +11,7 @@ import { parseFrontmatter, withTitle } from "@/lib/frontmatter.ts";
 import { cn, urlToFile } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
 import EditorField from "@/components/forum/MarkdownEditor.tsx";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence.ts";
 
 const MAX_IMAGES = 9;
 const MAX_TAGS = 10;
@@ -33,10 +34,6 @@ export default function Write() {
     const [searchParams, _] = useSearchParams();
     const currentId = searchParams.get("id");
 
-    const [content, setContent] = useState(localStorage.getItem("tmp_content") || "");
-    const [title, setTitle] = useState(localStorage.getItem("tmp_title") || "");
-    const [commentArea, setCommentArea] = useState(localStorage.getItem("tmp_comment_area") !== "false");
-    const [tagInput, setTagInput] = useState(localStorage.getItem("tmp_tag") || "");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<Draft["status"]>("draft");
     const [saving, setSaving] = useState(false);
@@ -46,6 +43,8 @@ export default function Write() {
     const [dirty, setDirty] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const saveDraftRef = useRef<() => Promise<void>>(async () => {});
+    const { content, setContent, title, setTitle, commentArea, setCommentArea, tagInput, setTagInput, clear } =
+        useDraftPersistence();
 
     // 加载已有草稿
     useEffect(() => {
@@ -73,18 +72,7 @@ export default function Write() {
         return () => {
             ignore = true;
         };
-    }, [currentId]);
-
-    // 防抖自动保存到 localStorage
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            localStorage.setItem("tmp_content", content);
-            localStorage.setItem("tmp_title", title);
-            localStorage.setItem("tmp_comment_area", commentArea ? "1" : "false");
-            localStorage.setItem("tmp_tag", tagInput);
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [content, title, tagInput, commentArea]);
+    }, [currentId, setTitle, setCommentArea, setContent, setTagInput, setImageFiles]);
 
     // 浏览器刷新/关闭标签页警告
     useEffect(() => {
@@ -112,16 +100,13 @@ export default function Write() {
             setStatus(draft.status);
             setDirty(false);
             setMessage(draft.status === "published" ? "帖子已更新" : `草稿已保存（#${draft.id}）`);
-            localStorage.removeItem("tmp_content");
-            localStorage.removeItem("tmp_title");
-            localStorage.removeItem("tmp_tag");
-            localStorage.removeItem("tmp_comment_area");
+            clear();
         } catch (err) {
             setError(err instanceof Error ? err.message : "保存草稿失败");
         } finally {
             setSaving(false);
         }
-    }, [tags, content, title, commentArea, imageFiles, currentId]);
+    }, [tags, content, title, commentArea, imageFiles, currentId, clear]);
 
     useEffect(() => {
         saveDraftRef.current = handleSaveDraft;
@@ -175,10 +160,7 @@ export default function Write() {
                     return;
                 }
                 const post = await publishDraft(Number(currentId));
-                localStorage.removeItem("tmp_content");
-                localStorage.removeItem("tmp_title");
-                localStorage.removeItem("tmp_tag");
-                localStorage.removeItem("tmp_comment_area");
+                clear();
                 navigate(`/posts/${post.id}`);
             } else {
                 const draft = await createDraft(finalContent, imageFiles, tags);

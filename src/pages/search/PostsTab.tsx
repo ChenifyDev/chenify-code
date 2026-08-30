@@ -3,27 +3,34 @@ import { useCallback } from "react";
 import PostCard from "@/components/forum/PostCard.tsx";
 import { searchPosts, type Post } from "@/lib/api";
 
-import { Empty, LoadMore, SkeletonList } from "@/pages/search/common.tsx";
-import { useSearchFeed } from "@/pages/search/useSearchFeed.ts";
+import Empty from "@/components/tab/Empty.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
+import LoadMore from "@/components/tab/LoadMore.tsx";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
 
 const LIMIT = 10;
 
 export default function PostsTab({ keyword, sort }: { keyword: string; sort: "hot" | "latest" }) {
-    const fetcher = useCallback(
-        (offset: number, limit: number) => searchPosts({ offset, limit, sort, keyword }),
-        [keyword, sort],
-    );
-    const { items, loading, loadingMore, hasMore, error, load } = useSearchFeed<Post>(fetcher, LIMIT);
+    const feed = useInfiniteList<Post>({
+        fetcher: useCallback(
+            async (offset, limit) => {
+                const res = await searchPosts({ offset, limit, sort, keyword });
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            },
+            [keyword, sort],
+        ),
+        limit: LIMIT,
+    });
 
-    if (loading) return <SkeletonList />;
-    if (error) return <Empty text={error} />;
-    if (items.length === 0) return <Empty text="没有找到相关帖子" />;
+    if (feed.loading) return <SkeletonList />;
+    if (feed.error) return <Empty text={feed.error} />;
+    if (feed.items.length === 0) return <Empty text="没有找到相关帖子" />;
     return (
         <div className="grid gap-3">
-            {items.map((post) => (
+            {feed.items.map((post) => (
                 <PostCard key={post.id} post={post} />
             ))}
-            {hasMore && <LoadMore loading={loadingMore} onClick={() => void load()} />}
+            {feed.hasMore && <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />}
         </div>
     );
 }

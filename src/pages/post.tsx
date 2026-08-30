@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     Bookmark,
     Check,
@@ -15,7 +15,6 @@ import {
     UserPlus,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 
 import Markdown from "@/components/forum/Markdown.tsx";
 import PostAstTree from "@/components/forum/PostAstTree.tsx";
@@ -24,32 +23,27 @@ import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
+import { useCopyLink } from "@/hooks/useCopyLink.ts";
+import { useFollow } from "@/hooks/useFollow.ts";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
+import { usePostActions } from "@/hooks/usePostActions.ts";
 import {
     createComment,
     deleteComment,
+    deleteDraft,
     getPost,
     getPostDraft,
     listComments,
-    toggleCommentLike,
-    toggleFavorite,
-    toggleFollow,
-    toggleLike,
-    unCommentLike,
-    unFavorite,
-    unFollow,
-    unLike,
-    type PostComment as Comment,
-    type Post,
-    deleteDraft,
     setPostCommentArea,
-    setPostPinned,
-    tipPost,
+    toggleCommentLike,
+    unCommentLike,
+    type Post,
+    type PostComment as Comment,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format.ts";
 import { parseFrontmatter } from "@/lib/frontmatter.ts";
 import { cn } from "@/lib/utils.ts";
 import { useUserStore } from "@/stores/useUser.ts";
-import { useCoinsStore } from "@/stores/useCoins.ts";
 import { insertReply, updateComment } from "@/components/comments/utils.ts";
 import CommentInput from "@/components/comments/CommentInput.tsx";
 import CommentList from "@/components/comments/CommentList.tsx";
@@ -89,24 +83,47 @@ export default function PostDetail() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [commentsLoading, setCommentsLoading] = useState(false);
-    const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
-    const [hasMoreComments, setHasMoreComments] = useState(false);
-    const [commentError, setCommentError] = useState<string | null>(null);
-    const commentsOffsetRef = useRef(0);
-
     const [draft, setDraft] = useState("");
     const [replyTo, setReplyTo] = useState<Comment | null>(null);
     const [sending, setSending] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const [followBusy, setFollowBusy] = useState(false);
-    const [reactBusy, setReactBusy] = useState(false);
-    const [copied, setCopied] = useState(false);
     const [draftId, setDraftId] = useState<number | null>(null);
     const [commentArea, setCommentArea] = useState(true);
     const [commentAreaBusy, setCommentAreaBusy] = useState(false);
-    const [pinBusy, setPinBusy] = useState(false);
+
+    const setPostMerge = useCallback(
+        (updater: (prev: Post) => Post) => setPost((prev) => (prev ? updater(prev) : prev)),
+        [],
+    );
+
+    const { reactBusy, pinBusy, handleLike, handleFavorite, handleTip, handlePin: handleTogglePin } = usePostActions({
+        post,
+        setPost: setPostMerge,
+    });
+
+    const { copied, copy } = useCopyLink();
+
+    const { busy: followBusy, toggle: handleFollow } = useFollow({
+        userId: post?.author.id ?? 0,
+        isFollowing: post?.is_following_author ?? false,
+        useUnfollow: true,
+        enabled: !!post,
+        onToggle: (res) => setPostMerge((prev) => ({ ...prev, is_following_author: res.following })),
+    });
+
+    const commentsFeed = useInfiniteList<Comment>({
+        fetcher: useCallback(
+            async (offset) => {
+                const list = await listComments(id, offset, COMMENTS_LIMIT);
+                return { items: list, hasMore: list.length === COMMENTS_LIMIT, hidden: false };
+            },
+            [id],
+        ),
+        limit: COMMENTS_LIMIT,
+        autoStart: false,
+    });
+    const { load: loadCommentsFeed, items: commentItems } = commentsFeed;
+    const comments = commentItems;
 
     useEffect(() => {
         let cancelled = false;
@@ -139,35 +156,10 @@ export default function PostDetail() {
         };
     }, [id, me?.id]);
 
-    const loadComments = useCallback(
-        async (reset = false) => {
-            if (reset) {
-                setCommentsLoading(true);
-            } else {
-                setCommentsLoadingMore(true);
-            }
-            setHasMoreComments(false);
-            setCommentError(null);
-            try {
-                const offset = reset ? 0 : commentsOffsetRef.current;
-                const list = await listComments(id, offset, COMMENTS_LIMIT);
-                setComments((prev) => (reset ? list : [...prev, ...list]));
-                commentsOffsetRef.current = (reset ? 0 : commentsOffsetRef.current) + list.length;
-                setHasMoreComments(list.length === COMMENTS_LIMIT);
-            } catch (err) {
-                setCommentError(err instanceof Error ? err.message : "评论加载失败");
-            } finally {
-                setCommentsLoading(false);
-                setCommentsLoadingMore(false);
-            }
-        },
-        [id],
-    );
-
     useEffect(() => {
         if (!commentArea) return;
-        void loadComments(true);
-    }, [loadComments, commentArea]);
+        void loadCommentsFeed(true);
+    }, [loadCommentsFeed, commentArea]);
 
     const requireLogin = (): boolean => {
         if (!me) {
@@ -175,76 +167,6 @@ export default function PostDetail() {
             return false;
         }
         return true;
-    };
-
-    const handleLike = async () => {
-        if (!post) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = post.is_liked ? await unLike(post.id) : await toggleLike(post.id);
-            setPost((prev) => (prev ? { ...prev, is_liked: res.liked, likes_count: res.likes_count } : prev));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setReactBusy(false);
-        }
-    };
-
-    const handleFavorite = async () => {
-        if (!post) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = post.is_favorited ? await unFavorite(post.id) : await toggleFavorite(post.id);
-            setPost((prev) =>
-                prev ? { ...prev, is_favorited: res.favorited, favorites_count: res.favorites_count } : prev,
-            );
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setReactBusy(false);
-        }
-    };
-
-    const handleFollow = async () => {
-        if (!post) return;
-        if (!requireLogin()) return;
-        setFollowBusy(true);
-        try {
-            const res = post.is_following_author ? await unFollow(post.author.id) : await toggleFollow(post.author.id);
-            setPost((prev) => (prev ? { ...prev, is_following_author: res.following } : prev));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setFollowBusy(false);
-        }
-    };
-
-    const handleCopyLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-        } catch {
-            /* ignore */
-        }
-    };
-
-    const handleTip = async () => {
-        if (!post) return;
-        if (!requireLogin()) return;
-        setReactBusy(true);
-        try {
-            const res = await tipPost(post.id);
-            setPost((prev) => (prev ? { ...prev, coins_count: res.coins_count } : prev));
-            useCoinsStore.getState().setBalance(res.balance);
-            toast.success(`投币成功，当前余额 ${res.balance}`);
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "投币失败");
-        } finally {
-            setReactBusy(false);
-        }
     };
 
     const handleToggleCommentArea = async () => {
@@ -261,20 +183,6 @@ export default function PostDetail() {
         }
     };
 
-    const handleTogglePin = async () => {
-        if (!post) return;
-        if (!requireLogin()) return;
-        setPinBusy(true);
-        try {
-            const updated = await setPostPinned(post.id, !post.pinned);
-            setPost(updated);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setPinBusy(false);
-        }
-    };
-
     const handleSend = async () => {
         if (!post || !draft.trim()) return;
         if (!requireLogin()) return;
@@ -282,9 +190,9 @@ export default function PostDetail() {
         try {
             const comment = await createComment(post.id, draft.trim(), replyTo?.id ?? null);
             if (replyTo) {
-                setComments((prev) => insertReply(prev, comment));
+                commentsFeed.setItems((prev) => insertReply(prev, comment));
             } else {
-                setComments((prev) => [comment, ...prev]);
+                commentsFeed.setItems((prev) => [comment, ...prev]);
             }
             setPost((prev) => (prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev));
             setDraft("");
@@ -300,7 +208,7 @@ export default function PostDetail() {
         if (!requireLogin()) return;
         try {
             const res = comment.is_liked ? await unCommentLike(comment.id) : await toggleCommentLike(comment.id);
-            setComments((prev) =>
+            commentsFeed.setItems((prev) =>
                 updateComment(prev, comment.id, (c) => ({ ...c, is_liked: res.liked, likes_count: res.likes_count })),
             );
         } catch (err) {
@@ -313,7 +221,7 @@ export default function PostDetail() {
             await deleteComment(commentId);
             const flat = comments.flatMap((c) => [c, ...c.replies]);
             const removedCount = flat.filter((c) => c.id === commentId || c.parent_id === commentId).length;
-            setComments((prev) =>
+            commentsFeed.setItems((prev) =>
                 prev
                     .filter((c) => c.id !== commentId)
                     .map((c) => ({ ...c, replies: c.replies.filter((r) => r.id !== commentId) })),
@@ -473,7 +381,7 @@ export default function PostDetail() {
                                 size="sm"
                                 className={cn(post.pinned && "text-primary")}
                                 disabled={pinBusy}
-                                onClick={handleTogglePin}
+                                onClick={() => void handleTogglePin()}
                                 title={post.pinned ? "取消置顶" : "置顶"}
                             >
                                 {post.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
@@ -501,7 +409,7 @@ export default function PostDetail() {
                             variant="ghost"
                             size="sm"
                             className="ml-auto text-muted-foreground"
-                            onClick={handleCopyLink}
+                            onClick={() => void copy(window.location.href)}
                         >
                             {copied ? <Check /> : <Copy />}
                             {copied ? "已复制" : "复制链接"}
@@ -531,15 +439,15 @@ export default function PostDetail() {
                         />
 
                         <CommentList
-                            commentsLoading={commentsLoading}
-                            commentError={commentError}
+                            commentsLoading={commentsFeed.loading}
+                            commentError={commentsFeed.error}
                             comments={comments}
                             handleDeleteComment={handleDeleteComment}
                             setReplyTo={setReplyTo}
-                            loadComments={loadComments}
-                            hasMoreComments={hasMoreComments}
+                            loadComments={commentsFeed.load}
+                            hasMoreComments={commentsFeed.hasMore}
                             handleLikeComment={handleLikeComment}
-                            commentsLoadingMore={commentsLoadingMore}
+                            commentsLoadingMore={commentsFeed.loadingMore}
                         />
                     </CardContent>
                 </Card>

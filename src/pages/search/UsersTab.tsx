@@ -1,80 +1,100 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { UserAvatar } from "@/components/avatar.tsx";
-import { type FollowUser, searchUsers, toggleFollow } from "@/lib/api";
+import { type FollowUser, searchUsers } from "@/lib/api";
 import { formatDate } from "@/lib/format.ts";
 
-import { Empty, LoadMore, SkeletonList } from "@/pages/search/common.tsx";
-import { useSearchFeed } from "@/pages/search/useSearchFeed.ts";
+import Empty from "@/components/tab/Empty.tsx";
+import SkeletonList from "@/components/forum/SkeletonList.tsx";
+import LoadMore from "@/components/tab/LoadMore.tsx";
+import { useInfiniteList } from "@/hooks/useInfiniteList.ts";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { UserCheck, UserPlus } from "lucide-react";
 import { useUserStore } from "@/stores/useUser.ts";
+import { useFollow } from "@/hooks/useFollow.ts";
 
 const LIMIT = 10;
 
-export default function UsersTab({ keyword }: { keyword: string }) {
-    const fetcher = useCallback((offset: number, limit: number) => searchUsers({ offset, limit, keyword }), [keyword]);
-    const { items, loading, loadingMore, hasMore, error, load, setItems } = useSearchFeed<FollowUser>(fetcher, LIMIT);
+function SearchUserRow({ user, onChanged }: { user: FollowUser; onChanged: (updated: FollowUser) => void }) {
     const navigate = useNavigate();
     const me = useUserStore((s) => s.user);
-    const [busy, setBusy] = useState<boolean>(false);
+    const { busy, toggle } = useFollow({
+        userId: user.id,
+        isFollowing: user.is_following,
+        useUnfollow: user.is_following,
+        onToggle: (res) => onChanged({ ...user, is_following: res.following }),
+    });
 
-    const handleFollow = async (user: FollowUser) => {
+    const handleToggle = () => {
         if (!me) {
             navigate("/login");
             return;
         }
-        setBusy(true);
-        try {
-            const res = await toggleFollow(user.id);
-
-            const updated = { ...user, is_following: res.following };
-            setItems((items) => items.map((u) => (u.id === updated.id ? updated : u)));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setBusy(false);
-        }
+        void toggle();
     };
 
-    if (loading) return <SkeletonList />;
-    if (error) return <Empty text={error} />;
-    if (items.length === 0) return <Empty text="没有找到相关用户" />;
+    return (
+        <Card>
+            <CardContent className={"flex gap-2 justify-between"}>
+                <div className={"flex gap-2"}>
+                    <Link to={`/users/${user.id}`}>
+                        <UserAvatar user={user} />
+                    </Link>
+                    <div className="grid min-w-0 flex-1 gap-0.5">
+                        <Link to={`/users/${user.id}`}>
+                            <span className="truncate text-sm font-medium">{user.username}</span>
+                        </Link>
+                        <span className="truncate text-xs text-muted-foreground">
+                            {formatDate(user.created_at)} 加入
+                        </span>
+                    </div>
+                </div>
+                {!(me?.id === user.id) && (
+                    <Button
+                        size="sm"
+                        variant={user.is_following ? "outline" : "default"}
+                        disabled={busy}
+                        onClick={handleToggle}
+                    >
+                        {user.is_following ? <UserCheck /> : <UserPlus />}
+                        {user.is_following ? "已关注" : "关注"}
+                    </Button>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function UsersTab({ keyword }: { keyword: string }) {
+    const feed = useInfiniteList<FollowUser>({
+        fetcher: useCallback(
+            async (offset, limit) => {
+                const res = await searchUsers({ offset, limit, keyword });
+                return { items: res.items, hasMore: res.hasMore, hidden: false };
+            },
+            [keyword],
+        ),
+        limit: LIMIT,
+    });
+
+    const { setItems } = feed;
+
+    const handleFollowChange = useCallback(
+        (updated: FollowUser) => setItems((items) => items.map((u) => (u.id === updated.id ? updated : u))),
+        [setItems],
+    );
+
+    if (feed.loading) return <SkeletonList />;
+    if (feed.error) return <Empty text={feed.error} />;
+    if (feed.items.length === 0) return <Empty text="没有找到相关用户" />;
     return (
         <div className="grid gap-3">
-            {items.map((user) => (
-                <Card key={user.id}>
-                    <CardContent className={"flex gap-2 justify-between"}>
-                        <div className={"flex gap-2"}>
-                            <Link to={`/users/${user.id}`}>
-                                <UserAvatar user={user} />
-                            </Link>
-                            <div className="grid min-w-0 flex-1 gap-0.5">
-                                <Link to={`/users/${user.id}`}>
-                                    <span className="truncate text-sm font-medium">{user.username}</span>
-                                </Link>
-                                <span className="truncate text-xs text-muted-foreground">
-                                    {formatDate(user.created_at)} 加入
-                                </span>
-                            </div>
-                        </div>
-                        {!(me?.id === user.id) && (
-                            <Button
-                                size="sm"
-                                variant={user.is_following ? "outline" : "default"}
-                                disabled={busy}
-                                onClick={async () => await handleFollow(user)}
-                            >
-                                {user.is_following ? <UserCheck /> : <UserPlus />}
-                                {user.is_following ? "已关注" : "关注"}
-                            </Button>
-                        )}
-                    </CardContent>
-                </Card>
+            {feed.items.map((user) => (
+                <SearchUserRow key={user.id} user={user} onChanged={handleFollowChange} />
             ))}
-            {hasMore && <LoadMore loading={loadingMore} onClick={() => void load()} />}
+            {feed.hasMore && <LoadMore loading={feed.loadingMore} onClick={() => void feed.load()} />}
         </div>
     );
 }

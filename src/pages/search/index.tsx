@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.t
 
 import PostsTab from "@/pages/search/PostsTab.tsx";
 import UsersTab from "@/pages/search/UsersTab.tsx";
-import { Empty } from "@/pages/search/common.tsx";
+import Empty from "@/components/tab/Empty.tsx";
 
 type SearchType = "posts" | "users";
 
