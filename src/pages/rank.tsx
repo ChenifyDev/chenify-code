@@ -13,6 +13,9 @@ import { UserAvatar } from "@/components/avatar.tsx";
 
 const LIMIT = 10;
 
+// 领奖台光束动画层：用 CSS mask 只在地块的边框区域显示渐变色条，
+// 并通过 offsetPath 让色条沿矩形边界画圈运动。width 控制粗细、via 是色相、
+// distance 是相位（下方 79.2667% / 29.2667% 两个数字为手调错峰）。
 function beamLayer(width: string, via: string, distance: string) {
     return (
         <div
@@ -27,6 +30,8 @@ function beamLayer(width: string, via: string, distance: string) {
     );
 }
 
+// 金银铜三格的布局与尺寸表：金牌 order-2 居中，银/铜分列左右（order-1 / order-3）；
+// 数组下标与 Podium 传入的 top[i] 一一对齐。
 const PODIUM_SLOTS = [
     {
         medal: "🥇",
@@ -305,6 +310,7 @@ function RankTabs() {
     const followers = useInfiniteList<FollowUser>({
         fetcher: useCallback(async (offset) => {
             const res = await rankUsersByFollowers({ limit: LIMIT, offset });
+            // 数据加载的同时顺带把"我的排名"写入页面状态（用于渲染"我的排名"卡片）
             setMyRank(res.my_rank);
             return { items: res.items, hasMore: res.hasMore, hidden: false };
         }, []),

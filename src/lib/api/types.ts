@@ -23,6 +23,7 @@ export interface Post {
     comments_count: number;
     likes_count: number;
     favorites_count: number;
+    // 收到的硬币总数，服务端按 0.1 枚为一"分"存储；展示处需换算（见 PostCard *10）
     coins_count: number;
     is_liked: boolean;
     is_favorited: boolean;
@@ -100,6 +101,11 @@ export interface Draft {
     tags: string[];
 }
 
+/**
+ * 服务端分页返回的统一形状。
+ * 注意：个人空间列表（getSpaceFavorites/getSpaceFollowing/getSpaceFollowers）返回的是
+ * 结构相近但多一个 hidden 字段的内联形状，用于"该列表被设为私密"，请在对应 fetcher 处处理。
+ */
 export type Paginated<T> = {
     items: T[];
     total: number;

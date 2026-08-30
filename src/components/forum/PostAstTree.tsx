@@ -11,6 +11,8 @@ function AstTreeList({ content }: { content: string }) {
     const [activeId, setActiveId] = useState<string | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
 
+    // 滚动定位（scroll-spy）：rootMargin 下缘收窄到视口底部 15%，
+    // 让"进入该区域的标题"成为当前高亮项，跟着阅读进度走。
     useEffect(() => {
         if (nodes.length === 0) return;
         observerRef.current?.disconnect();

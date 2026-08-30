@@ -7,6 +7,13 @@ const KEYS = {
     tag: "tmp_tag",
 };
 
+/**
+ * 写帖页的草稿自动保存：把内容/标题/评论开关/标签防抖（800ms）写入 localStorage，
+ * 页面刷新后可恢复。clear() 在草稿保存或发布成功后清空临时缓存。
+ *
+ * localStorage 只能存字符串，故布尔值 commentArea 序列化为 "1"/"false"，
+ * 读取时用 `!== "false"` 反解（旧数据缺失时默认为 true/允许评论）。
+ */
 export function useDraftPersistence() {
     const [content, setContent] = useState(() => localStorage.getItem(KEYS.content) || "");
     const [title, setTitle] = useState(() => localStorage.getItem(KEYS.title) || "");

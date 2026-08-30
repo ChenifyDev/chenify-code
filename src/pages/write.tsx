@@ -42,6 +42,8 @@ export default function Write() {
     const [error, setError] = useState<string | null>(null);
     const [dirty, setDirty] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    // 保存逻辑的"最新引用"：始终由下方 effect 同步为最新的 handleSaveDraft，
+    // 便于在任意时刻（如侧边栏/定时器）触发保存时拿到当前闭包。
     const saveDraftRef = useRef<() => Promise<void>>(async () => {});
     const { content, setContent, title, setTitle, commentArea, setCommentArea, tagInput, setTagInput, clear } =
         useDraftPersistence();
@@ -60,6 +62,7 @@ export default function Write() {
             setStatus(data.status);
             const imageUrls = data.images;
             const imgs: File[] = [];
+            // 把草稿里已上传的图片 URL 重新拉成 File，回显进编辑器以便再次提交
             for (const url of imageUrls) {
                 const file = await urlToFile(url);
                 if (!file) continue;

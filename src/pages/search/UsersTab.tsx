@@ -17,6 +17,8 @@ import { useFollow } from "@/hooks/useFollow.ts";
 
 const LIMIT = 10;
 
+// 每行是一个独立子组件：由于列表里有多行用户，关注状态/忙碌标志必须按行隔离，
+// 不能让一个组件实例持有多行共享的 busy。
 function SearchUserRow({ user, onChanged }: { user: FollowUser; onChanged: (updated: FollowUser) => void }) {
     const navigate = useNavigate();
     const me = useUserStore((s) => s.user);

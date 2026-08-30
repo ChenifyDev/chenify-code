@@ -91,6 +91,7 @@ export default function PostDetail() {
     const [commentArea, setCommentArea] = useState(true);
     const [commentAreaBusy, setCommentAreaBusy] = useState(false);
 
+    // usePostActions/useFollow 用函数式 setState 合并结果；包一层以规避 post 为 null 时的空值
     const setPostMerge = useCallback(
         (updater: (prev: Post) => Post) => setPost((prev) => (prev ? updater(prev) : prev)),
         [],
@@ -111,6 +112,7 @@ export default function PostDetail() {
         onToggle: (res) => setPostMerge((prev) => ({ ...prev, is_following_author: res.following })),
     });
 
+    // 评论列表不走 autoStart，由下方 effect 在"允许评论"时才首次加载
     const commentsFeed = useInfiniteList<Comment>({
         fetcher: useCallback(
             async (offset) => {
@@ -138,6 +140,7 @@ export default function PostDetail() {
                 setCommentArea(parseFrontmatter(data.content).commentArea);
                 if (me?.id === data.author.id) {
                     try {
+                        // 作者草稿 id 只为开启顶部"编辑"按钮，未发表时也可进入写帖页
                         const draft = await getPostDraft(id);
                         if (!cancelled) setDraftId(draft.id);
                     } catch {
@@ -156,6 +159,7 @@ export default function PostDetail() {
         };
     }, [id, me?.id]);
 
+    // 评论区开关变化时按需（重新）加载评论
     useEffect(() => {
         if (!commentArea) return;
         void loadCommentsFeed(true);
@@ -173,6 +177,7 @@ export default function PostDetail() {
         if (!post) return;
         setCommentAreaBusy(true);
         try {
+            // 评论开关存于正文 frontmatter 的 commentArea 字段，服务端更新后回读解析
             const updated = await setPostCommentArea(post.id, !commentArea);
             setPost(updated);
             setCommentArea(parseFrontmatter(updated.content).commentArea);
@@ -189,6 +194,7 @@ export default function PostDetail() {
         setSending(true);
         try {
             const comment = await createComment(post.id, draft.trim(), replyTo?.id ?? null);
+            // 回复插入到父评论的 replies 下；普通评论置于列表顶部
             if (replyTo) {
                 commentsFeed.setItems((prev) => insertReply(prev, comment));
             } else {
@@ -219,6 +225,8 @@ export default function PostDetail() {
     const handleDeleteComment = async (commentId: number) => {
         try {
             await deleteComment(commentId);
+            // 删除评论时其 replies 也一并删除：先把两层扁平化统计实际移除条数，
+            // 再同步递减帖子的 comments_count（clamp 到 0）
             const flat = comments.flatMap((c) => [c, ...c.replies]);
             const removedCount = flat.filter((c) => c.id === commentId || c.parent_id === commentId).length;
             commentsFeed.setItems((prev) =>
@@ -369,6 +377,7 @@ export default function PostDetail() {
                             title="投 1 枚硬币，作者获得 0.1 枚"
                         >
                             <Coins className="size-4" />
+                            {/* coins_count 按 0.1 枚存储，这里换算为整枚展示 */}
                             投币 {post.coins_count * 10}
                         </Button>
                         <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">

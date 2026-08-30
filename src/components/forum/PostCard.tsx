@@ -28,6 +28,7 @@ export function PostCard({
     onPinChanged?: () => void;
 }) {
     const [expanded, setExpanded] = useState(false);
+    // 本地持有一个 post 快照：交互 hooks 会就地更新它，而不动父级列表的 prop
     const [postState, setPost] = useState<Post>(post);
     const { copied, copy } = useCopyLink();
     const { reactBusy, pinBusy, handleLike, handleFavorite, handleTip, handlePin } = usePostActions({
@@ -38,6 +39,7 @@ export function PostCard({
     const { excerpt, isTruncated } = useMemo(() => truncateMarkdown(body, PREVIEW_MAX_LENGTH), [body]);
 
     const toggleExpanded = (e: React.MouseEvent) => {
+        // 卡片包在 <Link> 里：必须先阻止默认跳转和冒泡，再切换展开态
         e.preventDefault();
         e.stopPropagation();
         setExpanded((prev) => !prev);
@@ -137,6 +139,7 @@ export function PostCard({
                         className="inline-flex items-center gap-1 text-amber-500"
                     >
                         <Coins className="size-3.5" />
+                        {/* coins_count 按 0.1 枚存储，*10 换算为整枚 */}
                         {postState.coins_count * 10}
                     </Button>
                     <Button variant="ghost" size={"xs"} disabled className="inline-flex items-center gap-1">
@@ -159,6 +162,7 @@ export function PostCard({
                         variant="ghost"
                         size="sm"
                         className="ml-auto text-muted-foreground"
+                        // 用 host + 路径拼链接，避免带协议前缀的写法在公共页与域名不一致
                         onClick={() => void copy(window.location.host + `/posts/${postState.id}`)}
                     >
                         {copied ? <Check /> : <Copy />}

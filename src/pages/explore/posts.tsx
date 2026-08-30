@@ -89,6 +89,7 @@ export default function Posts() {
                                 "rounded-md px-2 py-0.5 text-xs",
                                 tag === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                             )}
+                            // 再次点击当前标签即清除筛选（tag 置回 null）
                             onClick={() => setTag(tag === t ? null : t)}
                         >
                             #{t}
@@ -97,6 +98,7 @@ export default function Posts() {
                 </div>
             )}
 
+            {/* key 随 排序/标签 变化会整体重挂 Feed，从而重置分页（useInfiniteList 从头加载） */}
             <Feed key={`${sort}:${tag ?? ""}`} sort={sort} tag={tag} />
         </div>
     );

@@ -16,6 +16,8 @@ function formatLocalDate(value: string): string {
     return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("zh-CN");
 }
 
+// 服务端日期是纯 "YYYY-MM-DD" 字符串，直接 new Date(...) 会按 UTC 解析导致时区偏移；
+// 这里用本地时区拼键，保证 "今天" 的判断与本地日历一致。
 function localTodayKey(): string {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -47,6 +49,7 @@ export default function CheckinPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    // 加载的同时把余额与签到状态写入全局 store（侧边栏也会轮询刷新这两项）
     useEffect(() => {
         if (me == null) return;
         let cancelled = false;
@@ -80,6 +83,7 @@ export default function CheckinPage() {
                 useCoinsStore.getState().setCheckedToday(true);
                 toast.success("签到成功，获得 1 枚硬币");
             } else {
+                // 已迟到不需要真的领币，但同样把"今日已签"同步进 store，禁用按钮
                 useCoinsStore.getState().setCheckedToday(true);
                 toast.info("今天已经签到过了");
             }
@@ -103,6 +107,7 @@ export default function CheckinPage() {
     }
     if (loading) return <StatusSkeleton />;
 
+    // days 是完整时间键（YYYY-MM-DD...），截取前 10 位去重并最多展示最近 14 天
     const recent = Array.from(new Set(days.map((d) => d.slice(0, 10)))).slice(0, 14);
     const todayKey = localTodayKey();
 

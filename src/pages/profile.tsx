@@ -45,6 +45,8 @@ import type { TabData } from "@/types/tab.ts";
 
 const LIMIT = 10;
 
+// 惰性 tab 模式：useInfiniteList 用 autoStart:false 建好，切到该 tab 时才首次加载；
+// 加载完（初始 tab）数据前不浪费请求。帖子/收藏/关注/粉丝四个 tab 共用此写法。
 function PostsTab({ tab, canPin }: { tab: TabData<Post>; canPin: boolean }) {
     const { load, initialized } = tab;
     useEffect(() => {
@@ -145,6 +147,7 @@ function Stat({ label, value }: { label: string; value: number | null }) {
     );
 }
 
+// 投币规则：单次 1-50 枚，接收方按 25% 折算（折算后保留 1 位小数）
 const TIP_MAX = 50;
 const TIP_RATE = 0.25;
 
@@ -167,6 +170,7 @@ function TipDialog({
     const [busy, setBusy] = useState(false);
     const numeric = Number(amount);
     const valid = Number.isInteger(numeric) && numeric >= 1 && numeric <= TIP_MAX;
+    // Math.round(x*10)/10 把 25% 折算结果四舍五入到 0.1 枚
     const recipient = valid ? Math.round(numeric * TIP_RATE * 10) / 10 : null;
 
     const handleConfirm = async () => {
@@ -252,6 +256,7 @@ function ProfileTabs({ userId, canPin }: { userId: number; canPin: boolean }) {
         fetcher: useCallback(
             async (offset) => {
                 const res = await getSpaceFavorites(userId, offset, LIMIT);
+                // hidden=true 表示列表被设为私密：既不透出内容，也不提供翻页
                 return { items: res.items, hasMore: !res.hidden && res.hasMore, hidden: res.hidden };
             },
             [userId],
@@ -324,6 +329,7 @@ export default function Profile() {
     const [tipOpen, setTipOpen] = useState(false);
     const coinsBalance = useCoinsStore((s) => s.balance);
 
+    // 关注后把最新粉丝数与关系回写进 space 状态，头部计数和按钮即时同步
     const { busy: followBusy, toggle: handleFollow } = useFollow({
         userId: id,
         isFollowing: space?.relation?.is_following ?? false,
@@ -374,6 +380,7 @@ export default function Profile() {
     const handlePrivacy = async (field: "is_favorites_public" | "is_follows_public", value: boolean) => {
         try {
             await updatePrivacy({ [field]: value });
+            // 直接更新本地 space.user，避免整页重拉
             setSpace((prev) => (prev ? { ...prev, user: { ...prev.user, [field]: value } } : prev));
         } catch (err) {
             console.error(err);

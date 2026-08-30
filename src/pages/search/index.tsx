@@ -31,6 +31,7 @@ export default function SearchPage() {
         });
     };
 
+    // 搜索状态全部放在 URL（q/type/sort），key 变化触发 tab 重挂载 → 列表分页重置
     const tabKey = `${keyword}:${type}:${sort}`;
 
     return (

@@ -1,5 +1,12 @@
 import { getToken } from "./token";
 
+/**
+ * 请求层约定：
+ * - request<T>()：走当前站点的 `/api`，认证靠 Bearer token（须由调用方手动
+ *   在 headers 里展开 authHeaders()）。绝大多数业务接口走这条路。
+ * - authRequest<T>()：登录/登出专用，走 `${VITE_API_PATH}/api` 并带 cookie 会话
+ *   （credentials: "include"）。应用同时存在 token 与 cookie 两套认证方式。
+ */
 export function getApiBase(): string {
     return (import.meta.env.VITE_API_PATH as string | undefined) ?? "";
 }
@@ -14,11 +21,13 @@ export class ApiError extends Error {
     }
 }
 
+/** 未登录时返回空对象，避免在 headers 里放一个 "Bearer null"。 */
 export function authHeaders(): Record<string, string> {
     const token = getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/** 拼查询串：过滤掉 undefined / null / 空串的键。 */
 export function qs(params: Record<string, string | number | boolean | undefined | null>): string {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {

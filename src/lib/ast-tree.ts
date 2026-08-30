@@ -18,6 +18,7 @@ export function slugify(text: string): string {
         .replace(/^-+|-+$/g, "");
 }
 
+/** 提取 mdast 节点的纯文本（递归展开 children，取叶节点的 value）。 */
 function collectText(node: unknown): string {
     if (node == null) return "";
     if (typeof node === "object" && "children" in (node as { children?: unknown[] }) && Array.isArray((node as { children: unknown[] }).children)) {
@@ -39,6 +40,7 @@ export function buildAstTree(content: string): AstTreeNode[] {
         const text = collectText(heading);
         if (!text.trim()) return;
         let id = slugify(text);
+        // 相同标题 slug 会重名，追加 -n 后缀消歧（目录锚点需唯一）
         if (seen.has(id)) {
             let n = 2;
             while (seen.has(`${id}-${n}`)) n++;

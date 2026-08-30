@@ -117,6 +117,7 @@ export default function NotificationsPage() {
     const user = useUserStore((s) => s.user);
     const checking = useUserStore((s) => s.checking);
     const navigate = useNavigate();
+    // marked 记录本次会话内"点开即已读"的通知 id（乐观标记，不等服务端回包刷新列表）
     const [marked, setMarked] = useState<number[]>([]);
 
     const feed = useInfiniteList<AppNotification>({
@@ -166,6 +167,7 @@ export default function NotificationsPage() {
     if (feed.loading) return <SkeletonList />;
     if (feed.error) return <Empty text={feed.error} />;
 
+    // 未读数 = 尚未读 且 本会话未被点开过的通知数
     const unreadCount = feed.items.filter((item) => !item.is_read && !marked.includes(item.id)).length;
 
     return (

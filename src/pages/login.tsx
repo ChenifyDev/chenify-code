@@ -14,6 +14,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload.ts";
 import { type FormStatus, StatusMessage } from "@/components/StatusMessage.tsx";
 
+// OAuth 授权跳转的"安全返回地址"白名单：仅允许跳回本站同源且指向 /oauth/authorize 的地址，
+// 防止第三方页面借登录成功后的跳转做钓鱼。
 function getSafeReturnTo(raw: string | null): string | null {
     if (!raw) return null;
     try {

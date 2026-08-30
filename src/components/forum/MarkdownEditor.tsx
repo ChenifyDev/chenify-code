@@ -101,6 +101,8 @@ type inputDataType = {
 };
 
 export default function EditorField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+    // prevValueRef 记录上一次同步给父组件的值，用于区分"父组件回填新草稿"与
+    // "编辑器自身 onUpdate 产生的回传"，避免编辑器被自己的输出重置（两相同步防护）。
     const prevValueRef = useRef(value);
     const [inputData, setInputData] = useState<inputDataType>({
         needInput: false,

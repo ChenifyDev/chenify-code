@@ -18,6 +18,7 @@ function unquoteYaml(value: string): string {
     return value;
 }
 
+/** 解析帖子正文头部的 `---\ntitle / commentArea\n---` 块，返回元数据与剔除块后的正文。 */
 export interface Frontmatter {
     title?: string;
     commentArea: boolean;
@@ -45,6 +46,7 @@ export function getTitle(content: string): string | undefined {
 export function withTitle(title: string | undefined, body: string, commentArea?: boolean): string {
     const trimmed = title?.trim();
     const cleanBody = body.trim();
+    // 无标题且允许评论时直接返回正文，让普通帖子的存储保持最干净的形式
     if (!trimmed && commentArea !== false) return cleanBody;
     const lines = [`---`];
     if (trimmed) lines.push(`title: ${quoteYaml(trimmed)}`);

@@ -57,6 +57,7 @@ export default function AppSidebar() {
     const { state, toggleSidebar } = useSidebar();
     const isCollapsed = state === "collapsed";
 
+    // 兜底轮询：未读消息数 + 今日签到状态，每隔 30s 刷新一次（进入消息页时再置零角标）
     useEffect(() => {
         if (!user) return;
         let cancelled = false;
@@ -82,6 +83,7 @@ export default function AppSidebar() {
         };
     }, [user, setCheckedToday]);
 
+    // 进入消息页后立即清掉角标，配合上方轮询下次再拉取真实未读数
     useEffect(() => {
         if (location.pathname === "/notifications") setUnread(0);
     }, [location.pathname]);

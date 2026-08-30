@@ -17,6 +17,8 @@ export default function SettingsPage() {
     const navigate = useNavigate();
 
     const [username, setUsername] = useState(user?.username ?? "");
+    // removeAvatar 标记"移除为默认头像"：它与"新选文件预览"互斥，
+    // 提交时 avatar=undefined + removeAvatar=true 表示还原默认。
     const [removeAvatar, setRemoveAvatar] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [status, setStatus] = useState<FormStatus>(null);
@@ -76,6 +78,7 @@ export default function SettingsPage() {
         }
     };
 
+    // 三种展示状态：新选文件预览 > 当前头像 > 移除后的空占位
     const showCurrent = !!user.avatar && !preview && !removeAvatar;
 
     return (
